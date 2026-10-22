@@ -335,3 +335,40 @@ def test_mvi_distributions_keep_cad_and_neac_independent(tmp_path):
     assert store.mvi_analysis("mvi_neac", year=2026, municipality="Igaci")["total"] == 1
     assert store.mvi_analysis("mvi_neac", municipality="Tanque d'Arca")[
         "municipalities"] == [{"name": "Tanque d'Arca", "total": 1}]
+
+
+def test_mvi_declared_instruments_respect_source_filters_and_revisions(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([
+        cad(**{"Instrumento empregado": "Outros meios",
+               "Tipo de agressão sofrida": "Revólver"}),
+        cad(**{"Número da ocorrência": "CAD-002", "Nº NIC": "NIC-222",
+               "Instrumento empregado": "Não informado", "Tipo de agressão sofrida": ""}),
+        cad(**{"Número da ocorrência": "CAD-003", "Nº NIC": "NIC-333",
+               "Cidade ocorrência": "Igaci", "Instrumento empregado": "Faca",
+               "Tipo de agressão sofrida": ""}),
+    ]))
+    store.import_file("mvi_neac", "neac.csv", csv_bytes([
+        neac(Instrumento="Asfixia"),
+        neac(**{"Número da ocorrência": "N-002", "Instrumento": "Pistola"}),
+    ]))
+    assert store.mvi_analysis("mvi_cad")["instruments"] == [
+        {"name": "Arma branca", "total": 1},
+        {"name": "Arma de fogo", "total": 1},
+        {"name": "Não identificado", "total": 1},
+    ]
+    assert store.mvi_analysis("mvi_neac")["instruments"] == [
+        {"name": "Arma de fogo", "total": 1}, {"name": "Outros meios", "total": 1},
+    ]
+    assert store.mvi_analysis("mvi_cad", municipality="Igaci")["instruments"] == [
+        {"name": "Arma branca", "total": 1},
+    ]
+    store.import_file("mvi_cad", "retificacao.csv", csv_bytes([
+        cad(**{"Instrumento empregado": "Faca"}),
+    ]))
+    assert store.mvi_analysis("mvi_cad")["instruments"] == [
+        {"name": "Arma branca", "total": 2}, {"name": "Não identificado", "total": 1},
+    ]
+    records = store.records("mvi_cad")["items"]
+    assert next(item for item in records if item["occurrence"] == "CAD-001")[
+        "instrument"] == "Arma branca"

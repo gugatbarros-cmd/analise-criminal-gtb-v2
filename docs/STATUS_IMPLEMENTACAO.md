@@ -1,23 +1,23 @@
 # Andamento da implantação — 22/10/2026
 
-**42% concluído · 58% restante.** Apenas a **Fase 1** está concluída. O projeto novo permanece local; o sistema antigo segue em produção.
+**45% concluído · 55% restante.** Apenas a **Fase 1** está concluída. O projeto novo permanece local; o sistema antigo segue em produção.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |
 | 0 — Inventário do legado | Em andamento | 2/4 | 50% | 5% |
 | 1 — Base local | Concluída | 4/4 | 100% | 10% |
 | 2 — Importação e histórico | Em andamento | 3/5 | 60% | 20% |
-| 3 — MVI CAD e NEAC | Em andamento | 4/10 | 40% | 25% |
+| 3 — MVI CAD e NEAC | Em andamento | 5/10 | 50% | 25% |
 | 4 — Demais módulos | Em andamento | 5/20 | 25% | 30% |
 | 5 — Preparação para troca | Pendente | 0/5 | 0% | 10% |
 
-O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredonda o resultado total ao inteiro mais próximo: 42% → **42%**. O restante é `100 − 42 = 58%`. Os pesos refletem uma estimativa de esforço, não uma previsão de prazo. Uma fase só aparece como concluída quando todas as suas entregas foram implementadas e verificadas. O arquivo usado pela tela é [`frontend/src/project-progress.json`](../frontend/src/project-progress.json).
+O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredonda o resultado total ao inteiro mais próximo: 44,5% → **45%**. O restante é `100 − 45 = 55%`. Os pesos refletem uma estimativa de esforço, não uma previsão de prazo. Uma fase só aparece como concluída quando todas as suas entregas foram implementadas e verificadas. O arquivo usado pela tela é [`frontend/src/project-progress.json`](../frontend/src/project-progress.json).
 
 ## Critérios restantes
 
 - **Fase 0:** detalhar filtros e cálculos de todas as abas e medir o desempenho de referência do legado.
 - **Fase 2:** validar adaptadores das seis fontes com layouts anonimizados e medir importações grandes.
-- **Fase 3:** perfis anuais, de municípios e de classificações independentes para CAD e NEAC já estão disponíveis. Ainda é preciso provar paridade MVI com casos oficiais, completar instrumentos, detalhes e demais análises.
+- **Fase 3:** perfis anuais, de municípios, de classificações e do meio explicitamente declarado são independentes para CAD e NEAC. Ainda é preciso provar paridade MVI com casos oficiais, interpretar relatos com revisão humana, completar detalhes e demais análises.
 - **Fase 4:** migrar os demais indicadores, tabelas, gráficos, relatórios e fluxos operacionais. CVP e tentativas têm classificação e relação inicial de casos. TCO elaborado tem relação, evolução mensal e rankings de município e natureza, podendo coexistir com CVP ou tentativa na mesma ocorrência. Instrumentos, auditoria técnica, relatórios e paridade oficial ainda faltam.
 - **Fase 5:** segurança multiusuário, empacotamento, backup dos dados existentes, validação paralela e plano de troca.
 

@@ -23,6 +23,26 @@ def meaningful(value: object) -> bool:
     )
 
 
+def mvi_instrument(value: str) -> str:
+    """Agrupa apenas o meio explicitamente informado; texto narrativo requer revisão."""
+    text = plain(value)
+    if not text or re.search(r"nao informad|nao identificad|ignorado|indeterminad|^outros?(?: meios?)?$", text):
+        return "Não identificado"
+    if re.search(r"arma de fogo|pistola|revolver|espingarda|garrucha|fuzil|carabina|"
+                 r"submetralhadora|\bdisparo\b|\btiro\b|\bpaf\b", text):
+        return "Arma de fogo"
+    if re.search(r"arma branca|perfuro.?cortante|perfurante|\bfaca\b|\bfacao\b|"
+                 r"canivete|punhal|foice|machado|estilete|tesoura", text):
+        return "Arma branca"
+    if re.search(r"objeto contundente|instrumento contundente|contundente|paulada|"
+                 r"pedrada|porrete|martelo|pedra|madeira|garrafa|asfixia|"
+                 r"estrangulamento|enforcamento|sufocamento|esganadura|"
+                 r"agressao fisica|espancamento|atropelamento|veiculo|"
+                 r"intoxicacao|veneno|explosivo|queimadura|incendio|\bfogo\b", text):
+        return "Outros meios"
+    return "Não identificado"
+
+
 def mvi_class(nature: str) -> str | None:
     text = plain(nature)
     if re.search(r"tentativa|tentado|tentada|culpos|transito|intervencao policial|resistencia", text):

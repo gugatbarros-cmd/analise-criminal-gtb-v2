@@ -12,7 +12,7 @@ from pathlib import Path
 import duckdb
 
 from gtb.indicators.rules import key, plain
-from gtb.ingestion.adapters.normalize import SOURCES, Record, normalize, pick
+from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
@@ -343,11 +343,19 @@ class Store:
             classifications = db.execute(f"""SELECT category, count(*) AS total
                 FROM record_versions WHERE {where}
                 GROUP BY category ORDER BY total DESC, category""", params).fetchall()
+            instrument_rows = db.execute(f"""SELECT raw_json FROM record_versions
+                WHERE {where}""", params).fetchall()
+        instruments: dict[str, int] = {}
+        for (raw_json,) in instrument_rows:
+            group = declared_instrument(json.loads(raw_json))
+            instruments[group] = instruments.get(group, 0) + 1
         return {"source": source, "total": sum(total for _year, total in years),
                 "yearly": [{"year": row_year, "total": total} for row_year, total in years],
                 "municipalities": [{"name": name, "total": total} for name, total in cities],
                 "classifications": [{"name": name, "total": total}
-                                    for name, total in classifications]}
+                                    for name, total in classifications],
+                "instruments": [{"name": name, "total": total} for name, total in
+                                sorted(instruments.items(), key=lambda item: (-item[1], item[0]))]}
 
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
@@ -386,5 +394,7 @@ class Store:
                    "eligible", "reason", "version", "indicators")
         return {"total": total, "page": page, "size": size,
                 "items": [dict(zip(columns, row[:-1])) | {
-                    "solution": pick(json.loads(row[-1]), "solution") if source == "ocorrencias" else ""
+                    "solution": pick(json.loads(row[-1]), "solution") if source == "ocorrencias" else "",
+                    "instrument": declared_instrument(json.loads(row[-1]))
+                    if source.startswith("mvi_") else "",
                 } for row in rows]}

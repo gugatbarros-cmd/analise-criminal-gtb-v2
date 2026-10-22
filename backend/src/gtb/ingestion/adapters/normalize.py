@@ -11,6 +11,7 @@ from gtb.indicators.rules import (
     key,
     meaningful,
     mvi_class,
+    mvi_instrument,
     victim_role,
 )
 
@@ -36,6 +37,10 @@ ALIASES = {
     "sex": ("sexo", "sexo da vitima"),
     "address": ("logradouro", "endereco"),
     "neighborhood": ("bairro",),
+    "instrument": ("instrumento empregado", "instrumento utilizado", "meio empregado",
+                   "meio utilizado", "arma utilizada", "tipo de arma", "instrumento",
+                   "tipo de agressao sofrida", "tipo de agressao", "agressao sofrida",
+                   "causa da lesao", "causa da morte", "arma", "meio"),
 }
 
 
@@ -46,6 +51,18 @@ def pick(row: dict[str, str], field: str) -> str:
         if value is not None and str(value).strip():
             return str(value).strip()
     return ""
+
+
+def declared_instrument(row: dict[str, str]) -> str:
+    """Ignora campos estruturados genéricos antes de consultar os seguintes."""
+    normalized = {key(column): value for column, value in row.items() if column.strip()}
+    for alias in ALIASES["instrument"]:
+        value = normalized.get(key(alias))
+        if value:
+            group = mvi_instrument(str(value))
+            if group != "Não identificado":
+                return group
+    return "Não identificado"
 
 
 @dataclass(frozen=True)

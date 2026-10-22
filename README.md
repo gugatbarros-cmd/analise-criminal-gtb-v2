@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo, local e independente do sistema legado em produção. A versão 0.1.8 oferece importação CSV/XLSX de teste, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas e TCO, relações paginadas, evolução e rankings TCO, perfis independentes de MVI por ano, município e classificação e andamento da implantação por fase. Não acessa CAD/Firebase nem publica dados.
+Projeto novo, local e independente do sistema legado em produção. A versão 0.1.9 oferece importação CSV/XLSX de teste, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas e TCO, relações paginadas, evolução e rankings TCO, perfis independentes de MVI por ano, município, classificação e meio declarado e andamento da implantação por fase. Não acessa CAD/Firebase nem publica dados.
 
 ## Requisitos
 
@@ -19,6 +19,6 @@ Fases 2 e 3 em andamento: CSV/XLSX com versões, quarentena, backup antes do lot
 
 As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. Armas, drogas e guarnições têm apenas cadastro genérico no banco, sem adaptadores ou indicadores completos. Autenticação multiusuário, sincronização, relatórios, empacotamento e publicação também faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
 
-O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **42% concluído e 58% restante**; somente a Fase 1 está concluída.
+O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **45% concluído e 55% restante**; somente a Fase 1 está concluída.
 
 O código antigo continua dois diretórios acima e na URL de produção. Seu backup de código está em `../legacy-v4.6.256-2026-10-22.bundle`. O bundle não contém dados privados do navegador nem exportação atual do Firestore.
