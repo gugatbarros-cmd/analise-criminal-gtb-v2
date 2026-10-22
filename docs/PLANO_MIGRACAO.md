@@ -1,0 +1,10 @@
+# Migração sem interrupção
+
+1. Legado permanece na URL atual, sem alteração do código ou bases.
+2. Fase 1: ambiente local, API, interface e documentação.
+3. Fase 2: importar dados sintéticos, com histórico e restauração testada.
+4. Fase 3: MVI CAD e NEAC separados, comparados com os resultados oficiais.
+5. Fase 4: demais módulos, filtro a filtro, gráfico a gráfico.
+6. Fase 5: empacotamento Windows, teste paralelo, plano de corte e reversão.
+
+Só depois de testes de paridade, segurança e backup dos dados atuais será possível propor a troca. A desativação do legado exigirá decisão explícita do responsável.
