@@ -60,6 +60,17 @@ def test_sources_independent_and_idempotent(tmp_path):
     assert store.summary()["mvi_cad"] == 2
     assert store.summary()["mvi_neac"] == 1
     assert store.records("mvi_neac")["total"] == 2
+    assert not list((tmp_path / "data" / "raw").glob("stage-*"))
+
+
+def test_staged_import_preserves_original_text_with_quotes_and_newlines(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    relato = 'A vítima disse "faca"; depois\nretificou o relato.'
+    row = cad(Relato=relato)
+    store.import_file("mvi_cad", "texto.csv", csv_bytes([row]))
+    natural_key = store.records("mvi_cad")["items"][0]["natural_key"]
+    assert store.mvi_record_detail("mvi_cad", natural_key)["fields"]["Relato"] == relato
+    assert not list((tmp_path / "data" / "raw").glob("stage-*"))
 
 
 def test_retification_history_and_preimport_backup(tmp_path):

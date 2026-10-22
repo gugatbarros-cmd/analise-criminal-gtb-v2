@@ -1,5 +1,6 @@
 """Importação transacional e consultas por fonte em um DuckDB local."""
 
+import csv
 import hashlib
 import json
 import os
@@ -148,15 +149,29 @@ class Store:
             raw_dir.mkdir(exist_ok=True)
             raw_path = raw_dir / f"{batch_id}{Path(filename).suffix.lower()}"
             raw_path.write_bytes(content)
+            keys_path = raw_dir / f"stage-{batch_id}-keys.csv"
+            changes_path = raw_dir / f"stage-{batch_id}-changes.csv"
             inserted = updated = unchanged = 0
             differences = 0
             try:
+                with keys_path.open("w", encoding="utf-8", newline="") as output:
+                    writer = csv.writer(output, delimiter=";")
+                    writer.writerow(("natural_key",))
+                    writer.writerows((record.natural_key,) for _, _, record, _ in prepared)
                 with self._connect() as db:
                     db.execute("BEGIN TRANSACTION")
+                    db.execute("""CREATE TEMP TABLE incoming_keys AS SELECT natural_key
+                        FROM read_csv(?, header=true, delim=';',
+                        columns={'natural_key':'VARCHAR'})""", [str(keys_path)])
+                    matches = db.execute("""SELECT r.natural_key, r.version, r.row_hash,
+                        r.raw_json FROM record_versions r JOIN incoming_keys i
+                        ON r.natural_key = i.natural_key
+                        WHERE r.source = ? AND r.is_current""", [source]).fetchall()
+                    existing_rows = {natural_key: (version, row_hash, raw_json)
+                                     for natural_key, version, row_hash, raw_json in matches}
+                    pending_rows: list[tuple] = []
                     for _number, row, record, row_hash in prepared:
-                        current = db.execute("""SELECT version, row_hash, raw_json FROM record_versions
-                            WHERE source = ? AND natural_key = ? AND is_current""",
-                                             [source, record.natural_key]).fetchone()
+                        current = existing_rows.get(record.natural_key)
                         if current and current[1] == row_hash:
                             unchanged += 1
                             continue
@@ -172,20 +187,38 @@ class Store:
                                 continue
                         version = (current[0] + 1) if current else 1
                         if current:
-                            db.execute("""UPDATE record_versions SET is_current = false,
-                                valid_to = ? WHERE source = ? AND natural_key = ? AND is_current""",
-                                       [stamp, source, record.natural_key])
                             updated += 1
                         else:
                             inserted += 1
-                        db.execute("""INSERT INTO record_versions VALUES
-                            (?, ?, ?, ?, ?, NULL, true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                                   [source, record.natural_key, version, row_hash, stamp, batch_id,
-                                    json.dumps(row, ensure_ascii=False, sort_keys=True),
-                                    record.event_date, record.year, record.municipality,
-                                    record.occurrence, record.victim, record.nature,
-                                    record.category, record.eligible, record.reason,
-                                    list(record.indicators)])
+                        pending_rows.append((record.natural_key, version, row_hash,
+                                             json.dumps(row, ensure_ascii=False, sort_keys=True),
+                                             record.event_date, record.year, record.municipality,
+                                             record.occurrence, record.victim, record.nature,
+                                             record.category, record.eligible, record.reason,
+                                             json.dumps(record.indicators, ensure_ascii=False)))
+                    if pending_rows:
+                        with changes_path.open("w", encoding="utf-8", newline="") as output:
+                            writer = csv.writer(output, delimiter=";")
+                            writer.writerow(("natural_key", "version", "row_hash", "raw_json",
+                                             "event_date", "year", "municipality", "occurrence",
+                                             "victim", "nature", "category", "eligible", "reason",
+                                             "indicators_json"))
+                            writer.writerows(pending_rows)
+                        db.execute("""CREATE TEMP TABLE changed_rows AS SELECT *
+                            FROM read_csv(?, header=true, delim=';', all_varchar=true)""",
+                                   [str(changes_path)])
+                        db.execute("""UPDATE record_versions SET is_current = false,
+                            valid_to = ? WHERE source = ? AND is_current
+                            AND natural_key IN (SELECT natural_key FROM changed_rows)""",
+                                   [stamp, source])
+                        db.execute("""INSERT INTO record_versions SELECT ?, natural_key,
+                            CAST(version AS INTEGER), row_hash, ?, NULL::TIMESTAMP, true,
+                            ?, raw_json, CAST(event_date AS DATE), CAST(year AS INTEGER),
+                            municipality, COALESCE(occurrence, ''), COALESCE(victim, ''),
+                            COALESCE(nature, ''), COALESCE(category, ''),
+                            CAST(eligible AS BOOLEAN), COALESCE(reason, ''),
+                            CAST(json_extract(indicators_json, '$') AS VARCHAR[])
+                            FROM changed_rows""", [source, stamp, batch_id])
                     for number, row, reason in rejected:
                         db.execute("INSERT INTO quarantine VALUES (?, ?, ?, ?)",
                                    [batch_id, number, reason, json.dumps(row, ensure_ascii=False)])
@@ -209,6 +242,9 @@ class Store:
             except Exception:
                 raw_path.unlink(missing_ok=True)
                 raise
+            finally:
+                keys_path.unlink(missing_ok=True)
+                changes_path.unlink(missing_ok=True)
             return {"id": batch_id, "row_count": len(rows), "inserted": inserted,
                     "updated": updated, "unchanged": unchanged, "quarantined": len(rejected),
                     "status": status, "repeated": False, "differences": differences}

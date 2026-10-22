@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo, local e independente do sistema legado em produção. A versão 0.1.12 oferece importação CSV/XLSX de teste, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados e visitas, relações paginadas, evolução e rankings das ações, perfis independentes de MVI e ficha original com navegação por versões. Não acessa CAD/Firebase nem publica dados.
+Projeto novo, local e independente do sistema legado em produção. A versão 0.1.13 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados e visitas, relações paginadas, evolução e rankings das ações, perfis independentes de MVI e ficha original com navegação por versões. Não acessa CAD/Firebase nem publica dados.
 
 ## Requisitos
 
@@ -19,6 +19,6 @@ Fases 2, 3 e 4 em andamento: CSV/XLSX com versões, quarentena, backup antes do 
 
 As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. Armas, drogas e guarnições têm apenas cadastro genérico no banco, sem adaptadores ou indicadores completos. Autenticação multiusuário, sincronização, relatórios, empacotamento e publicação também faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
 
-O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **53% concluído e 47% restante**; somente a Fase 1 está concluída.
+O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **57% concluído e 43% restante**; somente a Fase 1 está concluída. O [benchmark local](docs/BENCHMARKS.md) registra os ensaios sintéticos de 10 mil e 100 mil ocorrências.
 
 O código antigo continua dois diretórios acima e na URL de produção. Seu backup de código está em `../legacy-v4.6.256-2026-10-22.bundle`. O bundle não contém dados privados do navegador nem exportação atual do Firestore.
