@@ -106,4 +106,13 @@ describe('contrato de importação e indicadores', () => {
     expect(visits.pathname).toBe('/indicators/operations/Visitas/analysis')
     expect(visits.searchParams.get('year')).toBe('2025')
   })
+
+  it('consulta sossego como indicador próprio da base geral', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 1, monthly: [], municipalities: [], natures: [] }) })
+    vi.stubGlobal('fetch', request)
+    await getOperationalAnalysis('Sossego', 2026, 'Igaci')
+    await getRecords('ocorrencias', 1, 2026, 'Igaci', undefined, undefined, 'Sossego')
+    expect(new URL(request.mock.calls[0][0] as string).pathname).toBe('/indicators/operations/Sossego/analysis')
+    expect(new URL(request.mock.calls[1][0] as string).searchParams.get('indicator')).toBe('Sossego')
+  })
 })

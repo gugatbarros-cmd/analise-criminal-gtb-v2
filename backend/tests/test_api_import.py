@@ -152,3 +152,17 @@ def test_operational_actions_api_keeps_filters_and_evidence(tmp_path, monkeypatc
     assert client.get("/indicators/operations/Mandados/analysis?year=2026").json()["total"] == 1
     assert client.get("/indicators/operations/Visitas/analysis?year=2025").json()["total"] == 0
     assert client.get("/indicators/operations/Outros/analysis").status_code == 404
+
+
+def test_disturbance_api_exposes_classified_cases(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    row = {"Número da ocorrência": "S-1", "Data": "05/01/2026", "Cidade": "Igaci",
+           "Natureza": "Perturbação do sossego", "Solução": "Elaborou TCO PM"}
+    assert client.post("/imports/ocorrencias", content=csv_bytes([row]),
+                       headers={"X-Filename": "sossego.csv"}).status_code == 200
+    assert client.get("/indicators/summary").json()["sossego"] == 1
+    assert client.get("/indicators/operations/Sossego/analysis").json()["total"] == 1
+    item = client.get("/records/ocorrencias?indicator=Sossego").json()["items"][0]
+    assert item["indicators"] == ["TCO", "Sossego"]
+    assert "tipificação" in item["action_evidence"]

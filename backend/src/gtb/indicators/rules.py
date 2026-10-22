@@ -44,9 +44,24 @@ def mvi_instrument(value: str) -> str:
 
 
 def operational_action(row: dict[str, str], kind: str) -> tuple[bool, str]:
-    """Reconhece mandados cumpridos e visitas realizadas na base geral."""
-    if kind not in {"Mandados", "Visitas"}:
+    """Reconhece ações e perturbação do sossego na base geral."""
+    if kind not in {"Mandados", "Visitas", "Sossego"}:
         raise ValueError("Ação operacional desconhecida")
+    if kind == "Sossego":
+        classification_fields = ("natureza", "tipificacao", "tipicidade",
+                                 "tipo de ocorrencia", "indicador criminal")
+        classification = plain(" ".join(str(value) for column, value in row.items()
+                                        if value and any(term in plain(column)
+                                                         for term in classification_fields)))
+        if not re.search(r"\bpertur?bacao\b.{0,100}\b(?:sossego|tranquilidade|"
+                         r"trabalho|descanso)\b", classification):
+            return False, "Sem natureza de perturbação do sossego ou trabalho"
+        solution = plain(" ".join(str(value) for column, value in row.items()
+                                  if value and "solucao" in key(column)))
+        if re.search(r"nao constatad|nao confirmad|cancelad|duplicad|trote|"
+                     r"sem ilicitude|fato inexistente|improcedente|engano", solution):
+            return False, "Ocorrência descartada pela solução"
+        return True, "Natureza ou tipificação de perturbação do sossego ou trabalho"
     relevant = ("natureza", "tipificacao", "tipicidade", "classificacao", "solucao",
                 "relato", "historico", "narrativa", "descricao", "complemento",
                 "providencia", "desfecho", "modalidade", "acao")

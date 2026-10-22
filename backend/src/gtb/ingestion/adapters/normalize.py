@@ -145,7 +145,7 @@ def normalize(source: str, row: dict[str, str]) -> Record:
                 category = category or "Tentativa de homicídio"
             if elaborated_tco(pick(row, "tco_solution")):
                 labels.append("TCO")
-            for action in ("Mandados", "Visitas"):
+            for action in ("Mandados", "Visitas", "Sossego"):
                 if operational_action(row, action)[0]:
                     labels.append(action)
         indicators = tuple(labels)

@@ -436,3 +436,30 @@ def test_adapter_upgrade_reclassifies_old_operational_records(tmp_path):
     upgraded = Store(path)
     assert (upgraded.summary()["mandados"], upgraded.summary()["visitas"]) == (1, 1)
     assert list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))
+
+
+def test_disturbance_uses_classification_and_discards_negative_solution(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    base = {"Data": "05/01/2026", "Cidade": "Igaci", "Natureza": "",
+            "Solução": "", "Relato": ""}
+    rows = [
+        base | {"Número da ocorrência": "1", "Natureza": "Perturbação do sossego",
+                "Solução": "Elaborou TCO PM"},
+        base | {"Número da ocorrência": "2", "Natureza": "Perturbação do trabalho"},
+        base | {"Número da ocorrência": "3", "Natureza": "Ameaça",
+                "Relato": "Houve perturbação do sossego"},
+        base | {"Número da ocorrência": "4", "Natureza": "Perturbação da tranquilidade",
+                "Solução": "Fato não constatado"},
+        base | {"Número da ocorrência": "5", "Data": "05/01/2025",
+                "Natureza": "Perturbação do descanso"},
+    ]
+    store.import_file("ocorrencias", "sossego.csv", csv_bytes(rows))
+    assert store.summary()["sossego"] == 3
+    cases = store.records("ocorrencias", indicator="Sossego")
+    assert {item["occurrence"] for item in cases["items"]} == {"1", "2", "5"}
+    assert "Sossego" in next(item for item in cases["items"]
+                             if item["occurrence"] == "1")["indicators"]
+    assert store.operational_analysis("Sossego", 2026, "Igaci")["total"] == 2
+    assert store.operational_analysis("Sossego", 2025)["monthly"] == [
+        {"period": "2025-01", "total": 1},
+    ]
