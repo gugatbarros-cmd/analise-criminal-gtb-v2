@@ -1,6 +1,6 @@
 # Inventário do legado (leitura de código e documentação)
 
-Base observada: `../../` na versão 4.6.256. Isto é um mapa inicial, não uma prova de paridade.
+Base observada: `../../../` na versão 4.6.256. Isto é um mapa inicial, não uma prova de paridade.
 
 | Área | Evidência encontrada | Conferência pendente |
 | --- | --- | --- |

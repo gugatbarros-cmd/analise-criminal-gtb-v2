@@ -1,0 +1,1 @@
+"""Adaptadores por fonte."""

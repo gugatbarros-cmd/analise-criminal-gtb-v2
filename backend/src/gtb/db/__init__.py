@@ -1,0 +1,1 @@
+"""Persistência DuckDB local."""

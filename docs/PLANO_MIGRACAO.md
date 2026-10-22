@@ -1,9 +1,9 @@
 # Migração sem interrupção
 
 1. Legado permanece na URL atual, sem alteração do código ou bases.
-2. Fase 1: ambiente local, API, interface e documentação.
-3. Fase 2: importar dados sintéticos, com histórico e restauração testada.
-4. Fase 3: MVI CAD e NEAC separados, comparados com os resultados oficiais.
+2. Fase 1 concluída: ambiente local, API, interface e documentação.
+3. Fase 2 em andamento: importação sintética, versões, quarentena, backup pré-lote e restauração manual testada; layouts completos pendentes.
+4. Fase 3 em andamento: MVI CAD e NEAC separados, CVP e tentativas iniciais; paridade oficial ainda pendente.
 5. Fase 4: demais módulos, filtro a filtro, gráfico a gráfico.
 6. Fase 5: empacotamento Windows, teste paralelo, plano de corte e reversão.
 

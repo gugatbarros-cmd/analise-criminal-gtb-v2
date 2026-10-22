@@ -15,6 +15,7 @@ data/*
 *.duckdb.wal
 *.sqlite*
 *.csv
+!fixtures/synthetic/*.csv
 *.xlsx
 *.xls
 *.log
