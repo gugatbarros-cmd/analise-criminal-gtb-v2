@@ -6,6 +6,7 @@ import { ProjectProgress } from './components/ProjectProgress'
 import { CvpAnalysis } from './components/CvpAnalysis'
 import { AttemptAnalysis } from './components/AttemptAnalysis'
 import { TcoAnalysis } from './components/TcoAnalysis'
+import { MviAnalysis } from './components/MviAnalysis'
 import { getBatches, getSummary, upload, type Source } from './services/api'
 import { getHealth } from './services/health'
 import './style.css'
@@ -36,11 +37,11 @@ function App() {
       if (!file) throw new Error('Selecione um arquivo CSV ou XLSX.')
       return upload(source, file, scope)
     },
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }); void queryClient.invalidateQueries({ queryKey: ['tco-analysis'] }) },
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }); void queryClient.invalidateQueries({ queryKey: ['tco-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-analysis'] }) },
   })
 
   return <main className="shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Local · v{health.data?.version || '0.1.7'}</span></header>
+    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Local · v{health.data?.version || '0.1.8'}</span></header>
     <section className="hero"><div><p className="eyebrow">Ambiente paralelo de validação</p><h1>Dados separados. Resultados auditáveis.</h1><p>Importe bases de teste, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'API local indisponível' : 'API local ativa'}</div></section>
     <div className="notice">Indicadores provisórios: regras extraídas do legado. A paridade ainda precisa ser conferida com amostras anonimizadas e números oficiais.</div>
     <ProjectProgress />
@@ -49,6 +50,7 @@ function App() {
     {summary.isError && <p className="error" role="alert">Não foi possível consultar os indicadores.</p>}
     <section className="panel"><div className="section-head"><div><p className="eyebrow">Evolução mensal</p><h2>MVI por fonte</h2></div><span>CAD e NEAC permanecem independentes</span></div><Suspense fallback={<p className="empty">Carregando gráfico…</p>}><MonthlyChart monthly={summary.data?.monthly || {}} /></Suspense></section>
     <section className="panel"><div className="section-head"><div><p className="eyebrow">Relação individual</p><h2>Vítimas elegíveis</h2></div></div><div className="tabs" role="tablist" aria-label="Fonte MVI"><button type="button" role="tab" aria-selected={activeSource === 'mvi_cad'} onClick={() => setActiveSource('mvi_cad')}>MVI CAD</button><button type="button" role="tab" aria-selected={activeSource === 'mvi_neac'} onClick={() => setActiveSource('mvi_neac')}>MVI NEAC</button></div><SourceTable source="mvi_cad" active={activeSource === 'mvi_cad'} /><SourceTable source="mvi_neac" active={activeSource === 'mvi_neac'} /></section>
+    <MviAnalysis source={activeSource} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
     <CvpAnalysis summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
     <AttemptAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
     <TcoAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />

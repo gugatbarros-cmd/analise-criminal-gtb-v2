@@ -320,6 +320,35 @@ class Store:
                 "municipalities": [{"name": name, "total": total} for name, total in cities],
                 "natures": [{"name": name, "total": total} for name, total in natures]}
 
+    def mvi_analysis(self, source: str, year: int | None = None,
+                     municipality: str | None = None) -> dict:
+        if source not in {"mvi_cad", "mvi_neac"}:
+            raise ValueError("Fonte MVI desconhecida")
+        clauses = ["source = ?", "is_current", "eligible"]
+        params: list[object] = [source]
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        where = " AND ".join(clauses)
+        with self.lock, self._connect() as db:
+            years = db.execute(f"""SELECT year, count(*) FROM record_versions
+                WHERE {where} GROUP BY year ORDER BY year""", params).fetchall()
+            cities = db.execute(f"""SELECT municipality, count(*) AS total
+                FROM record_versions WHERE {where}
+                GROUP BY municipality ORDER BY total DESC, municipality LIMIT 10""",
+                                params).fetchall()
+            classifications = db.execute(f"""SELECT category, count(*) AS total
+                FROM record_versions WHERE {where}
+                GROUP BY category ORDER BY total DESC, category""", params).fetchall()
+        return {"source": source, "total": sum(total for _year, total in years),
+                "yearly": [{"year": row_year, "total": total} for row_year, total in years],
+                "municipalities": [{"name": name, "total": total} for name, total in cities],
+                "classifications": [{"name": name, "total": total}
+                                    for name, total in classifications]}
+
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,

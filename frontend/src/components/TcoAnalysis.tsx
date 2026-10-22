@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getRecords, getTcoAnalysis } from '../services/api'
-
-function Ranking({ title, items }: { title: string; items: { name: string; total: number }[] }) {
-  const maximum = Math.max(1, ...items.map(item => item.total))
-  return <div className="tco-ranking"><h3>{title}</h3>{items.length === 0 ? <p className="empty">Sem dados neste recorte.</p> : <ol>{items.map(item => <li key={item.name}><div><span>{item.name}</span><strong>{item.total}</strong></div><span className="tco-bar" aria-hidden="true"><span style={{ width: `${item.total / maximum * 100}%` }} /></span></li>)}</ol>}</div>
-}
+import { Ranking } from './Ranking'
 
 export function TcoAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
   const [page, setPage] = useState(1)
@@ -25,7 +21,7 @@ export function TcoAnalysis({ year, municipality }: { year?: number; municipalit
     <div className="section-head"><div><p className="eyebrow">Termos circunstanciados</p><h2>TCO elaborados pela PM</h2></div><span>Uma ocorrência por CAD/BO e ano</span></div>
     <p className="muted">Conta a solução “ELABOROU TCO (PM)” e variantes de separadores. “NÃO ELABOROU TCO” não entra. Um TCO também pode aparecer em outro indicador quando a ocorrência satisfaz ambas as regras.</p>
     {analysis.isError && <p className="error" role="alert">Não foi possível carregar os gráficos de TCO.</p>}
-    {analysis.data && <><p className="tco-total">TCOs no recorte <strong>{analysis.data.total}</strong></p><div className="tco-analysis-grid"><Ranking title="Evolução mensal" items={months} /><Ranking title="Municípios com mais TCOs" items={analysis.data.municipalities} /><Ranking title="Naturezas mais frequentes" items={analysis.data.natures} /></div></>}
+    {analysis.data && <><p className="analysis-total">TCOs no recorte <strong>{analysis.data.total}</strong></p><div className="analysis-grid"><Ranking title="Evolução mensal" items={months} /><Ranking title="Municípios com mais TCOs" items={analysis.data.municipalities} /><Ranking title="Naturezas mais frequentes" items={analysis.data.natures} /></div></>}
     {records.isPending && <p className="empty">Carregando TCOs…</p>}
     {records.isError && <p className="error" role="alert">Não foi possível carregar os TCOs.</p>}
     {records.data?.total === 0 && <p className="empty">Nenhum TCO elaborado neste recorte.</p>}

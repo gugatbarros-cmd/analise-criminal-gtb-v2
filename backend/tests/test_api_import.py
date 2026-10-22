@@ -84,3 +84,14 @@ def test_tco_api_filter_keeps_overlapping_cvp(tmp_path, monkeypatch):
     assert analysis.json()["total"] == 1
     assert analysis.json()["monthly"] == [{"period": "2026-01", "total": 1}]
     assert client.get("/indicators/tco/analysis?year=2025").json()["total"] == 0
+
+
+def test_mvi_analysis_api_rejects_other_sources(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    response = client.post("/imports/mvi_cad", content=csv_bytes([cad()]),
+                           headers={"X-Filename": "cad.csv"})
+    assert response.status_code == 200
+    assert client.get("/indicators/mvi/mvi_cad/analysis?year=2026").json()["total"] == 1
+    assert client.get("/indicators/mvi/mvi_neac/analysis?year=2026").json()["total"] == 0
+    assert client.get("/indicators/mvi/ocorrencias/analysis").status_code == 404

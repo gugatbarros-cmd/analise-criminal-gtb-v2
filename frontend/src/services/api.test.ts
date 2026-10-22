@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getMviAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -58,5 +58,20 @@ describe('contrato de importação e indicadores', () => {
     expect(url.pathname).toBe('/indicators/tco/analysis')
     expect(url.searchParams.get('year')).toBe('2026')
     expect(url.searchParams.get('municipality')).toBe('Igaci')
+  })
+
+  it('consulta perfis MVI de CAD e NEAC em rotas separadas', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 2, yearly: [], municipalities: [], classifications: [] }) })
+    vi.stubGlobal('fetch', request)
+    await getMviAnalysis('mvi_cad', 2026, 'Igaci')
+    await getMviAnalysis('mvi_neac', 2025)
+    const cad = new URL(request.mock.calls[0][0] as string)
+    const neac = new URL(request.mock.calls[1][0] as string)
+    expect(cad.pathname).toBe('/indicators/mvi/mvi_cad/analysis')
+    expect(cad.searchParams.get('year')).toBe('2026')
+    expect(cad.searchParams.get('municipality')).toBe('Igaci')
+    expect(neac.pathname).toBe('/indicators/mvi/mvi_neac/analysis')
+    expect(neac.searchParams.get('year')).toBe('2025')
+    expect(neac.searchParams.has('municipality')).toBe(false)
   })
 })

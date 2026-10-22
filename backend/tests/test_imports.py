@@ -301,3 +301,37 @@ def test_tco_month_city_and_nature_follow_master_filters(tmp_path):
     ]
     assert filtered["municipalities"] == [{"name": "Igaci", "total": 2}]
     assert filtered["natures"] == [{"name": "Perturbação do sossego", "total": 2}]
+
+
+def test_mvi_distributions_keep_cad_and_neac_independent(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([
+        cad(**{"Cidade ocorrência": "Igaci"}),
+        cad(**{"Cidade ocorrência": "Igaci", "Nome da vítima": "Ana Paula Souza",
+               "Nº NIC": "NIC-222", "Tipificação no despacho": "Feminicídio"}),
+        cad(**{"Número da ocorrência": "CAD-2025", "Data da ocorrência": "05/01/2025",
+               "Nº NIC": "NIC-333", "Cidade ocorrência": "Palmeira dos Índios"}),
+        cad(**{"Número da ocorrência": "CAD-AUTOR", "Nº NIC": "NIC-444",
+               "Envolvimento": "Autor", "Cidade ocorrência": "Igaci"}),
+    ]))
+    store.import_file("mvi_neac", "neac.csv", csv_bytes([
+        neac(Cidade="Igaci"),
+        neac(**{"Número da ocorrência": "N-2025", "Data": "05/01/2025",
+                "Cidade": "Tanque d Arca", "Natureza": "Latrocínio"}),
+    ]))
+    cad_analysis = store.mvi_analysis("mvi_cad")
+    neac_analysis = store.mvi_analysis("mvi_neac")
+    assert (cad_analysis["total"], neac_analysis["total"]) == (3, 2)
+    assert cad_analysis["yearly"] == [
+        {"year": 2025, "total": 1}, {"year": 2026, "total": 2}
+    ]
+    assert cad_analysis["classifications"] == [
+        {"name": "Homicídio doloso", "total": 2}, {"name": "Feminicídio", "total": 1}
+    ]
+    assert neac_analysis["classifications"] == [
+        {"name": "Homicídio doloso", "total": 1}, {"name": "Latrocínio", "total": 1}
+    ]
+    assert store.mvi_analysis("mvi_cad", year=2026, municipality="Igaci")["total"] == 2
+    assert store.mvi_analysis("mvi_neac", year=2026, municipality="Igaci")["total"] == 1
+    assert store.mvi_analysis("mvi_neac", municipality="Tanque d'Arca")[
+        "municipalities"] == [{"name": "Tanque d'Arca", "total": 1}]

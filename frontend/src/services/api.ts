@@ -5,6 +5,8 @@ export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'update
 export type RecordItem = { event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; indicators: string[] }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
+export type MviSource = 'mvi_cad' | 'mvi_neac'
+export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[] }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 async function json<T>(response: Response): Promise<T> {
@@ -27,6 +29,13 @@ export async function getTcoAnalysis(year?: number, municipality?: string): Prom
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   return json(await fetch(`${baseUrl}/indicators/tco/analysis?${params}`))
+}
+
+export async function getMviAnalysis(source: MviSource, year?: number, municipality?: string): Promise<MviAnalysis> {
+  const params = new URLSearchParams()
+  if (year) params.set('year', String(year))
+  if (municipality) params.set('municipality', municipality)
+  return json(await fetch(`${baseUrl}/indicators/mvi/${source}/analysis?${params}`))
 }
 
 export async function getBatches(): Promise<Batch[]> {
