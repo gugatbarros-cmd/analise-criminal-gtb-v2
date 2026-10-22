@@ -193,3 +193,39 @@ def test_previous_import_is_reclassified_with_backup(tmp_path):
     upgraded = Store(path)
     assert upgraded.summary()["categories"]["ocorrencias"] == {"CVP Tentado": 1}
     assert list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))
+
+
+def test_attempts_use_narrative_and_discarded_solution(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    base = {"Data": "05/01/2026", "Cidade": "Igaci"}
+    rows = [
+        base | {"Número da ocorrência": "1", "Natureza": "Lesão corporal",
+                "Relato": "O autor tentou matar a vítima", "Solução": ""},
+        base | {"Número da ocorrência": "2", "Natureza": "Tentativa de feminicídio",
+                "Relato": "", "Solução": "Fato não constatado"},
+        base | {"Número da ocorrência": "3", "Natureza": "Tentativa de homicídio",
+                "Relato": "Hipótese descartada, sem indícios", "Solução": ""},
+        base | {"Número da ocorrência": "4", "Natureza": "Homicídio tentado",
+                "Relato": "", "Solução": "Atendimento confirmado"},
+        base | {"Número da ocorrência": "5", "Natureza": "Roubo tentado",
+                "Relato": "", "Solução": ""},
+    ]
+    store.import_file("ocorrencias", "attempts.csv", csv_bytes(rows))
+    assert store.summary()["tentativas"] == 2
+    page = store.records("ocorrencias", category_prefix="Tentativa de homicídio")
+    assert {item["occurrence"] for item in page["items"]} == {"1", "4"}
+    assert {item["solution"] for item in page["items"]} == {"", "Atendimento confirmado"}
+
+
+def test_previous_occurrences_gain_narrative_attempt_after_upgrade(tmp_path):
+    path = tmp_path / "data" / "gtb.duckdb"
+    store = Store(path)
+    row = {"Número da ocorrência": "1", "Data": "05/01/2026", "Cidade": "Igaci",
+           "Natureza": "Lesão corporal", "Relato": "Tentou matar a vítima"}
+    store.import_file("ocorrencias", "old.csv", csv_bytes([row]))
+    with store._connect() as db:
+        db.execute("UPDATE source_types SET adapter_version = '0.1.4'")
+        db.execute("UPDATE record_versions SET category = ''")
+    upgraded = Store(path)
+    assert upgraded.summary()["tentativas"] == 1
+    assert len(list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))) == 1

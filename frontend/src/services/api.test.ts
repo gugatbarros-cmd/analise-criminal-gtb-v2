@@ -30,4 +30,13 @@ describe('contrato de importação e indicadores', () => {
     expect(url.searchParams.get('year')).toBe('2026')
     expect(url.searchParams.get('municipality')).toBe('Igaci')
   })
+
+  it('solicita a relação de tentativas por categoria', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 0, items: [] }) })
+    vi.stubGlobal('fetch', request)
+    await getRecords('ocorrencias', 2, 2026, undefined, undefined, 'Tentativa de homicídio')
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.searchParams.get('category_prefix')).toBe('Tentativa de homicídio')
+    expect(url.searchParams.get('page')).toBe('2')
+  })
 })

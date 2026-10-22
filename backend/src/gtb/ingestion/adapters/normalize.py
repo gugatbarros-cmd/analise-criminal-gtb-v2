@@ -28,7 +28,8 @@ ALIASES = {
     "type": ("classificacao", "natureza final", "tipificacao geral", "tipicidade geral",
              "natureza geral", "natureza", "tipo de ocorrencia", "tipo",
              "tipificacao no atendimento", "tipo de crime"),
-    "solution": ("solucao", "solucao da ocorrencia"),
+    "solution": ("solucao da ocorrencia", "solucao ocorrencia", "solucao",
+                 "desfecho", "providencia"),
     "age": ("idade", "idade da vitima"),
     "sex": ("sexo", "sexo da vitima"),
     "address": ("logradouro", "endereco"),
@@ -109,7 +110,12 @@ def normalize(source: str, row: dict[str, str]) -> Record:
                                        "tipodeocorrencia", "classificacao")))
             cvp = cvp_class(classification or nature)
             category = "CVP " + cvp if cvp else ""
-            if homicide_attempt(nature, pick(row, "solution")):
+            attempt_text = " ".join(str(value) for column, value in row.items()
+                                    if value and any(term in key(column) for term in
+                                    ("tipificacao", "tipicidade", "natureza", "classificacao",
+                                     "relato", "historico", "narrativa", "descricao",
+                                     "complemento", "solucao", "desfecho", "providencia")))
+            if homicide_attempt(attempt_text or nature, pick(row, "solution")):
                 category = "Tentativa de homicídio"
         eligible, reason = True, ""
     return Record(natural_key, when.isoformat(), when.year, city, occurrence, victim,

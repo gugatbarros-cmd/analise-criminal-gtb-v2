@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getRecords, type Summary } from '../services/api'
 
@@ -7,6 +7,7 @@ export function CvpAnalysis({ summary, year, municipality }: {
 }) {
   const [status, setStatus] = useState<'Todos' | 'Consumado' | 'Tentado'>('Todos')
   const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [year, municipality])
   const category = status === 'Todos' ? 'CVP ' : `CVP ${status}`
   const records = useQuery({
     queryKey: ['records', 'ocorrencias', 'cvp', page, year, municipality, category],

@@ -16,7 +16,7 @@ from gtb.ingestion.adapters.normalize import SOURCES, Record, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-ADAPTER_VERSION = "0.1.4"
+ADAPTER_VERSION = "0.1.5"
 
 
 class Store:
@@ -305,10 +305,12 @@ class Store:
         with self.lock, self._connect() as db:
             total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}", params).fetchone()[0]
             rows = db.execute(f"""SELECT event_date, municipality, occurrence, victim, nature,
-                category, eligible, reason, version FROM record_versions
+                category, eligible, reason, version, raw_json FROM record_versions
                 WHERE {where} ORDER BY event_date DESC, occurrence, victim
                 LIMIT ? OFFSET ?""", [*params, size, (page - 1) * size]).fetchall()
         columns = ("event_date", "municipality", "occurrence", "victim", "nature", "category",
                    "eligible", "reason", "version")
         return {"total": total, "page": page, "size": size,
-                "items": [dict(zip(columns, row)) for row in rows]}
+                "items": [dict(zip(columns, row[:-1])) | {
+                    "solution": pick(json.loads(row[-1]), "solution") if source == "ocorrencias" else ""
+                } for row in rows]}

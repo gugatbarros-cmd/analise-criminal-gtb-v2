@@ -61,11 +61,34 @@ def cvp_class(nature: str) -> str | None:
 
 def homicide_attempt(nature: str, solution: str = "") -> bool:
     text = plain(nature)
-    if not re.search(r"tentativa|tentado|tentada", text):
+    explicit = re.search(
+        r"tentativa (?:de |do crime de )?(?:homicidio|feminicidio|assassinato)|"
+        r"(?:homicidio|feminicidio) (?:doloso )?(?:tentad[ao]|na forma tentada|"
+        r"em sua forma tentada)|tentou matar|atentado contra a vida",
+        text,
+    )
+    has_homicide = re.search(r"\bhomicidio\b|\bfeminicidio\b|\bassassinato\b", text)
+    has_attempt = re.search(
+        r"\btentativa\b|\btentad[ao]\b|\bforma tentada\b|"
+        r"\bmodalidade tentada\b|\btentou matar\b|\batentado contra a vida\b", text,
+    )
+    if not (explicit or (has_homicide and has_attempt)):
         return False
-    if not re.search(r"homicidio|feminicidio|assassinato", text):
+    discarded = re.search(
+        r"(?:tentativa (?:de )?(?:homicidio|feminicidio)|"
+        r"(?:homicidio|feminicidio).{0,30}tentad[ao]).{0,60}"
+        r"(?:descartad[ao]|nao confirmad[ao]|nao configurad[ao]|sem indicios)|"
+        r"(?:nao se trata|nao se tratava|descartada? a hipotese|"
+        r"afastada? a hipotese).{0,60}(?:tentativa (?:de )?"
+        r"(?:homicidio|feminicidio)|(?:homicidio|feminicidio).{0,30}tentad[ao])",
+        text,
+    )
+    if discarded:
         return False
-    return not bool(re.search(r"improcedente|nao constatad|descartad", plain(solution)))
+    return not bool(re.search(
+        r"nao constatad|nao confirmad|cancelad|duplicad|trote|sem ilicitude|"
+        r"nada constatado|fato inexistente|improcedente|engano", plain(solution),
+    ))
 
 
 def event_date(value: object) -> date | None:

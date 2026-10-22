@@ -48,3 +48,17 @@ def test_cvp_records_api_filter(tmp_path, monkeypatch):
     attempted = client.get("/records/ocorrencias?category_prefix=CVP%20Tentado").json()
     assert attempted["total"] == 1
     assert attempted["items"][0]["occurrence"] == "2"
+
+
+def test_attempt_records_expose_solution_for_review(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([{
+        "Número da ocorrência": "A-1", "Data": "05/01/2026", "Cidade": "Igaci",
+        "Natureza": "Tentativa de homicídio", "Solução": "Atendimento confirmado",
+    }])
+    assert client.post("/imports/ocorrencias", content=content,
+                       headers={"X-Filename": "attempt.csv"}).status_code == 200
+    result = client.get("/records/ocorrencias?category_prefix=Tentativa%20de%20homic%C3%ADdio")
+    assert result.status_code == 200
+    assert result.json()["items"][0]["solution"] == "Atendimento confirmado"

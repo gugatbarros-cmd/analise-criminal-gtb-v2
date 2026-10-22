@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "analise-criminal-gtb-v2-backend"
-version = "0.1.4"
+version = "0.1.5"
 requires-python = ">=3.12"
 dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.34,<1", "pydantic>=2,<3", "duckdb>=1,<2", "polars>=1,<2", "openpyxl>=3,<4"]
 
