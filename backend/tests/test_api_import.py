@@ -30,3 +30,21 @@ def test_rejects_unsafe_upload(tmp_path, monkeypatch):
     assert response.status_code == 404
     response = client.post("/imports/mvi_cad", content=b"data", headers={"X-Filename": "x.exe"})
     assert response.status_code == 422
+
+
+def test_cvp_records_api_filter(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([
+        {"Número da ocorrência": "1", "Data": "05/01/2026", "Cidade": "Igaci",
+         "Natureza": "Roubo consumado"},
+        {"Número da ocorrência": "2", "Data": "06/01/2026", "Cidade": "Igaci",
+         "Natureza": "Roubo tentado"},
+    ])
+    response = client.post("/imports/ocorrencias", content=content,
+                           headers={"X-Filename": "cvp.csv"})
+    assert response.status_code == 200
+    assert client.get("/records/ocorrencias?category_prefix=CVP%20").json()["total"] == 2
+    attempted = client.get("/records/ocorrencias?category_prefix=CVP%20Tentado").json()
+    assert attempted["total"] == 1
+    assert attempted["items"][0]["occurrence"] == "2"

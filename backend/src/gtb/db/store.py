@@ -16,6 +16,7 @@ from gtb.ingestion.adapters.normalize import SOURCES, Record, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
+ADAPTER_VERSION = "0.1.4"
 
 
 class Store:
@@ -25,6 +26,7 @@ class Store:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as db:
             self._schema(db)
+        self._upgrade_occurrences()
 
     def _connect(self) -> duckdb.DuckDBPyConnection:
         return duckdb.connect(str(self.path))
@@ -33,8 +35,9 @@ class Store:
     def _schema(db: duckdb.DuckDBPyConnection) -> None:
         db.execute("""CREATE TABLE IF NOT EXISTS source_types (
             code VARCHAR PRIMARY KEY, label VARCHAR NOT NULL, adapter_version VARCHAR NOT NULL)""")
-        db.executemany("INSERT OR REPLACE INTO source_types VALUES (?, ?, ?)",
-                       [(source, source.replace("_", " ").upper(), "0.1.3") for source in SOURCES])
+        db.executemany("INSERT OR IGNORE INTO source_types VALUES (?, ?, ?)",
+                       [(source, source.replace("_", " ").upper(), ADAPTER_VERSION)
+                        for source in SOURCES])
         db.execute("""CREATE TABLE IF NOT EXISTS import_batches (
             id VARCHAR PRIMARY KEY, source VARCHAR NOT NULL, filename VARCHAR NOT NULL,
             sha256 VARCHAR NOT NULL, imported_at TIMESTAMP NOT NULL, scope VARCHAR NOT NULL,
@@ -56,6 +59,31 @@ class Store:
         db.execute("""CREATE TABLE IF NOT EXISTS import_divergences (
             batch_id VARCHAR NOT NULL, source VARCHAR NOT NULL, natural_key VARCHAR NOT NULL,
             reason VARCHAR NOT NULL)""")
+
+    def _upgrade_occurrences(self) -> None:
+        """Reclassifica dados derivados antigos, mantendo originais e um backup anterior."""
+        with self._connect() as db:
+            previous = db.execute("SELECT adapter_version FROM source_types WHERE code = 'ocorrencias'").fetchone()
+        if not previous or previous[0] == ADAPTER_VERSION:
+            return
+        backup_dir = self.path.parent / "backups"
+        backup_dir.mkdir(exist_ok=True)
+        shutil.copy2(self.path, backup_dir / f"before-adapter-{uuid.uuid4()}.duckdb")
+        with self._connect() as db:
+            db.execute("BEGIN TRANSACTION")
+            try:
+                rows = db.execute("""SELECT natural_key, version, raw_json FROM record_versions
+                    WHERE source = 'ocorrencias'""").fetchall()
+                for natural_key, version, raw_json in rows:
+                    record = normalize("ocorrencias", json.loads(raw_json))
+                    db.execute("""UPDATE record_versions SET nature = ?, category = ?
+                        WHERE source = 'ocorrencias' AND natural_key = ? AND version = ?""",
+                               [record.nature, record.category, natural_key, version])
+                db.execute("UPDATE source_types SET adapter_version = ?", [ADAPTER_VERSION])
+                db.execute("COMMIT")
+            except Exception:
+                db.execute("ROLLBACK")
+                raise
 
     def import_file(self, source: str, filename: str, content: bytes,
                     scope: str = "partial") -> dict:
@@ -165,8 +193,9 @@ class Store:
                                 differences += 1
                     status = "completed_with_quarantine" if rejected else "completed"
                     db.execute("""INSERT INTO import_batches VALUES
-                        (?, ?, ?, ?, ?, ?, '0.1.3', ?, ?, ?, ?, ?, ?, ?, ?)""",
-                               [batch_id, source, filename, digest, stamp, scope, len(rows),
+                        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               [batch_id, source, filename, digest, stamp, scope, ADAPTER_VERSION,
+                                len(rows),
                                 inserted, updated, unchanged, len(rejected), status,
                                 str(backup_path) if backup_path else None, str(raw_path)])
                     db.execute("COMMIT")
@@ -251,7 +280,8 @@ class Store:
 
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
-                victim: str | None = None, eligible_only: bool = False) -> dict:
+                victim: str | None = None, eligible_only: bool = False,
+                category_prefix: str | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
         page, size = max(page, 1), min(max(size, 1), 100)
@@ -268,6 +298,9 @@ class Store:
             params.append(victim)
         if eligible_only:
             clauses.append("eligible")
+        if category_prefix:
+            clauses.append("starts_with(category, ?)")
+            params.append(category_prefix)
         where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
             total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}", params).fetchone()[0]

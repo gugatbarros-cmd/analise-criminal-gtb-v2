@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 
-APP_VERSION = "0.1.3"
+APP_VERSION = "0.1.4"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -75,8 +75,9 @@ def indicators_summary(year: int | None = None, municipality: str | None = None)
 @app.get("/records/{source}")
 def records(source: str, page: int = 1, size: int = 20, year: int | None = None,
             municipality: str | None = None, victim: str | None = None,
-            eligible_only: bool = False) -> dict:
+            eligible_only: bool = False, category_prefix: str | None = None) -> dict:
     try:
-        return store.records(source, page, size, year, municipality, victim, eligible_only)
+        return store.records(source, page, size, year, municipality, victim, eligible_only,
+                             category_prefix)
     except ValueError as error:
         raise HTTPException(404, str(error)) from error

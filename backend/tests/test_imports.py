@@ -155,3 +155,41 @@ def test_documented_synthetic_fixtures(tmp_path):
     assert (summary["mvi_cad"], summary["mvi_neac"], summary["cvp"], summary["tentativas"]) == (
         2, 1, 1, 1
     )
+
+
+def test_cvp_classification_and_filtered_occurrences(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    base = {"Data da ocorrência": "05/01/2026", "Cidade": "Igaci"}
+    rows = [
+        base | {"Número da ocorrência": "1", "Natureza": "Roubo consumado",
+                "Indicador criminal": "CVP"},
+        base | {"Número da ocorrência": "2", "Natureza": "Roubo tentado",
+                "Indicador criminal": "CVP"},
+        base | {"Número da ocorrência": "3", "Natureza": "Furto",
+                "Indicador criminal": ""},
+        base | {"Número da ocorrência": "4", "Natureza": "Roubo seguido de morte",
+                "Indicador criminal": "CVP"},
+        base | {"Número da ocorrência": "5", "Natureza": "Furto",
+                "Indicador criminal": "CVP"},
+    ]
+    store.import_file("ocorrencias", "cvp.csv", csv_bytes(rows))
+    summary = store.summary(year=2026, municipality="Igaci")
+    assert summary["cvp"] == 3
+    assert summary["categories"]["ocorrencias"] == {"CVP Consumado": 2, "CVP Tentado": 1}
+    assert store.records("ocorrencias", category_prefix="CVP ")["total"] == 3
+    assert store.records("ocorrencias", category_prefix="CVP Tentado")["total"] == 1
+    assert store.records("ocorrencias", municipality="Outra", category_prefix="CVP ")["total"] == 0
+
+
+def test_previous_import_is_reclassified_with_backup(tmp_path):
+    path = tmp_path / "data" / "gtb.duckdb"
+    store = Store(path)
+    row = {"Número da ocorrência": "1", "Data": "05/01/2026", "Cidade": "Igaci",
+           "Natureza": "Roubo tentado"}
+    store.import_file("ocorrencias", "old.csv", csv_bytes([row]))
+    with store._connect() as db:
+        db.execute("UPDATE source_types SET adapter_version = '0.1.3'")
+        db.execute("UPDATE record_versions SET category = 'CVP Consumado'")
+    upgraded = Store(path)
+    assert upgraded.summary()["categories"]["ocorrencias"] == {"CVP Tentado": 1}
+    assert list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))

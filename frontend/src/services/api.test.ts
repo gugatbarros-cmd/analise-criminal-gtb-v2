@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getSummary, upload } from './api'
+import { getRecords, getSummary, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -19,5 +19,15 @@ describe('contrato de importação e indicadores', () => {
     vi.stubGlobal('fetch', request)
     await expect(getSummary(2026, 'Igaci')).resolves.toMatchObject({ mvi_cad: 2, mvi_neac: 1 })
     expect(request.mock.calls[0][0]).toContain('year=2026&municipality=Igaci')
+  })
+
+  it('solicita apenas CVP tentado no recorte selecionado', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 0, items: [] }) })
+    vi.stubGlobal('fetch', request)
+    await getRecords('ocorrencias', 1, 2026, 'Igaci', undefined, 'CVP Tentado')
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.searchParams.get('category_prefix')).toBe('CVP Tentado')
+    expect(url.searchParams.get('year')).toBe('2026')
+    expect(url.searchParams.get('municipality')).toBe('Igaci')
   })
 })

@@ -51,10 +51,11 @@ def victim_role(value: str) -> bool:
 
 def cvp_class(nature: str) -> str | None:
     text = plain(nature)
-    if "latrocinio" in text or ("roubo" in text and "morte" in text):
+    if re.search(r"latrocinio|roubo (?:seguido de|com resultado) morte", text):
         return None
     if re.search(r"\broubo\b|\bcvp\b", text):
-        return "Tentado" if re.search(r"tentativa|tentado|tentada", text) else "Consumado"
+        return ("Tentado" if re.search(r"tentativa|tentado|tentada|forma tentada|"
+                                      r"nao consumado", text) else "Consumado")
     return None
 
 

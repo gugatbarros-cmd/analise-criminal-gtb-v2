@@ -6,7 +6,7 @@
     { "id": 1, "name": "Base local", "weight": 10, "completed": 4, "total": 4, "done": "Repositório separado, API, interface, scripts e testes", "remaining": "Concluída" },
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 3, "total": 5, "done": "CSV/XLSX sintético, versões, quarentena, divergências e restauração", "remaining": "Adaptadores validados das seis fontes e benchmark com bases grandes" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 3, "total": 10, "done": "Regras iniciais separadas, filtros, série mensal e testes sintéticos", "remaining": "Paridade oficial, detalhes, instrumentos e análises completas" },
-    { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 1, "total": 20, "done": "Contagens iniciais de CVP e tentativas", "remaining": "Migrar e validar os demais indicadores, tabelas e relatórios" },
+    { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 2, "total": 20, "done": "Contagens iniciais de CVP e tentativas; análise CVP com situação, filtros e casos", "remaining": "Migrar e validar os demais indicadores, tabelas e relatórios" },
     { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 0, "total": 5, "done": "Nenhuma entrega concluída", "remaining": "Segurança, empacotamento, dados, operação paralela e plano de troca" }
   ]
 }

@@ -25,11 +25,12 @@ export async function getBatches(): Promise<Batch[]> {
   return (await json<{ items: Batch[] }>(await fetch(`${baseUrl}/imports`))).items
 }
 
-export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string): Promise<RecordPage> {
+export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string): Promise<RecordPage> {
   const params = new URLSearchParams({ page: String(page), size: '20', eligible_only: 'true' })
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   if (victim) params.set('victim', victim)
+  if (categoryPrefix) params.set('category_prefix', categoryPrefix)
   return json(await fetch(`${baseUrl}/records/${source}?${params}`))
 }
 
