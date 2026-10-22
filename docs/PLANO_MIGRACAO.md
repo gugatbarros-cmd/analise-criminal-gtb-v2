@@ -1,5 +1,7 @@
 # Migração sem interrupção
 
+Consulte [o andamento e os percentuais por fase](STATUS_IMPLEMENTACAO.md). Uma fase é concluída somente depois de verificar todas as entregas previstas.
+
 1. Legado permanece na URL atual, sem alteração do código ou bases.
 2. Fase 1 concluída: ambiente local, API, interface e documentação.
 3. Fase 2 em andamento: importação sintética, versões, quarentena, backup pré-lote e restauração manual testada; layouts completos pendentes.

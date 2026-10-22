@@ -33,8 +33,8 @@ class Store:
     def _schema(db: duckdb.DuckDBPyConnection) -> None:
         db.execute("""CREATE TABLE IF NOT EXISTS source_types (
             code VARCHAR PRIMARY KEY, label VARCHAR NOT NULL, adapter_version VARCHAR NOT NULL)""")
-        db.executemany("INSERT OR IGNORE INTO source_types VALUES (?, ?, ?)",
-                       [(source, source.replace("_", " ").upper(), "0.1.2") for source in SOURCES])
+        db.executemany("INSERT OR REPLACE INTO source_types VALUES (?, ?, ?)",
+                       [(source, source.replace("_", " ").upper(), "0.1.3") for source in SOURCES])
         db.execute("""CREATE TABLE IF NOT EXISTS import_batches (
             id VARCHAR PRIMARY KEY, source VARCHAR NOT NULL, filename VARCHAR NOT NULL,
             sha256 VARCHAR NOT NULL, imported_at TIMESTAMP NOT NULL, scope VARCHAR NOT NULL,
@@ -165,7 +165,7 @@ class Store:
                                 differences += 1
                     status = "completed_with_quarantine" if rejected else "completed"
                     db.execute("""INSERT INTO import_batches VALUES
-                        (?, ?, ?, ?, ?, ?, '0.1.2', ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (?, ?, ?, ?, ?, ?, '0.1.3', ?, ?, ?, ?, ?, ?, ?, ?)""",
                                [batch_id, source, filename, digest, stamp, scope, len(rows),
                                 inserted, updated, unchanged, len(rejected), status,
                                 str(backup_path) if backup_path else None, str(raw_path)])

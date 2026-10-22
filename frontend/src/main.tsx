@@ -2,10 +2,12 @@ import React, { lazy, Suspense, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query'
 import { SourceTable } from './components/SourceTable'
+import { ProjectProgress } from './components/ProjectProgress'
 import { getBatches, getSummary, upload, type Source } from './services/api'
 import { getHealth } from './services/health'
 import './style.css'
 import './source-table.css'
+import './progress.css'
 
 const labels: Record<Source, string> = {
   mvi_cad: 'MVI CAD', mvi_neac: 'MVI NEAC', ocorrencias: 'Ocorrências',
@@ -35,9 +37,10 @@ function App() {
   })
 
   return <main className="shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Local · v{health.data?.version || '0.1.2'}</span></header>
+    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Local · v{health.data?.version || '0.1.3'}</span></header>
     <section className="hero"><div><p className="eyebrow">Ambiente paralelo de validação</p><h1>Dados separados. Resultados auditáveis.</h1><p>Importe bases de teste, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'API local indisponível' : 'API local ativa'}</div></section>
     <div className="notice">Indicadores provisórios: regras extraídas do legado. A paridade ainda precisa ser conferida com amostras anonimizadas e números oficiais.</div>
+    <ProjectProgress />
     <section className="filters" aria-label="Filtros de indicadores"><label>Ano<input type="number" min="1900" max="2100" placeholder="Todos" value={year} onChange={event => setYear(event.target.value)} /></label><label>Município<input type="search" placeholder="Todos os municípios" value={municipality} onChange={event => setMunicipality(event.target.value)} /></label><button type="button" onClick={() => { setYear(''); setMunicipality('') }}>Limpar filtros</button></section>
     <section className="metrics" aria-label="Indicadores"><article><span>MVI CAD</span><strong>{summary.data?.mvi_cad ?? '—'}</strong><small>Vítimas · fonte CAD</small></article><article><span>MVI NEAC</span><strong>{summary.data?.mvi_neac ?? '—'}</strong><small>Vítimas · fonte NEAC</small></article><article><span>CVP</span><strong>{summary.data?.cvp ?? '—'}</strong><small>Ocorrências de roubo</small></article><article><span>Tentativas</span><strong>{summary.data?.tentativas ?? '—'}</strong><small>Ocorrências de homicídio tentado</small></article></section>
     {summary.isError && <p className="error" role="alert">Não foi possível consultar os indicadores.</p>}
