@@ -91,6 +91,15 @@ def homicide_attempt(nature: str, solution: str = "") -> bool:
     ))
 
 
+def elaborated_tco(value: str) -> bool:
+    status = re.sub(r"[^a-z0-9]+", " ", plain(value)).strip()
+    compact = key(value)
+    if not status or "naoelaborou" in compact:
+        return False
+    return ("elaboroutcopm" in compact or
+            all(word in compact for word in ("elaborou", "tco", "pm")))
+
+
 def event_date(value: object) -> date | None:
     if isinstance(value, datetime):
         return value.date()

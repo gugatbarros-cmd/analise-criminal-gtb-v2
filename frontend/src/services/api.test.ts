@@ -34,9 +34,18 @@ describe('contrato de importação e indicadores', () => {
   it('solicita a relação de tentativas por categoria', async () => {
     const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 0, items: [] }) })
     vi.stubGlobal('fetch', request)
-    await getRecords('ocorrencias', 2, 2026, undefined, undefined, 'Tentativa de homicídio')
+    await getRecords('ocorrencias', 2, 2026, undefined, undefined, undefined, 'Tentativa de homicídio')
     const url = new URL(request.mock.calls[0][0] as string)
-    expect(url.searchParams.get('category_prefix')).toBe('Tentativa de homicídio')
+    expect(url.searchParams.get('indicator')).toBe('Tentativa de homicídio')
     expect(url.searchParams.get('page')).toBe('2')
+  })
+
+  it('consulta TCO sem remover outros indicadores da ocorrência', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 1, items: [{ indicators: ['CVP', 'TCO'] }] }) })
+    vi.stubGlobal('fetch', request)
+    const result = await getRecords('ocorrencias', 1, 2026, 'Igaci', undefined, undefined, 'TCO')
+    expect(result.items[0].indicators).toEqual(['CVP', 'TCO'])
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.searchParams.get('indicator')).toBe('TCO')
   })
 })

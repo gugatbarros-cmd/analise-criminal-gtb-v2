@@ -7,7 +7,7 @@ export function AttemptAnalysis({ year, municipality }: { year?: number; municip
   useEffect(() => setPage(1), [year, municipality])
   const records = useQuery({
     queryKey: ['records', 'ocorrencias', 'tentativas', page, year, municipality],
-    queryFn: () => getRecords('ocorrencias', page, year, municipality, undefined, 'Tentativa de homicídio'),
+    queryFn: () => getRecords('ocorrencias', page, year, municipality, undefined, undefined, 'Tentativa de homicídio'),
   })
   return <section className="panel" aria-label="Análise de tentativas de homicídio">
     <div className="section-head"><div><p className="eyebrow">Base geral de ocorrências</p><h2>Tentativas de homicídio</h2></div><span>Uma ocorrência por CAD/BO</span></div>

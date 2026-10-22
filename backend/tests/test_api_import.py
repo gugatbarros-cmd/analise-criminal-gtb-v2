@@ -62,3 +62,20 @@ def test_attempt_records_expose_solution_for_review(tmp_path, monkeypatch):
     result = client.get("/records/ocorrencias?category_prefix=Tentativa%20de%20homic%C3%ADdio")
     assert result.status_code == 200
     assert result.json()["items"][0]["solution"] == "Atendimento confirmado"
+
+
+def test_tco_api_filter_keeps_overlapping_cvp(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([{
+        "Número da ocorrência": "O-1", "Data": "05/01/2026", "Cidade": "Igaci",
+        "Natureza": "Roubo", "Solução": "ELABOROU TCO (PM)",
+    }])
+    assert client.post("/imports/ocorrencias", content=content,
+                       headers={"X-Filename": "tco.csv"}).status_code == 200
+    summary = client.get("/indicators/summary?year=2026").json()
+    assert (summary["tco"], summary["cvp"]) == (1, 1)
+    result = client.get("/records/ocorrencias?indicator=TCO")
+    assert result.status_code == 200
+    assert result.json()["total"] == 1
+    assert result.json()["items"][0]["indicators"] == ["CVP", "TCO"]

@@ -5,7 +5,7 @@ A classificação inicial segue o contrato em `../../../docs/regras-indicadores.
 - Inclui tentativa explícita de homicídio, feminicídio ou assassinato na tipificação, natureza ou relato. Expressões como “tentou matar” e “atentado contra a vida” também identificam casos candidatos.
 - Exclui hipótese expressamente descartada no texto ou solução improcedente, não constatada, cancelada, duplicada, trote, sem ilicitude ou engano.
 - Solução vazia não elimina uma tentativa explícita.
-- A relação de casos mostra data, CAD/BO, município, natureza e solução, respeitando ano e município selecionados. A rota `/records/ocorrencias` aceita `category_prefix=Tentativa%20de%20homic%C3%ADdio`.
+- A relação de casos mostra data, CAD/BO, município, natureza e solução, respeitando ano e município selecionados. A rota `/records/ocorrencias` aceita `indicator=Tentativa%20de%20homic%C3%ADdio`, inclusive quando outra classificação também se aplica à mesma ocorrência.
 
 Na primeira abertura da versão 0.1.5, categorias derivadas de importações anteriores são recalculadas a partir do JSON bruto, após backup automático em `data/backups/before-adapter-*.duckdb`. O sistema não altera os arquivos importados nem remove versões.
 

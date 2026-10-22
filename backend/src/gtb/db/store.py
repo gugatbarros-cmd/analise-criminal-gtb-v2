@@ -16,7 +16,7 @@ from gtb.ingestion.adapters.normalize import SOURCES, Record, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-ADAPTER_VERSION = "0.1.5"
+ADAPTER_VERSION = "0.1.6"
 
 
 class Store:
@@ -51,7 +51,7 @@ class Store:
             is_current BOOLEAN NOT NULL, batch_id VARCHAR NOT NULL, raw_json VARCHAR NOT NULL,
             event_date DATE NOT NULL, year INTEGER NOT NULL, municipality VARCHAR NOT NULL,
             occurrence VARCHAR NOT NULL, victim VARCHAR, nature VARCHAR, category VARCHAR,
-            eligible BOOLEAN NOT NULL, reason VARCHAR,
+            eligible BOOLEAN NOT NULL, reason VARCHAR, indicators VARCHAR[] NOT NULL DEFAULT [],
             PRIMARY KEY (source, natural_key, version))""")
         db.execute("""CREATE TABLE IF NOT EXISTS quarantine (
             batch_id VARCHAR NOT NULL, row_number INTEGER NOT NULL, reason VARCHAR NOT NULL,
@@ -72,13 +72,19 @@ class Store:
         with self._connect() as db:
             db.execute("BEGIN TRANSACTION")
             try:
+                has_indicators = db.execute("""SELECT count(*) FROM information_schema.columns
+                    WHERE table_name = 'record_versions' AND column_name = 'indicators'""").fetchone()[0]
+                if not has_indicators:
+                    db.execute("""ALTER TABLE record_versions ADD COLUMN indicators
+                        VARCHAR[] DEFAULT []""")
                 rows = db.execute("""SELECT natural_key, version, raw_json FROM record_versions
                     WHERE source = 'ocorrencias'""").fetchall()
                 for natural_key, version, raw_json in rows:
                     record = normalize("ocorrencias", json.loads(raw_json))
-                    db.execute("""UPDATE record_versions SET nature = ?, category = ?
+                    db.execute("""UPDATE record_versions SET nature = ?, category = ?, indicators = ?
                         WHERE source = 'ocorrencias' AND natural_key = ? AND version = ?""",
-                               [record.nature, record.category, natural_key, version])
+                               [record.nature, record.category, list(record.indicators),
+                                natural_key, version])
                 db.execute("UPDATE source_types SET adapter_version = ?", [ADAPTER_VERSION])
                 db.execute("COMMIT")
             except Exception:
@@ -173,12 +179,13 @@ class Store:
                         else:
                             inserted += 1
                         db.execute("""INSERT INTO record_versions VALUES
-                            (?, ?, ?, ?, ?, NULL, true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                            (?, ?, ?, ?, ?, NULL, true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                                    [source, record.natural_key, version, row_hash, stamp, batch_id,
                                     json.dumps(row, ensure_ascii=False, sort_keys=True),
                                     record.event_date, record.year, record.municipality,
                                     record.occurrence, record.victim, record.nature,
-                                    record.category, record.eligible, record.reason])
+                                    record.category, record.eligible, record.reason,
+                                    list(record.indicators)])
                     for number, row, reason in rejected:
                         db.execute("INSERT INTO quarantine VALUES (?, ?, ?, ?)",
                                    [batch_id, number, reason, json.dumps(row, ensure_ascii=False)])
@@ -256,15 +263,17 @@ class Store:
             params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
         where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
-            rows = db.execute(f"""SELECT source, category, year, month(event_date) AS month,
+            rows = db.execute(f"""SELECT source, category, indicators, year,
+                month(event_date) AS month,
                 count(*) AS total FROM record_versions WHERE {where}
-                GROUP BY source, category, year, month ORDER BY year, month, source, category""",
+                GROUP BY source, category, indicators, year, month
+                ORDER BY year, month, source, category""",
                               params).fetchall()
             quarantine_count = db.execute("SELECT count(*) FROM quarantine").fetchone()[0]
         by_source = {source: 0 for source in SOURCES}
         monthly: dict[str, dict[str, int]] = {}
         categories: dict[str, dict[str, int]] = {}
-        for source, category, row_year, month, total in rows:
+        for source, category, _indicators, row_year, month, total in rows:
             by_source[source] += total
             period = f"{row_year:04d}-{month:02d}"
             monthly.setdefault(period, {})[source] = monthly.setdefault(period, {}).get(source, 0) + total
@@ -273,15 +282,18 @@ class Store:
         return {"by_source": by_source, "monthly": monthly, "categories": categories,
                 "quarantined_rows": quarantine_count,
                 "mvi_cad": by_source["mvi_cad"], "mvi_neac": by_source["mvi_neac"],
-                "cvp": sum(total for source, category, *_rest, total in rows
-                           if source == "ocorrencias" and category.startswith("CVP ")),
-                "tentativas": sum(total for source, category, *_rest, total in rows
-                                  if source == "ocorrencias" and category == "Tentativa de homicídio")}
+                "cvp": sum(total for source, _category, indicators, *_rest, total in rows
+                           if source == "ocorrencias" and "CVP" in indicators),
+                "tentativas": sum(total for source, _category, indicators, *_rest, total in rows
+                                  if source == "ocorrencias" and
+                                  "Tentativa de homicídio" in indicators),
+                "tco": sum(total for source, _category, indicators, *_rest, total in rows
+                           if source == "ocorrencias" and "TCO" in indicators)}
 
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,
-                category_prefix: str | None = None) -> dict:
+                category_prefix: str | None = None, indicator: str | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
         page, size = max(page, 1), min(max(size, 1), 100)
@@ -301,15 +313,18 @@ class Store:
         if category_prefix:
             clauses.append("starts_with(category, ?)")
             params.append(category_prefix)
+        if indicator:
+            clauses.append("list_contains(indicators, ?)")
+            params.append(indicator)
         where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
             total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}", params).fetchone()[0]
             rows = db.execute(f"""SELECT event_date, municipality, occurrence, victim, nature,
-                category, eligible, reason, version, raw_json FROM record_versions
+                category, eligible, reason, version, indicators, raw_json FROM record_versions
                 WHERE {where} ORDER BY event_date DESC, occurrence, victim
                 LIMIT ? OFFSET ?""", [*params, size, (page - 1) * size]).fetchall()
         columns = ("event_date", "municipality", "occurrence", "victim", "nature", "category",
-                   "eligible", "reason", "version")
+                   "eligible", "reason", "version", "indicators")
         return {"total": total, "page": page, "size": size,
                 "items": [dict(zip(columns, row[:-1])) | {
                     "solution": pick(json.loads(row[-1]), "solution") if source == "ocorrencias" else ""

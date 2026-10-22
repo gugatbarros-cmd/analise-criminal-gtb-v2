@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from gtb.indicators.rules import (
     cvp_class,
     death_confirmed,
+    elaborated_tco,
     event_date,
     homicide_attempt,
     key,
@@ -30,6 +31,7 @@ ALIASES = {
              "tipificacao no atendimento", "tipo de crime"),
     "solution": ("solucao da ocorrencia", "solucao ocorrencia", "solucao",
                  "desfecho", "providencia"),
+    "tco_solution": ("solucao da ocorrencia", "solucao ocorrencia", "solucao"),
     "age": ("idade", "idade da vitima"),
     "sex": ("sexo", "sexo da vitima"),
     "address": ("logradouro", "endereco"),
@@ -58,6 +60,7 @@ class Record:
     category: str
     eligible: bool
     reason: str
+    indicators: tuple[str, ...]
 
 
 def normalize(source: str, row: dict[str, str]) -> Record:
@@ -77,6 +80,7 @@ def normalize(source: str, row: dict[str, str]) -> Record:
     if not city:
         raise ValueError("Município ausente")
     if source.startswith("mvi_"):
+        indicators: tuple[str, ...] = ()
         if not (meaningful(victim) or meaningful(nic)):
             raise ValueError("Vítima sem identidade confiável")
         identity = key(nic) or key(victim)
@@ -103,6 +107,7 @@ def normalize(source: str, row: dict[str, str]) -> Record:
             raise ValueError("Número da ocorrência ausente; revisar chave natural")
         natural_key = f"{when.year}|{key(occurrence)}"
         category = ""
+        labels: list[str] = []
         if source == "ocorrencias":
             classification = " ".join(str(value) for column, value in row.items()
                                       if value and any(term in key(column) for term in
@@ -110,13 +115,19 @@ def normalize(source: str, row: dict[str, str]) -> Record:
                                        "tipodeocorrencia", "classificacao")))
             cvp = cvp_class(classification or nature)
             category = "CVP " + cvp if cvp else ""
+            if cvp:
+                labels.append("CVP")
             attempt_text = " ".join(str(value) for column, value in row.items()
                                     if value and any(term in key(column) for term in
                                     ("tipificacao", "tipicidade", "natureza", "classificacao",
                                      "relato", "historico", "narrativa", "descricao",
                                      "complemento", "solucao", "desfecho", "providencia")))
             if homicide_attempt(attempt_text or nature, pick(row, "solution")):
-                category = "Tentativa de homicídio"
+                labels.append("Tentativa de homicídio")
+                category = category or "Tentativa de homicídio"
+            if elaborated_tco(pick(row, "tco_solution")):
+                labels.append("TCO")
+        indicators = tuple(labels)
         eligible, reason = True, ""
     return Record(natural_key, when.isoformat(), when.year, city, occurrence, victim,
-                  nature, category, eligible, reason)
+                  nature, category, eligible, reason, indicators)

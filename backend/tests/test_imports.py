@@ -229,3 +229,44 @@ def test_previous_occurrences_gain_narrative_attempt_after_upgrade(tmp_path):
     upgraded = Store(path)
     assert upgraded.summary()["tentativas"] == 1
     assert len(list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))) == 1
+
+
+def test_tco_status_and_overlapping_indicators(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    base = {"Data": "05/01/2026", "Cidade": "Igaci"}
+    rows = [
+        base | {"Número da ocorrência": "1", "Natureza": "Perturbação do sossego",
+                "Solução da Ocorrência": "ELABOROU TCO (PM)"},
+        base | {"Número da ocorrência": "2", "Natureza": "Roubo consumado",
+                "Solução da Ocorrência": "ELABOROU TCO - PM"},
+        base | {"Número da ocorrência": "3", "Natureza": "Tentativa de homicídio",
+                "Solução da Ocorrência": "Elaborou TCO PM"},
+        base | {"Número da ocorrência": "4", "Natureza": "Perturbação do sossego",
+                "Solução da Ocorrência": "NÃO ELABOROU TCO (PM)"},
+        base | {"Número da ocorrência": "5", "Natureza": "Perturbação do sossego",
+                "Solução da Ocorrência": "TCO pendente"},
+    ]
+    store.import_file("ocorrencias", "tco.csv", csv_bytes(rows))
+    summary = store.summary(year=2026, municipality="Igaci")
+    assert (summary["tco"], summary["cvp"], summary["tentativas"]) == (3, 1, 1)
+    tco_rows = store.records("ocorrencias", indicator="TCO")
+    assert {item["occurrence"] for item in tco_rows["items"]} == {"1", "2", "3"}
+    assert store.records("ocorrencias", indicator="CVP")["total"] == 1
+    assert store.records("ocorrencias", indicator="Tentativa de homicídio")["total"] == 1
+    assert store.records("ocorrencias", year=2025, indicator="TCO")["total"] == 0
+
+
+def test_upgrade_adds_indicator_column_after_backup(tmp_path):
+    path = tmp_path / "data" / "gtb.duckdb"
+    store = Store(path)
+    row = {"Número da ocorrência": "1", "Data": "05/01/2026", "Cidade": "Igaci",
+           "Natureza": "Roubo", "Solução": "ELABOROU TCO (PM)"}
+    store.import_file("ocorrencias", "old.csv", csv_bytes([row]))
+    with store._connect() as db:
+        db.execute("ALTER TABLE record_versions DROP COLUMN indicators")
+        db.execute("UPDATE source_types SET adapter_version = '0.1.5'")
+    upgraded = Store(path)
+    assert upgraded.summary()["tco"] == 1
+    assert upgraded.summary()["cvp"] == 1
+    assert upgraded.records("ocorrencias", indicator="TCO")["total"] == 1
+    assert list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))
