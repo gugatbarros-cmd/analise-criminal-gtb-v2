@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo, local e independente do sistema legado em produção. A versão 0.1.11 oferece importação CSV/XLSX de teste, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas e TCO, relações paginadas, evolução e rankings TCO, perfis independentes de MVI por ano, município, classificação e meio declarado, ficha original de cada caso MVI com navegação por versões e andamento da implantação por fase. Não acessa CAD/Firebase nem publica dados.
+Projeto novo, local e independente do sistema legado em produção. A versão 0.1.12 oferece importação CSV/XLSX de teste, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados e visitas, relações paginadas, evolução e rankings das ações, perfis independentes de MVI e ficha original com navegação por versões. Não acessa CAD/Firebase nem publica dados.
 
 ## Requisitos
 
@@ -15,10 +15,10 @@ Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estive
 
 ## Estado
 
-Fases 2 e 3 em andamento: CSV/XLSX com versões, quarentena, backup antes do lote, filtros e indicadores básicos. O arquivo bruto e o banco ficam em `data/`, ignorados pelo Git. A API oferece `/sources`, `/imports`, `/imports/{id}/divergences`, `/indicators/summary` e `/records/{source}`. O upload usa `POST /imports/{source}` com corpo binário, cabeçalho `X-Filename` e `scope=partial|complete`. O limite é 30 MB. Arquivos completos sinalizam ausentes sem apagar registros. Arquivos XLS antigos ainda não são aceitos.
+Fases 2, 3 e 4 em andamento: CSV/XLSX com versões, quarentena, backup antes do lote, filtros e indicadores provisórios. O arquivo bruto e o banco ficam em `data/`, ignorados pelo Git. A API oferece `/sources`, `/imports`, `/imports/{id}/divergences`, `/indicators/summary`, `/indicators/operations/{kind}/analysis` e `/records/{source}`. O upload usa `POST /imports/{source}` com corpo binário, cabeçalho `X-Filename` e `scope=partial|complete`. O limite é 30 MB. Arquivos completos sinalizam ausentes sem apagar registros. Arquivos XLS antigos ainda não são aceitos.
 
 As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. Armas, drogas e guarnições têm apenas cadastro genérico no banco, sem adaptadores ou indicadores completos. Autenticação multiusuário, sincronização, relatórios, empacotamento e publicação também faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
 
-O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **50% concluído e 50% restante**; somente a Fase 1 está concluída.
+O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **53% concluído e 47% restante**; somente a Fase 1 está concluída.
 
 O código antigo continua dois diretórios acima e na URL de produção. Seu backup de código está em `../legacy-v4.6.256-2026-10-22.bundle`. O bundle não contém dados privados do navegador nem exportação atual do Firestore.

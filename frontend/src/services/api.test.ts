@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -92,5 +92,18 @@ describe('contrato de importação e indicadores', () => {
     await expect(getMviRecordDetail('mvi_neac', '2026|n1|v1', 1)).resolves.toMatchObject({ version: 1 })
     expect(request.mock.calls[0][0]).toContain('/mvi/mvi_neac/records/2026%7Cn1%7Cv1/versions')
     expect(request.mock.calls[1][0]).toContain('/mvi/mvi_neac/records/2026%7Cn1%7Cv1?version=1')
+  })
+
+  it('consulta mandados e visitas por indicador com filtros mestres', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 1, monthly: [], municipalities: [], natures: [] }) })
+    vi.stubGlobal('fetch', request)
+    await getOperationalAnalysis('Mandados', 2026, 'Igaci')
+    await getOperationalAnalysis('Visitas', 2025)
+    const warrants = new URL(request.mock.calls[0][0] as string)
+    const visits = new URL(request.mock.calls[1][0] as string)
+    expect(warrants.pathname).toBe('/indicators/operations/Mandados/analysis')
+    expect(warrants.searchParams.get('municipality')).toBe('Igaci')
+    expect(visits.pathname).toBe('/indicators/operations/Visitas/analysis')
+    expect(visits.searchParams.get('year')).toBe('2025')
   })
 })

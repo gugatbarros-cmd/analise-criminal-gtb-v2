@@ -11,12 +11,12 @@ from pathlib import Path
 
 import duckdb
 
-from gtb.indicators.rules import key, plain
+from gtb.indicators.rules import key, operational_action, plain
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-ADAPTER_VERSION = "0.1.6"
+ADAPTER_VERSION = "0.1.12"
 
 
 class Store:
@@ -288,13 +288,27 @@ class Store:
                                   if source == "ocorrencias" and
                                   "Tentativa de homicídio" in indicators),
                 "tco": sum(total for source, _category, indicators, *_rest, total in rows
-                           if source == "ocorrencias" and "TCO" in indicators)}
+                           if source == "ocorrencias" and "TCO" in indicators),
+                "mandados": sum(total for source, _category, indicators, *_rest, total in rows
+                                if source == "ocorrencias" and "Mandados" in indicators),
+                "visitas": sum(total for source, _category, indicators, *_rest, total in rows
+                              if source == "ocorrencias" and "Visitas" in indicators)}
 
     def tco_analysis(self, year: int | None = None,
                      municipality: str | None = None) -> dict:
+        return self._occurrence_analysis("TCO", year, municipality)
+
+    def operational_analysis(self, kind: str, year: int | None = None,
+                             municipality: str | None = None) -> dict:
+        if kind not in {"Mandados", "Visitas"}:
+            raise ValueError("Ação operacional desconhecida")
+        return self._occurrence_analysis(kind, year, municipality)
+
+    def _occurrence_analysis(self, indicator: str, year: int | None,
+                             municipality: str | None) -> dict:
         clauses = ["source = 'ocorrencias'", "is_current", "eligible",
-                   "list_contains(indicators, 'TCO')"]
-        params: list[object] = []
+                   "list_contains(indicators, ?)"]
+        params: list[object] = [indicator]
         if year:
             clauses.append("year = ?")
             params.append(year)
@@ -397,6 +411,8 @@ class Store:
                     "solution": pick(json.loads(row[-1]), "solution") if source == "ocorrencias" else "",
                     "instrument": declared_instrument(json.loads(row[-1]))
                     if source.startswith("mvi_") else "",
+                    "action_evidence": operational_action(json.loads(row[-1]), indicator)[1]
+                    if source == "ocorrencias" and indicator in {"Mandados", "Visitas"} else "",
                 } for row in rows]}
 
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:

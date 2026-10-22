@@ -136,3 +136,19 @@ def test_mvi_case_detail_keeps_sources_and_current_version_separate(tmp_path, mo
     assert client.get("/mvi/ocorrencias/records/example").status_code == 404
     assert client.get("/mvi/mvi_cad/records/inexistente").status_code == 404
     assert client.get("/mvi/mvi_cad/records/inexistente/versions").status_code == 404
+
+
+def test_operational_actions_api_keeps_filters_and_evidence(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    row = {"Número da ocorrência": "A-1", "Data": "05/01/2026", "Cidade": "Igaci",
+           "Natureza": "Cumprimento de mandado", "Relato": "Visita preventiva"}
+    assert client.post("/imports/ocorrencias", content=csv_bytes([row]),
+                       headers={"X-Filename": "actions.csv"}).status_code == 200
+    summary = client.get("/indicators/summary?year=2026&municipality=Igaci").json()
+    assert (summary["mandados"], summary["visitas"]) == (1, 1)
+    items = client.get("/records/ocorrencias?indicator=Mandados").json()["items"]
+    assert len(items) == 1 and items[0]["action_evidence"]
+    assert client.get("/indicators/operations/Mandados/analysis?year=2026").json()["total"] == 1
+    assert client.get("/indicators/operations/Visitas/analysis?year=2025").json()["total"] == 0
+    assert client.get("/indicators/operations/Outros/analysis").status_code == 404

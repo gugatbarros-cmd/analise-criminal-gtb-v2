@@ -12,6 +12,7 @@ from gtb.indicators.rules import (
     meaningful,
     mvi_class,
     mvi_instrument,
+    operational_action,
     victim_role,
 )
 
@@ -144,6 +145,9 @@ def normalize(source: str, row: dict[str, str]) -> Record:
                 category = category or "Tentativa de homicídio"
             if elaborated_tco(pick(row, "tco_solution")):
                 labels.append("TCO")
+            for action in ("Mandados", "Visitas"):
+                if operational_action(row, action)[0]:
+                    labels.append(action)
         indicators = tuple(labels)
         eligible, reason = True, ""
     return Record(natural_key, when.isoformat(), when.year, city, occurrence, victim,

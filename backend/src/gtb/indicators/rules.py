@@ -43,6 +43,54 @@ def mvi_instrument(value: str) -> str:
     return "Não identificado"
 
 
+def operational_action(row: dict[str, str], kind: str) -> tuple[bool, str]:
+    """Reconhece mandados cumpridos e visitas realizadas na base geral."""
+    if kind not in {"Mandados", "Visitas"}:
+        raise ValueError("Ação operacional desconhecida")
+    relevant = ("natureza", "tipificacao", "tipicidade", "classificacao", "solucao",
+                "relato", "historico", "narrativa", "descricao", "complemento",
+                "providencia", "desfecho", "modalidade", "acao")
+    text = plain(" ".join(str(value) for column, value in row.items()
+                          if value and any(term in key(column) for term in relevant)))
+    excluded = (r"nao\s+(?:cumprid[oa]|realizad[oa]|localizad[oa]|encontrad[oa])|"
+                r"sem\s+exito|cancelad[oa]|improcedente|trote|nada\s+constatado|"
+                r"fato\s+nao\s+constatado")
+    if kind == "Mandados":
+        excluded += (r"|mandado\s+(?:apenas\s+)?(?:expedid[oa]|solicitad[oa]|"
+                     r"pendente|a\s+cumprir)|(?:expedid[oa]|solicitad[oa]|"
+                     r"pendente|a\s+cumprir)\s+mandado")
+    if re.search(excluded, text):
+        return False, "Ação não realizada, sem êxito ou pendente"
+    if kind == "Mandados":
+        rules = (
+            (r"\b(?:cumprimento|execucao)\s+(?:d[eo]|ao)\s+mandado\b",
+             "Cumprimento ou execução de mandado"),
+            (r"\b(?:deu|foi\s+dado)\s+cumprimento\s+ao\s+mandado\b",
+             "Cumprimento confirmado no relato"),
+            ((r"\bmandado\s+(?:judicial|de\s+prisao|de\s+busca(?:\s+e\s+apreensao)?)\b"
+              r".{0,100}\b(?:cumprid[oa]|executad[oa]|efetivad[oa]|concluid[oa])\b"),
+             "Mandado registrado como executado"),
+            ((r"\b(?:cumprid[oa]|executad[oa]|efetivad[oa]|concluid[oa])\b"
+              r".{0,100}\bmandado\b"), "Execução de mandado confirmada"),
+            ((r"\bmandado\b.{0,140}\b(?:prisao\s+efetuada|preso|capturado|"
+              r"conduzido|localizado\s+e\s+preso|com\s+exito)\b"),
+             "Mandado com resultado operacional efetivo"),
+        )
+    else:
+        rules = (
+            (r"\bvisita\s+orientativa\b", "Visita orientativa registrada"),
+            (r"\bvisita\s+preventiva\b", "Visita preventiva registrada"),
+            (r"\bvisita\s+comunitaria\b", "Visita comunitária registrada"),
+            (r"\bvisita\s+tranquilizadora\b", "Visita tranquilizadora registrada"),
+            (r"\bvisita\s+(?:de\s+)?acompanhamento\b",
+             "Visita de acompanhamento registrada"),
+        )
+    for pattern, reason in rules:
+        if re.search(pattern, text):
+            return True, reason
+    return False, "Sem confirmação textual da ação"
+
+
 def mvi_class(nature: str) -> str | None:
     text = plain(nature)
     if re.search(r"tentativa|tentado|tentada|culpos|transito|intervencao policial|resistencia", text):

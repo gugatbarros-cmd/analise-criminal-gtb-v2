@@ -372,3 +372,56 @@ def test_mvi_declared_instruments_respect_source_filters_and_revisions(tmp_path)
     records = store.records("mvi_cad")["items"]
     assert next(item for item in records if item["occurrence"] == "CAD-001")[
         "instrument"] == "Arma branca"
+
+
+def test_warrants_and_visits_are_independent_auditable_occurrence_flags(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    base = {"Data": "05/01/2026", "Cidade": "Igaci", "Natureza": "",
+            "Solução": "", "Relato": "", "Nome": ""}
+    rows = [
+        base | {"Número da ocorrência": "1", "Natureza": "Cumprimento de mandado"},
+        base | {"Número da ocorrência": "2", "Natureza": "Visita preventiva"},
+        base | {"Número da ocorrência": "3", "Natureza": "Cumprimento de mandado",
+                "Relato": "Visita orientativa realizada", "Solução": "Elaborou TCO PM"},
+        base | {"Número da ocorrência": "4", "Natureza": "Mandado pendente"},
+        base | {"Número da ocorrência": "5", "Natureza": "Visita preventiva",
+                "Solução": "Não realizada"},
+        base | {"Número da ocorrência": "6", "Cidade": "Palmeira dos Índios",
+                "Natureza": "Mandado de prisão", "Relato": "Preso após ordem judicial"},
+        base | {"Número da ocorrência": "7", "Data": "05/01/2025",
+                "Natureza": "Visita comunitária"},
+        base | {"Número da ocorrência": "8", "Nome": "Visita Orientativa",
+                "Natureza": "Atendimento comum"},
+    ]
+    store.import_file("ocorrencias", "operacoes.csv", csv_bytes(rows))
+    summary = store.summary()
+    assert (summary["mandados"], summary["visitas"], summary["tco"]) == (3, 3, 1)
+    mandados = store.records("ocorrencias", indicator="Mandados")
+    visitas = store.records("ocorrencias", indicator="Visitas")
+    assert {item["occurrence"] for item in mandados["items"]} == {"1", "3", "6"}
+    assert {item["occurrence"] for item in visitas["items"]} == {"2", "3", "7"}
+    both = next(item for item in mandados["items"] if item["occurrence"] == "3")
+    assert both["indicators"] == ["TCO", "Mandados", "Visitas"]
+    assert "cumprimento" in both["action_evidence"].lower()
+    filtered = store.operational_analysis("Mandados", 2026, "Igaci")
+    assert filtered["total"] == 2
+    assert filtered["monthly"] == [{"period": "2026-01", "total": 2}]
+    assert filtered["municipalities"] == [{"name": "Igaci", "total": 2}]
+    assert filtered["natures"] == [{"name": "Cumprimento de mandado", "total": 2}]
+    assert store.operational_analysis("Visitas", 2026, "Igaci")["total"] == 2
+    assert store.operational_analysis("Visitas", 2025)["total"] == 1
+
+
+def test_adapter_upgrade_reclassifies_old_operational_records(tmp_path):
+    path = tmp_path / "data" / "gtb.duckdb"
+    store = Store(path)
+    store.import_file("ocorrencias", "old.csv", csv_bytes([{
+        "Número da ocorrência": "A-1", "Data": "05/01/2026", "Cidade": "Igaci",
+        "Natureza": "Visita orientativa", "Relato": "Cumprimento de mandado",
+    }]))
+    with store._connect() as db:
+        db.execute("UPDATE source_types SET adapter_version = '0.1.6'")
+        db.execute("UPDATE record_versions SET indicators = []")
+    upgraded = Store(path)
+    assert (upgraded.summary()["mandados"], upgraded.summary()["visitas"]) == (1, 1)
+    assert list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))
