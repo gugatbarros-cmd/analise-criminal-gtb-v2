@@ -270,3 +270,34 @@ def test_upgrade_adds_indicator_column_after_backup(tmp_path):
     assert upgraded.summary()["cvp"] == 1
     assert upgraded.records("ocorrencias", indicator="TCO")["total"] == 1
     assert list((tmp_path / "data" / "backups").glob("before-adapter-*.duckdb"))
+
+
+def test_tco_month_city_and_nature_follow_master_filters(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    rows = [
+        {"Número da ocorrência": "1", "Data": "05/01/2026", "Cidade": "Igaci",
+         "Natureza": "Perturbação do sossego", "Solução": "ELABOROU TCO (PM)"},
+        {"Número da ocorrência": "2", "Data": "06/02/2026", "Cidade": "Igaci",
+         "Natureza": "Perturbação do sossego", "Solução": "ELABOROU TCO (PM)"},
+        {"Número da ocorrência": "3", "Data": "07/02/2026", "Cidade": "Palmeira dos Índios",
+         "Natureza": "Ameaça", "Solução": "ELABOROU TCO (PM)"},
+        {"Número da ocorrência": "4", "Data": "08/01/2025", "Cidade": "Igaci",
+         "Natureza": "Ameaça", "Solução": "ELABOROU TCO (PM)"},
+        {"Número da ocorrência": "5", "Data": "09/02/2026", "Cidade": "Igaci",
+         "Natureza": "Roubo", "Solução": "NÃO ELABOROU TCO (PM)"},
+    ]
+    store.import_file("ocorrencias", "tco-trend.csv", csv_bytes(rows))
+    all_years = store.tco_analysis()
+    assert all_years["total"] == 4
+    assert all_years["monthly"] == [
+        {"period": "2025-01", "total": 1},
+        {"period": "2026-01", "total": 1},
+        {"period": "2026-02", "total": 2},
+    ]
+    filtered = store.tco_analysis(year=2026, municipality="Igaci")
+    assert filtered["total"] == store.summary(year=2026, municipality="Igaci")["tco"] == 2
+    assert filtered["monthly"] == [
+        {"period": "2026-01", "total": 1}, {"period": "2026-02", "total": 1}
+    ]
+    assert filtered["municipalities"] == [{"name": "Igaci", "total": 2}]
+    assert filtered["natures"] == [{"name": "Perturbação do sossego", "total": 2}]

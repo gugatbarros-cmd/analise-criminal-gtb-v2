@@ -36,11 +36,11 @@ function App() {
       if (!file) throw new Error('Selecione um arquivo CSV ou XLSX.')
       return upload(source, file, scope)
     },
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }) },
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }); void queryClient.invalidateQueries({ queryKey: ['tco-analysis'] }) },
   })
 
   return <main className="shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Local · v{health.data?.version || '0.1.6'}</span></header>
+    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Local · v{health.data?.version || '0.1.7'}</span></header>
     <section className="hero"><div><p className="eyebrow">Ambiente paralelo de validação</p><h1>Dados separados. Resultados auditáveis.</h1><p>Importe bases de teste, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'API local indisponível' : 'API local ativa'}</div></section>
     <div className="notice">Indicadores provisórios: regras extraídas do legado. A paridade ainda precisa ser conferida com amostras anonimizadas e números oficiais.</div>
     <ProjectProgress />

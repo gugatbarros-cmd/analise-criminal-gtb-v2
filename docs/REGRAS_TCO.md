@@ -1,4 +1,4 @@
-# TCO no sistema novo (versão 0.1.6)
+# TCO no sistema novo (versão 0.1.7)
 
 O contrato foi extraído de `../../../docs/regras-indicadores.md` e das funções `isElaborouTcoStatus` e `getTcoRows` em `../../../assets/js/app.js` do legado 4.6.256. A unidade é a ocorrência por CAD/BO e ano na base geral.
 
@@ -9,4 +9,6 @@ O contrato foi extraído de `../../../docs/regras-indicadores.md` e das funçõe
 
 Na primeira abertura da versão 0.1.6, o banco anterior recebe a coluna de indicadores, após cópia em `data/backups/before-adapter-*.duckdb`. As classificações derivadas são recalculadas a partir dos registros originais; arquivos brutos e histórico de versões são preservados.
 
-Faltam tipologias, série mensal, distribuição territorial, busca por CAD/BO, relatórios e conferência com amostras anonimizadas e totais do legado. Valores contraditórios em mais de uma coluna de solução precisam de validação antes de declarar paridade.
+Faltam busca por CAD/BO, relatórios, comparação anual por períodos equivalentes e conferência com amostras anonimizadas e totais do legado. Valores contraditórios em mais de uma coluna de solução precisam de validação antes de declarar paridade.
+
+Na versão 0.1.7, `GET /indicators/tco/analysis` acrescenta a série por mês do fato e os dez municípios e naturezas mais frequentes. O endpoint e a tela aplicam os filtros mestres de ano e município aos registros atuais elegíveis com marcador TCO. Meses sem ocorrência não são preenchidos artificialmente.

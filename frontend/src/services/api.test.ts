@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getRecords, getSummary, upload } from './api'
+import { getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -47,5 +47,16 @@ describe('contrato de importação e indicadores', () => {
     expect(result.items[0].indicators).toEqual(['CVP', 'TCO'])
     const url = new URL(request.mock.calls[0][0] as string)
     expect(url.searchParams.get('indicator')).toBe('TCO')
+  })
+
+  it('consulta a série e os rankings TCO no recorte mestre', async () => {
+    const analysis = { total: 1, monthly: [{ period: '2026-01', total: 1 }], municipalities: [], natures: [] }
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => analysis })
+    vi.stubGlobal('fetch', request)
+    await expect(getTcoAnalysis(2026, 'Igaci')).resolves.toEqual(analysis)
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.pathname).toBe('/indicators/tco/analysis')
+    expect(url.searchParams.get('year')).toBe('2026')
+    expect(url.searchParams.get('municipality')).toBe('Igaci')
   })
 })

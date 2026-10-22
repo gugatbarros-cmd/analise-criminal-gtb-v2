@@ -290,6 +290,36 @@ class Store:
                 "tco": sum(total for source, _category, indicators, *_rest, total in rows
                            if source == "ocorrencias" and "TCO" in indicators)}
 
+    def tco_analysis(self, year: int | None = None,
+                     municipality: str | None = None) -> dict:
+        clauses = ["source = 'ocorrencias'", "is_current", "eligible",
+                   "list_contains(indicators, 'TCO')"]
+        params: list[object] = []
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        where = " AND ".join(clauses)
+        with self.lock, self._connect() as db:
+            months = db.execute(f"""SELECT year, month(event_date), count(*)
+                FROM record_versions WHERE {where}
+                GROUP BY year, month(event_date) ORDER BY year, month(event_date)""",
+                                params).fetchall()
+            cities = db.execute(f"""SELECT municipality, count(*) AS total
+                FROM record_versions WHERE {where}
+                GROUP BY municipality ORDER BY total DESC, municipality LIMIT 10""",
+                                params).fetchall()
+            natures = db.execute(f"""SELECT coalesce(nullif(trim(nature), ''), 'Não informada'),
+                count(*) AS total FROM record_versions WHERE {where}
+                GROUP BY 1 ORDER BY total DESC, 1 LIMIT 10""", params).fetchall()
+        return {"total": sum(total for _year, _month, total in months),
+                "monthly": [{"period": f"{row_year:04d}-{month:02d}", "total": total}
+                            for row_year, month, total in months],
+                "municipalities": [{"name": name, "total": total} for name, total in cities],
+                "natures": [{"name": name, "total": total} for name, total in natures]}
+
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,

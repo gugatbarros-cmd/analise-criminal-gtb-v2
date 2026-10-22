@@ -79,3 +79,8 @@ def test_tco_api_filter_keeps_overlapping_cvp(tmp_path, monkeypatch):
     assert result.status_code == 200
     assert result.json()["total"] == 1
     assert result.json()["items"][0]["indicators"] == ["CVP", "TCO"]
+    analysis = client.get("/indicators/tco/analysis?year=2026&municipality=Igaci")
+    assert analysis.status_code == 200
+    assert analysis.json()["total"] == 1
+    assert analysis.json()["monthly"] == [{"period": "2026-01", "total": 1}]
+    assert client.get("/indicators/tco/analysis?year=2025").json()["total"] == 0

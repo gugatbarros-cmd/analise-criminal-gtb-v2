@@ -4,6 +4,7 @@ export type Batch = { id: string; source: Source; filename: string; imported_at:
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
 export type RecordItem = { event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; indicators: string[] }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
+export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 async function json<T>(response: Response): Promise<T> {
@@ -19,6 +20,13 @@ export async function getSummary(year?: number, municipality?: string): Promise<
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   return json(await fetch(`${baseUrl}/indicators/summary?${params}`))
+}
+
+export async function getTcoAnalysis(year?: number, municipality?: string): Promise<TcoAnalysis> {
+  const params = new URLSearchParams()
+  if (year) params.set('year', String(year))
+  if (municipality) params.set('municipality', municipality)
+  return json(await fetch(`${baseUrl}/indicators/tco/analysis?${params}`))
 }
 
 export async function getBatches(): Promise<Batch[]> {
