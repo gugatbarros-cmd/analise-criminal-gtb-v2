@@ -386,11 +386,11 @@ class Store:
         where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
             total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}", params).fetchone()[0]
-            rows = db.execute(f"""SELECT event_date, municipality, occurrence, victim, nature,
+            rows = db.execute(f"""SELECT natural_key, event_date, municipality, occurrence, victim, nature,
                 category, eligible, reason, version, indicators, raw_json FROM record_versions
                 WHERE {where} ORDER BY event_date DESC, occurrence, victim
                 LIMIT ? OFFSET ?""", [*params, size, (page - 1) * size]).fetchall()
-        columns = ("event_date", "municipality", "occurrence", "victim", "nature", "category",
+        columns = ("natural_key", "event_date", "municipality", "occurrence", "victim", "nature", "category",
                    "eligible", "reason", "version", "indicators")
         return {"total": total, "page": page, "size": size,
                 "items": [dict(zip(columns, row[:-1])) | {
@@ -398,3 +398,19 @@ class Store:
                     "instrument": declared_instrument(json.loads(row[-1]))
                     if source.startswith("mvi_") else "",
                 } for row in rows]}
+
+    def mvi_record_detail(self, source: str, natural_key: str) -> dict | None:
+        if source not in {"mvi_cad", "mvi_neac"}:
+            raise ValueError("Fonte MVI desconhecida")
+        with self.lock, self._connect() as db:
+            row = db.execute("""SELECT occurrence, victim, event_date, municipality,
+                category, eligible, reason, version, batch_id, raw_json
+                FROM record_versions WHERE source = ? AND natural_key = ? AND is_current""",
+                             [source, natural_key]).fetchone()
+        if row is None:
+            return None
+        columns = ("occurrence", "victim", "event_date", "municipality", "category",
+                   "eligible", "reason", "version", "batch_id")
+        return dict(zip(columns, row[:-1])) | {
+            "source": source, "natural_key": natural_key, "fields": json.loads(row[-1]),
+        }

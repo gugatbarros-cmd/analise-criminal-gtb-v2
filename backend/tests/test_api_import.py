@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from test_imports import cad, csv_bytes
+from test_imports import cad, csv_bytes, neac
 
 from gtb.api import main
 from gtb.db.store import Store
@@ -95,3 +95,31 @@ def test_mvi_analysis_api_rejects_other_sources(tmp_path, monkeypatch):
     assert client.get("/indicators/mvi/mvi_cad/analysis?year=2026").json()["total"] == 1
     assert client.get("/indicators/mvi/mvi_neac/analysis?year=2026").json()["total"] == 0
     assert client.get("/indicators/mvi/ocorrencias/analysis").status_code == 404
+
+
+def test_mvi_case_detail_keeps_sources_and_current_version_separate(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    original = cad(**{"Instrumento empregado": "Revólver", "Relato": "Texto CAD original"})
+    assert client.post("/imports/mvi_cad", content=csv_bytes([original]),
+                       headers={"X-Filename": "cad.csv"}).status_code == 200
+    assert client.post("/imports/mvi_neac", content=csv_bytes([
+        neac(**{"Nº NIC": "NIC-111", "Instrumento": "Faca",
+                "Relato": "Texto NEAC original"}),
+    ]), headers={"X-Filename": "neac.csv"}).status_code == 200
+    cad_key = client.get("/records/mvi_cad").json()["items"][0]["natural_key"]
+    neac_key = client.get("/records/mvi_neac").json()["items"][0]["natural_key"]
+    assert cad_key == neac_key
+    cad_detail = client.get(f"/mvi/mvi_cad/records/{cad_key}").json()
+    neac_detail = client.get(f"/mvi/mvi_neac/records/{neac_key}").json()
+    assert cad_detail["fields"]["Relato"] == "Texto CAD original"
+    assert neac_detail["fields"]["Relato"] == "Texto NEAC original"
+    assert cad_detail["version"] == 1
+    assert client.post("/imports/mvi_cad", content=csv_bytes([
+        original | {"Relato": "Texto CAD retificado"},
+    ]), headers={"X-Filename": "cad-revisado.csv"}).status_code == 200
+    revised = client.get(f"/mvi/mvi_cad/records/{cad_key}").json()
+    assert revised["fields"]["Relato"] == "Texto CAD retificado"
+    assert revised["version"] == 2
+    assert client.get("/mvi/ocorrencias/records/example").status_code == 404
+    assert client.get("/mvi/mvi_cad/records/inexistente").status_code == 404

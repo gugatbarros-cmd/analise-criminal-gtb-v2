@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getMviAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getMviAnalysis, getMviRecordDetail, getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -73,5 +73,13 @@ describe('contrato de importação e indicadores', () => {
     expect(neac.pathname).toBe('/indicators/mvi/mvi_neac/analysis')
     expect(neac.searchParams.get('year')).toBe('2025')
     expect(neac.searchParams.has('municipality')).toBe(false)
+  })
+
+  it('busca a ficha original do caso pela fonte e chave codificada', async () => {
+    const detail = { source: 'mvi_cad', version: 2, fields: { Relato: 'Texto retificado' } }
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => detail })
+    vi.stubGlobal('fetch', request)
+    await expect(getMviRecordDetail('mvi_cad', '2026|cad 1|nic 2')).resolves.toEqual(detail)
+    expect(request.mock.calls[0][0]).toContain('/mvi/mvi_cad/records/2026%7Ccad%201%7Cnic%202')
   })
 })

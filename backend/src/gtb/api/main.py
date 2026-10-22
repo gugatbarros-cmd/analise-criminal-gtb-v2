@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 
-APP_VERSION = "0.1.9"
+APP_VERSION = "0.1.10"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -96,3 +96,14 @@ def records(source: str, page: int = 1, size: int = 20, year: int | None = None,
                              category_prefix, indicator)
     except ValueError as error:
         raise HTTPException(404, str(error)) from error
+
+
+@app.get("/mvi/{source}/records/{natural_key}")
+def mvi_record_detail(source: str, natural_key: str) -> dict:
+    try:
+        detail = store.mvi_record_detail(source, natural_key)
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from error
+    if detail is None:
+        raise HTTPException(404, "Caso MVI não encontrado")
+    return detail

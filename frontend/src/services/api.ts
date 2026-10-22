@@ -2,11 +2,12 @@ export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas'
 export type Summary = { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
 export type Batch = { id: string; source: Source; filename: string; imported_at: string; row_count: number; inserted: number; updated: number; unchanged: number; quarantined: number; differences: number; status: string }
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
-export type RecordItem = { event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; indicators: string[] }
+export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; indicators: string[] }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
 export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[]; instruments: { name: string; total: number }[] }
+export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; fields: Record<string, string> }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 async function json<T>(response: Response): Promise<T> {
@@ -36,6 +37,10 @@ export async function getMviAnalysis(source: MviSource, year?: number, municipal
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   return json(await fetch(`${baseUrl}/indicators/mvi/${source}/analysis?${params}`))
+}
+
+export async function getMviRecordDetail(source: MviSource, naturalKey: string): Promise<MviRecordDetail> {
+  return json(await fetch(`${baseUrl}/mvi/${source}/records/${encodeURIComponent(naturalKey)}`))
 }
 
 export async function getBatches(): Promise<Batch[]> {
