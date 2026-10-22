@@ -21,6 +21,6 @@ export function SourceTable({ source, active }: { source: MviSource; active: boo
     {records.isPending && active && <p className="empty">Carregando registros…</p>}
     {records.data?.total === 0 && <p className="empty">Nenhum registro elegível neste filtro.</p>}
     {!!records.data?.total && <><div className="table-scroll"><table><thead><tr><th>Data</th><th>Ocorrência</th><th>Vítima</th><th>Município</th><th>Classificação</th><th>Meio declarado</th><th>Ficha</th></tr></thead><tbody>{records.data.items.map(item => <tr key={item.natural_key}><td>{item.event_date}</td><td>{item.occurrence}</td><td>{item.victim}</td><td>{item.municipality}</td><td>{item.category}</td><td>{item.instrument}</td><td><button type="button" aria-label={`Abrir ficha de ${item.victim}`} onClick={() => setSelectedKey(item.natural_key)}>Ver ficha</button></td></tr>)}</tbody></table></div><div className="pagination"><span>{records.data.total} vítima(s) · página {page}</span><div><button type="button" disabled={page <= 1} onClick={() => { setPage(value => value - 1); setSelectedKey(null) }}>Anterior</button><button type="button" disabled={page * 20 >= records.data.total} onClick={() => { setPage(value => value + 1); setSelectedKey(null) }}>Próxima</button></div></div></>}
-    {selectedKey && <MviRecordDetail source={source} naturalKey={selectedKey} onClose={() => setSelectedKey(null)} />}
+    {selectedKey && <MviRecordDetail key={`${source}:${selectedKey}`} source={source} naturalKey={selectedKey} onClose={() => setSelectedKey(null)} />}
   </div>
 }

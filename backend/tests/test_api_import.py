@@ -121,5 +121,18 @@ def test_mvi_case_detail_keeps_sources_and_current_version_separate(tmp_path, mo
     revised = client.get(f"/mvi/mvi_cad/records/{cad_key}").json()
     assert revised["fields"]["Relato"] == "Texto CAD retificado"
     assert revised["version"] == 2
+    assert revised["is_current"] is True
+    cad_versions = client.get(f"/mvi/mvi_cad/records/{cad_key}/versions").json()["items"]
+    neac_versions = client.get(f"/mvi/mvi_neac/records/{neac_key}/versions").json()["items"]
+    assert [(item["version"], item["is_current"]) for item in cad_versions] == [
+        (2, True), (1, False),
+    ]
+    assert [(item["version"], item["is_current"]) for item in neac_versions] == [(1, True)]
+    old = client.get(f"/mvi/mvi_cad/records/{cad_key}?version=1").json()
+    assert old["fields"]["Relato"] == "Texto CAD original"
+    assert old["is_current"] is False
+    assert old["batch_id"] != revised["batch_id"]
+    assert client.get(f"/mvi/mvi_cad/records/{cad_key}?version=3").status_code == 404
     assert client.get("/mvi/ocorrencias/records/example").status_code == 404
     assert client.get("/mvi/mvi_cad/records/inexistente").status_code == 404
+    assert client.get("/mvi/mvi_cad/records/inexistente/versions").status_code == 404

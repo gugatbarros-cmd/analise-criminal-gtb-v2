@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getMviAnalysis, getMviRecordDetail, getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -81,5 +81,16 @@ describe('contrato de importação e indicadores', () => {
     vi.stubGlobal('fetch', request)
     await expect(getMviRecordDetail('mvi_cad', '2026|cad 1|nic 2')).resolves.toEqual(detail)
     expect(request.mock.calls[0][0]).toContain('/mvi/mvi_cad/records/2026%7Ccad%201%7Cnic%202')
+  })
+
+  it('consulta versões anteriores sem mudar a fonte nem a chave do caso', async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: [{ version: 2, is_current: true }, { version: 1, is_current: false }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ source: 'mvi_neac', version: 1, is_current: false }) })
+    vi.stubGlobal('fetch', request)
+    await expect(getMviRecordVersions('mvi_neac', '2026|n1|v1')).resolves.toHaveLength(2)
+    await expect(getMviRecordDetail('mvi_neac', '2026|n1|v1', 1)).resolves.toMatchObject({ version: 1 })
+    expect(request.mock.calls[0][0]).toContain('/mvi/mvi_neac/records/2026%7Cn1%7Cv1/versions')
+    expect(request.mock.calls[1][0]).toContain('/mvi/mvi_neac/records/2026%7Cn1%7Cv1?version=1')
   })
 })

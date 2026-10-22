@@ -399,18 +399,35 @@ class Store:
                     if source.startswith("mvi_") else "",
                 } for row in rows]}
 
-    def mvi_record_detail(self, source: str, natural_key: str) -> dict | None:
+    def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:
         if source not in {"mvi_cad", "mvi_neac"}:
             raise ValueError("Fonte MVI desconhecida")
         with self.lock, self._connect() as db:
+            rows = db.execute("""SELECT version, is_current, valid_from, valid_to,
+                batch_id, eligible, category FROM record_versions
+                WHERE source = ? AND natural_key = ? ORDER BY version DESC""",
+                              [source, natural_key]).fetchall()
+        columns = ("version", "is_current", "valid_from", "valid_to", "batch_id",
+                   "eligible", "category")
+        return [dict(zip(columns, row)) for row in rows]
+
+    def mvi_record_detail(self, source: str, natural_key: str,
+                          version: int | None = None) -> dict | None:
+        if source not in {"mvi_cad", "mvi_neac"}:
+            raise ValueError("Fonte MVI desconhecida")
+        where = "version = ?" if version is not None else "is_current"
+        params: list[object] = [source, natural_key]
+        if version is not None:
+            params.append(version)
+        with self.lock, self._connect() as db:
             row = db.execute("""SELECT occurrence, victim, event_date, municipality,
-                category, eligible, reason, version, batch_id, raw_json
-                FROM record_versions WHERE source = ? AND natural_key = ? AND is_current""",
-                             [source, natural_key]).fetchone()
+                category, eligible, reason, version, batch_id, is_current, raw_json
+                FROM record_versions WHERE source = ? AND natural_key = ? AND """ + where,
+                             params).fetchone()
         if row is None:
             return None
         columns = ("occurrence", "victim", "event_date", "municipality", "category",
-                   "eligible", "reason", "version", "batch_id")
+                   "eligible", "reason", "version", "batch_id", "is_current")
         return dict(zip(columns, row[:-1])) | {
             "source": source, "natural_key": natural_key, "fields": json.loads(row[-1]),
         }

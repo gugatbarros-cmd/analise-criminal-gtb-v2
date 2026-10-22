@@ -7,7 +7,8 @@ export type RecordPage = { total: number; page: number; size: number; items: Rec
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
 export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[]; instruments: { name: string; total: number }[] }
-export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; fields: Record<string, string> }
+export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; is_current: boolean; fields: Record<string, string> }
+export type MviRecordVersion = { version: number; is_current: boolean; valid_from: string; valid_to: string | null; batch_id: string; eligible: boolean; category: string }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 async function json<T>(response: Response): Promise<T> {
@@ -39,8 +40,14 @@ export async function getMviAnalysis(source: MviSource, year?: number, municipal
   return json(await fetch(`${baseUrl}/indicators/mvi/${source}/analysis?${params}`))
 }
 
-export async function getMviRecordDetail(source: MviSource, naturalKey: string): Promise<MviRecordDetail> {
-  return json(await fetch(`${baseUrl}/mvi/${source}/records/${encodeURIComponent(naturalKey)}`))
+export async function getMviRecordDetail(source: MviSource, naturalKey: string, version?: number): Promise<MviRecordDetail> {
+  const url = `${baseUrl}/mvi/${source}/records/${encodeURIComponent(naturalKey)}`
+  return json(await fetch(version === undefined ? url : `${url}?version=${version}`))
+}
+
+export async function getMviRecordVersions(source: MviSource, naturalKey: string): Promise<MviRecordVersion[]> {
+  const response = await json<{ items: MviRecordVersion[] }>(await fetch(`${baseUrl}/mvi/${source}/records/${encodeURIComponent(naturalKey)}/versions`))
+  return response.items
 }
 
 export async function getBatches(): Promise<Batch[]> {
