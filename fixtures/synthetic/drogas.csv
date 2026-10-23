@@ -1,0 +1,5 @@
+ID OCOR DESPC ENVL DROG;Número da ocorrência;Data apreensão;Cidade;Tipo de droga;Quantidade apreendida;Unidade de medida;Local da apreensão
+DRG-SYN-001;DRG-BO-1;09/01/2026;Igaci;Maconha;500;g;Via pública
+DRG-SYN-002;DRG-BO-2;14/02/2026;Igaci;Cocaína;0,5;kg;Residência
+DRG-SYN-003;DRG-BO-3;03/03/2026;Palmeira dos Índios;Crack;100;mg;Via pública
+DRG-SYN-004;DRG-BO-4;04/03/2026;Tanque d'Arca;Ecstasy;12;comprimidos;Bar

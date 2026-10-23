@@ -13,6 +13,7 @@ from pathlib import Path
 import duckdb
 
 from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
+from gtb.indicators.drugs import drug_field, drug_quantity, drug_weight_grams
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
@@ -487,6 +488,48 @@ class Store:
                           sorted(group.items(), key=lambda item: (-item[1], item[0]))[:10]]
                    for name, group in groups.items()}}
 
+    def drugs_analysis(self, year: int | None = None,
+                       municipality: str | None = None) -> dict:
+        clauses = ["source = 'drogas'", "is_current", "eligible"]
+        params: list[object] = []
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        with self.lock, self._connect() as db:
+            rows = db.execute(f"""SELECT raw_json, event_date, municipality, category
+                FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
+        monthly: dict[str, int] = {}
+        groups: dict[str, dict[str, int]] = {name: {} for name in
+                                            ("types", "municipalities", "locations")}
+        weights: dict[str, float] = {}
+        total_weight = 0.0
+        weighted_records = 0
+        for raw_json, event_date, city, category in rows:
+            row = json.loads(raw_json)
+            month = event_date.strftime("%Y-%m")
+            monthly[month] = monthly.get(month, 0) + 1
+            location = drug_field(row, "location") or "Não informado"
+            for group, value in zip(groups.values(), (category, city, location)):
+                group[value] = group.get(value, 0) + 1
+            weight = drug_weight_grams(row)
+            if weight is not None:
+                weighted_records += 1
+                total_weight += weight
+                weights[category] = weights.get(category, 0) + weight
+        return {"total": len(rows), "total_weight_grams": round(total_weight, 3),
+                "weighted_records": weighted_records,
+                "monthly": [{"period": period, "total": count}
+                            for period, count in sorted(monthly.items())],
+                **{name: [{"name": value, "total": count} for value, count in
+                          sorted(group.items(), key=lambda item: (-item[1], item[0]))[:10]]
+                   for name, group in groups.items()},
+                "weights_by_type": [{"name": name, "grams": round(grams, 3)}
+                                    for name, grams in sorted(weights.items(),
+                                                              key=lambda item: (-item[1], item[0]))]}
+
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,
@@ -534,6 +577,14 @@ class Store:
                     "arm_caliber": arm_field(json.loads(row[-1]), "caliber")
                     if source == "armas" else None,
                     "arm_seized": arm_seized(json.loads(row[-1])) if source == "armas" else None,
+                    "drug_quantity": drug_quantity(json.loads(row[-1]))
+                    if source == "drogas" else None,
+                    "drug_unit": drug_field(json.loads(row[-1]), "unit")
+                    if source == "drogas" else None,
+                    "drug_weight_grams": drug_weight_grams(json.loads(row[-1]))
+                    if source == "drogas" else None,
+                    "drug_location": drug_field(json.loads(row[-1]), "location")
+                    if source == "drogas" else None,
                 } for row in rows]}
 
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:

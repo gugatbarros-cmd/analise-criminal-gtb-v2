@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getDomesticAnalysis, getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getArmsAnalysis, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -28,6 +28,15 @@ describe('contrato de importação e indicadores', () => {
     const url = new URL(request.mock.calls[0][0] as string)
     expect(url.pathname).toBe('/indicators/arms/analysis')
     expect(url.searchParams.get('municipality')).toBe('Igaci')
+  })
+
+  it('consulta drogas por fonte própria com filtros', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 4, total_weight_grams: 1000.1 }) })
+    vi.stubGlobal('fetch', request)
+    await expect(getDrugsAnalysis(2026, 'Igaci')).resolves.toMatchObject({ total: 4, total_weight_grams: 1000.1 })
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.pathname).toBe('/indicators/drugs/analysis')
+    expect(url.searchParams.get('year')).toBe('2026')
   })
 
   it('solicita apenas CVP tentado no recorte selecionado', async () => {
