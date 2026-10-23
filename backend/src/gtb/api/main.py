@@ -11,10 +11,14 @@ from pydantic import BaseModel
 from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 
-APP_VERSION = "0.1.14"
+APP_VERSION = "0.1.15"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
+
+
+def demo_mode() -> bool:
+    return os.environ.get("GTB_DEMO_MODE") == "1"
 
 
 class HealthResponse(BaseModel):
@@ -35,7 +39,8 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", version=APP_VERSION, mode="local")
+    return HealthResponse(status="ok", version=APP_VERSION,
+                          mode="demo" if demo_mode() else "local")
 
 
 @app.get("/sources")
@@ -45,6 +50,8 @@ def sources() -> dict:
 
 @app.post("/imports/{source}")
 async def import_source(source: str, request: Request, scope: str = "partial") -> dict:
+    if demo_mode():
+        raise HTTPException(403, "Demonstração somente para consulta")
     if source not in SOURCES:
         raise HTTPException(404, "Fonte desconhecida")
     if int(request.headers.get("content-length", "0")) > MAX_UPLOAD_BYTES:

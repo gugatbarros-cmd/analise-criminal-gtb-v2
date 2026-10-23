@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-23",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     { "id": 0, "name": "Inventário do legado", "weight": 5, "completed": 2, "total": 4, "done": "Fontes, arquitetura e módulos principais mapeados", "remaining": "Detalhar todos os filtros, cálculos e desempenho de referência" },
@@ -7,6 +7,6 @@
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, quarentena, restauração e benchmark de 10 mil e 100 mil linhas com gravação por lote", "remaining": "Validar os seis layouts anonimizados, medir memória e ampliar escala" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 7, "total": 10, "done": "Regras iniciais separadas, filtros, séries e perfis, meio declarado, ficha original e histórico consultável", "remaining": "Paridade oficial, inferência por relato, campos derivados e demais análises" },
     { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 8, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas e sossego; relações auditáveis, evolução mensal e rankings", "remaining": "Migrar e validar os demais indicadores, tabelas e relatórios com bases de referência" },
-    { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 0, "total": 5, "done": "Nenhuma entrega concluída", "remaining": "Segurança, empacotamento, dados, operação paralela e plano de troca" }
+    { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 0, "total": 5, "done": "Prévia local sintética disponível; nenhuma entrega de troca concluída", "remaining": "Segurança, empacotamento, dados, operação paralela e plano de troca" }
   ]
 }

@@ -1,6 +1,6 @@
-# Andamento da implantação — 22/10/2026
+# Andamento da implantação — 23/10/2026
 
-**58% concluído · 42% restante.** Apenas a **Fase 1** está concluída. O projeto novo permanece local; o sistema antigo segue em produção.
+**58% concluído · 42% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.15 oferece uma demonstração local com dados sintéticos e consulta somente leitura. O projeto novo permanece local; o sistema antigo segue em produção.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |
@@ -19,6 +19,6 @@ O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredond
 - **Fase 2:** o ensaio sintético de 10 mil e 100 mil linhas passou após otimização da gravação por lote. Falta validar adaptadores das seis fontes com layouts anonimizados, medir memória e ampliar a escala; não há paridade comprovada.
 - **Fase 3:** perfis anuais, de municípios, de classificações e do meio explicitamente declarado são independentes para CAD e NEAC. A ficha individual abre os campos originais da versão atual ou de uma versão histórica na própria fonte. Ainda é preciso provar paridade MVI com casos oficiais, interpretar relatos com revisão humana e completar campos derivados e demais análises.
 - **Fase 4:** migrar os demais indicadores, tabelas, gráficos, relatórios e fluxos operacionais. CVP e tentativas têm classificação e relação inicial de casos. TCO, mandados cumpridos, visitas realizadas e perturbação do sossego têm relação, evolução mensal e rankings, podendo coexistir com outros indicadores na mesma ocorrência. Armas, drogas, violência doméstica, relatórios e paridade oficial ainda faltam.
-- **Fase 5:** segurança multiusuário, empacotamento, backup dos dados existentes, validação paralela e plano de troca.
+- **Fase 5:** a prévia local sintética permite inspecionar a interface, mas não equivale à validação paralela. Ainda faltam segurança multiusuário, empacotamento, backup dos dados existentes, validação paralela e plano de troca.
 
 Cada entrega futura deve atualizar o arquivo de progresso, este registro e a versão no mesmo trabalho. A conclusão da implantação exige validação de paridade, segurança e dados, além do código pronto.

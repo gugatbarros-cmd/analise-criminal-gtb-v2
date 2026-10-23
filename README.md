@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo, local e independente do sistema legado em produção. A versão 0.1.14 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas e sossego, relações paginadas, evolução e rankings, perfis independentes de MVI e ficha original com navegação por versões. Não acessa CAD/Firebase nem publica dados.
+Projeto novo, local e independente do sistema legado em produção. A versão 0.1.15 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas e sossego, relações paginadas, evolução e rankings, perfis independentes de MVI e ficha original com navegação por versões. Inclui demonstração local somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados.
 
 ## Requisitos
 
@@ -10,6 +10,10 @@ Projeto novo, local e independente do sistema legado em produção. A versão 0.
 ## Iniciar no Windows
 
 Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar-frontend.cmd` em dois terminais. Na primeira execução, os scripts criam o ambiente Python e instalam dependências gratuitas do PyPI/npm. A API fica em `http://127.0.0.1:8000/health`; a interface em `http://127.0.0.1:5173`. Importe as três planilhas em `fixtures/synthetic/` para conferir os cartões e o gráfico.
+
+### Ver a demonstração
+
+Na pasta deste projeto, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\iniciar-demonstracao.ps1` e abra `http://127.0.0.1:5173/` no mesmo computador. A prévia usa exclusivamente `fixtures/synthetic/` e seu banco fica em `data/demo/`, separado do banco local normal. Ela bloqueia importações via API e mostra um aviso de dados fictícios. As portas 8000 e 5173 precisam estar livres. Para encerrar apenas os processos iniciados pela demonstração, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\parar-demonstracao.ps1`. Os dados sintéticos permanecem em `data/demo/` para a próxima abertura.
 
 Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para restaurar um backup do **banco novo**, pare a API e execute `.venv\Scripts\python.exe scripts\restore-local.py data\backups\<arquivo>.duckdb`; o estado anterior também será salvo.
 
