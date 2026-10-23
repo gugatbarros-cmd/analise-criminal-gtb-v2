@@ -411,6 +411,13 @@ class Store:
         with self.lock, self._connect() as db:
             years = db.execute(f"""SELECT year, count(*) FROM record_versions
                 WHERE {where} GROUP BY year ORDER BY year""", params).fetchall()
+            months = db.execute(f"""SELECT year, month(event_date), count(*)
+                FROM record_versions WHERE {where}
+                GROUP BY year, month(event_date) ORDER BY year, month(event_date)""",
+                                params).fetchall()
+            weekday_rows = db.execute(f"""SELECT dayofweek(event_date), count(*)
+                FROM record_versions WHERE {where}
+                GROUP BY dayofweek(event_date)""", params).fetchall()
             cities = db.execute(f"""SELECT municipality, count(*) AS total
                 FROM record_versions WHERE {where}
                 GROUP BY municipality ORDER BY total DESC, municipality LIMIT 10""",
@@ -424,8 +431,15 @@ class Store:
         for (raw_json,) in instrument_rows:
             group = declared_instrument(json.loads(raw_json))
             instruments[group] = instruments.get(group, 0) + 1
+        weekday_counts = dict(weekday_rows)
+        weekday_names = ("Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira",
+                         "Quinta-feira", "Sexta-feira", "Sábado")
         return {"source": source, "total": sum(total for _year, total in years),
                 "yearly": [{"year": row_year, "total": total} for row_year, total in years],
+                "monthly": [{"period": f"{row_year:04d}-{month:02d}", "total": total}
+                            for row_year, month, total in months],
+                "weekdays": [{"name": name, "total": weekday_counts.get(day, 0)}
+                             for day, name in enumerate(weekday_names)],
                 "municipalities": [{"name": name, "total": total} for name, total in cities],
                 "classifications": [{"name": name, "total": total}
                                     for name, total in classifications],

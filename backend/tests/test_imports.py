@@ -385,6 +385,29 @@ def test_mvi_declared_instruments_respect_source_filters_and_revisions(tmp_path)
         "instrument"] == "Arma branca"
 
 
+def test_mvi_monthly_and_weekday_profiles_remain_source_specific(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([
+        cad(),
+        cad(**{"Número da ocorrência": "CAD-002", "Nº NIC": "NIC-222",
+               "Data da ocorrência": "01/02/2026", "Cidade ocorrência": "Igaci"}),
+    ]))
+    store.import_file("mvi_neac", "neac.csv", csv_bytes([neac()]))
+    cad_profile = store.mvi_analysis("mvi_cad")
+    neac_profile = store.mvi_analysis("mvi_neac")
+    assert cad_profile["monthly"] == [
+        {"period": "2026-01", "total": 1}, {"period": "2026-02", "total": 1},
+    ]
+    assert cad_profile["weekdays"][0] == {"name": "Domingo", "total": 1}
+    assert cad_profile["weekdays"][1] == {"name": "Segunda-feira", "total": 1}
+    assert neac_profile["monthly"] == [{"period": "2026-01", "total": 1}]
+    assert neac_profile["weekdays"][0]["total"] == 0
+    assert neac_profile["weekdays"][1]["total"] == 1
+    assert store.mvi_analysis("mvi_cad", municipality="Igaci")["monthly"] == [
+        {"period": "2026-02", "total": 1},
+    ]
+
+
 def test_warrants_and_visits_are_independent_auditable_occurrence_flags(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     base = {"Data": "05/01/2026", "Cidade": "Igaci", "Natureza": "",

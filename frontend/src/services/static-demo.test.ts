@@ -11,7 +11,7 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
     action_evidence: '', indicators: ['Visitas'],
   }
   const data = {
-    version: '0.1.18', years: [2026], cities: ['Igaci'],
+    version: '0.1.19', years: [2026], cities: ['Igaci'],
     views: { '*|*': { summary: { visitas: 1 } }, '1900|*': { summary: { visitas: 0 } } },
     records: { ocorrencias: [caseItem] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
     details: {}, batches: [],
