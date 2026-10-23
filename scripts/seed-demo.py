@@ -10,6 +10,7 @@ for source, filename in (
     ("mvi_cad", "mvi-cad.csv"),
     ("mvi_neac", "mvi-neac.csv"),
     ("ocorrencias", "ocorrencias-demo.csv"),
+    ("armas", "armas.csv"),
 ):
     fixture = ROOT / "fixtures" / "synthetic" / filename
     result = store.import_file(source, filename, fixture.read_bytes())

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import duckdb
 
+from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
@@ -446,6 +447,46 @@ class Store:
                 "instruments": [{"name": name, "total": total} for name, total in
                                 sorted(instruments.items(), key=lambda item: (-item[1], item[0]))]}
 
+    def arms_analysis(self, year: int | None = None,
+                      municipality: str | None = None) -> dict:
+        clauses = ["source = 'armas'", "is_current", "eligible"]
+        params: list[object] = []
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        with self.lock, self._connect() as db:
+            rows = db.execute(f"""SELECT raw_json, event_date, municipality, category
+                FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
+        total = seized = restricted = 0
+        monthly: dict[str, int] = {}
+        groups: dict[str, dict[str, int]] = {name: {} for name in
+                                            ("municipalities", "types", "calibers", "situations")}
+        for raw_json, event_date, city, category in rows:
+            row = json.loads(raw_json)
+            units = arm_quantity(row)
+            total += units
+            seized_item = arm_seized(row)
+            if seized_item:
+                seized += units
+                month = event_date.strftime("%Y-%m")
+                monthly[month] = monthly.get(month, 0) + units
+            if arm_restricted(row):
+                restricted += units
+            values = (city, category, arm_field(row, "caliber") or "Não informado",
+                      arm_field(row, "situation") or "Não informado")
+            for group, value in zip(groups.values(), values):
+                group[value] = group.get(value, 0) + units
+        return {"total": total, "seized": seized, "restricted": restricted,
+                "records": len(rows),
+                "monthly": [{"period": period, "total": value}
+                            for period, value in sorted(monthly.items())],
+                **{name: [{"name": value, "total": count} for value, count in
+                          sorted(group.items(), key=lambda item: (-item[1], item[0]))[:10]]
+                   for name, group in groups.items()}}
+
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,
@@ -487,6 +528,12 @@ class Store:
                     "instrument": declared_instrument(json.loads(row[-1]))
                     if source.startswith("mvi_") else "",
                     "action_evidence": indicator_evidence(row[-1], source, indicator),
+                    "arm_quantity": arm_quantity(json.loads(row[-1])) if source == "armas" else None,
+                    "arm_situation": arm_field(json.loads(row[-1]), "situation")
+                    if source == "armas" else None,
+                    "arm_caliber": arm_field(json.loads(row[-1]), "caliber")
+                    if source == "armas" else None,
+                    "arm_seized": arm_seized(json.loads(row[-1])) if source == "armas" else None,
                 } for row in rows]}
 
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:

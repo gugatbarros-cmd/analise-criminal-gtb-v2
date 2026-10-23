@@ -6,7 +6,7 @@
     { "id": 1, "name": "Base local", "weight": 10, "completed": 4, "total": 4, "done": "Repositório separado, API, interface, scripts e testes", "remaining": "Concluída" },
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, quarentena, restauração e benchmark de 10 mil e 100 mil linhas com gravação por lote", "remaining": "Validar os seis layouts anonimizados, medir memória e ampliar escala" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 8, "total": 10, "done": "Regras e filtros separados, histórico anual/mensal, dia da semana, perfis, meio declarado, ficha e versões", "remaining": "Paridade oficial, inferência por relato, campos derivados e análise de horários" },
-    { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 10, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica e relatório resumido imprimível", "remaining": "Armas, drogas, relatórios detalhados e paridade oficial com bases de referência" },
+    { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 11, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas iniciais e relatório resumido imprimível", "remaining": "Drogas, filtros de armas, relatórios detalhados e paridade oficial com bases de referência" },
     { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 2, "total": 5, "done": "Contas locais, perfis e backup integral verificável do banco novo, contas e arquivos importados", "remaining": "Empacotamento, backup dos dados do legado, operação paralela e plano de troca" }
   ]
 }

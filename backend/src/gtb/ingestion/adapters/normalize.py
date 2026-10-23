@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from gtb.indicators.arms import arm_field, arm_identity
 from gtb.indicators.rules import (
     cvp_class,
     death_confirmed,
@@ -22,7 +23,8 @@ SOURCES = ("mvi_cad", "mvi_neac", "ocorrencias", "armas", "drogas", "guarnicoes"
 ALIASES = {
     "occurrence": ("numero da ocorrencia", "n da ocorrencia", "numero ocorrencia", "ocorrencia",
                    "cad", "bo", "numero do boletim"),
-    "date": ("data da ocorrencia", "data do fato", "data do evento", "data", "dia"),
+    "date": ("data da ocorrencia", "data do fato", "data do evento", "data inclusao arma",
+             "data da inclusao", "data inclusao", "dt incluiu", "data registro", "data", "dia"),
     "city": ("cidade ocorrencia", "municipio", "cidade", "municipio do fato"),
     "victim": ("nome da vitima", "nome vitima", "vitima"),
     "nic": ("n nic", "numero nic", "nic", "identificador da vitima"),
@@ -121,6 +123,11 @@ def normalize(source: str, row: dict[str, str]) -> Record:
                 eligible, reason = False, "Envolvimento não é vítima"
             elif not death_confirmed(pick(row, "death")):
                 eligible, reason = False, "Óbito da vítima não confirmado"
+    elif source == "armas":
+        natural_key = arm_identity(row, occurrence, when.year)
+        category = arm_field(row, "type") or "Não informado"
+        indicators = ()
+        eligible, reason = True, ""
     else:
         if not occurrence:
             raise ValueError("Número da ocorrência ausente; revisar chave natural")

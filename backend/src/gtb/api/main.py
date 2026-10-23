@@ -14,7 +14,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.21"
+APP_VERSION = "0.1.22"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -173,6 +173,11 @@ def tco_analysis(year: int | None = None, municipality: str | None = None) -> di
 @app.get("/indicators/domestic/analysis")
 def domestic_analysis(year: int | None = None, municipality: str | None = None) -> dict:
     return store.domestic_analysis(year, municipality)
+
+
+@app.get("/indicators/arms/analysis")
+def arms_analysis(year: int | None = None, municipality: str | None = None) -> dict:
+    return store.arms_analysis(year, municipality)
 
 
 @app.get("/indicators/operations/{kind}/analysis")

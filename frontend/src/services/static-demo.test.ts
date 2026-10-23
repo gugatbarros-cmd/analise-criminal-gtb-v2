@@ -11,8 +11,8 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
     action_evidence: '', indicators: ['Visitas'],
   }
   const data = {
-    version: '0.1.21', years: [2026], cities: ['Igaci'],
-    views: { '*|*': { summary: { visitas: 1 } }, '1900|*': { summary: { visitas: 0 } } },
+    version: '0.1.22', years: [2026], cities: ['Igaci'],
+    views: { '*|*': { summary: { visitas: 1 }, arms: { total: 4, seized: 3 } }, '1900|*': { summary: { visitas: 0 }, arms: { total: 0, seized: 0 } } },
     records: { ocorrencias: [caseItem] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
     details: {}, batches: [],
   }
@@ -20,6 +20,8 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
   vi.stubGlobal('fetch', read)
   const summary = await demoFetch('http://127.0.0.1:8000/indicators/summary')
   expect((await summary.json()).visitas).toBe(1)
+  const arms = await demoFetch('http://127.0.0.1:8000/indicators/arms/analysis')
+  expect((await arms.json()).seized).toBe(3)
   const matching = await demoFetch('http://127.0.0.1:8000/records/ocorrencias?indicator=Visitas&municipality=igaci')
   expect((await matching.json()).items[0].action_evidence).toBe('Visita confirmada')
   const excluded = await demoFetch('http://127.0.0.1:8000/records/ocorrencias?year=2025')
