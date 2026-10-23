@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo e independente do sistema legado em produção. A versão 0.1.23 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas e drogas, relatório resumido imprimível, relações paginadas, evolução e rankings, perfis independentes de MVI e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
+Projeto novo e independente do sistema legado em produção. A versão 0.1.24 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições, relatório resumido imprimível, relações paginadas, evolução e rankings, perfis independentes de MVI e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
 
 ## Requisitos
 
@@ -9,7 +9,7 @@ Projeto novo e independente do sistema legado em produção. A versão 0.1.23 of
 
 ## Iniciar no Windows
 
-Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar-frontend.cmd` em dois terminais. Na primeira execução, os scripts criam o ambiente Python e instalam dependências gratuitas do PyPI/npm. A API fica em `http://127.0.0.1:8000/health`; a interface em `http://127.0.0.1:5173`. Crie a primeira conta com `.venv\Scripts\python.exe scripts\criar-usuario.py admin`; a senha é solicitada sem aparecer no comando. Depois, entre pela interface e importe as cinco planilhas em `fixtures/synthetic/` para conferir os cartões e o gráfico. O administrador pode criar perfis de analista ou consulta pela interface; o perfil de consulta não importa arquivos.
+Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar-frontend.cmd` em dois terminais. Na primeira execução, os scripts criam o ambiente Python e instalam dependências gratuitas do PyPI/npm. A API fica em `http://127.0.0.1:8000/health`; a interface em `http://127.0.0.1:5173`. Crie a primeira conta com `.venv\Scripts\python.exe scripts\criar-usuario.py admin`; a senha é solicitada sem aparecer no comando. Depois, entre pela interface e importe as seis planilhas em `fixtures/synthetic/` para conferir os cartões e o gráfico. O administrador pode criar perfis de analista ou consulta pela interface; o perfil de consulta não importa arquivos.
 
 ### Ver a demonstração
 
@@ -17,7 +17,7 @@ Na pasta deste projeto, execute `powershell -NoProfile -ExecutionPolicy Bypass -
 
 Para gerar a prévia estática com as mesmas planilhas fictícias, execute `.venv\Scripts\python.exe scripts\export-demo-snapshot.py` e, na pasta `frontend`, defina `VITE_STATIC_DEMO=1` antes de `npm.cmd run build`. O resultado em `frontend/dist/` funciona sem API e bloqueia importações. `frontend/public/demo-data.json` contém somente dados sintéticos e é recriado pelo exportador. A prévia estática permite testar a interface; o backend completo permanece local.
 
-A prévia privada da versão 0.1.23 foi publicada em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 26 registros sintéticos; não recebe dados nem substitui o sistema antigo.
+A prévia privada da versão 0.1.24 foi publicada em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos; não recebe dados nem substitui o sistema antigo.
 
 Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para copiar e restaurar **todos os dados do sistema novo**, siga [o procedimento local](docs/BACKUP_LOCAL.md). O backup antigo de um único banco DuckDB continua disponível em `scripts\restore-local.py`.
 
@@ -25,8 +25,8 @@ Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estive
 
 Fases 2, 3, 4 e 5 em andamento: CSV/XLSX com versões, quarentena, backup antes do lote, filtros e indicadores provisórios. O arquivo bruto e o banco ficam em `data/`, ignorados pelo Git. A API oferece `/sources`, `/imports`, `/imports/{id}/divergences`, `/indicators/summary`, `/indicators/operations/{kind}/analysis` e `/records/{source}`. O upload usa `POST /imports/{source}` com corpo binário, cabeçalho `X-Filename` e `scope=partial|complete`. O limite é 30 MB. Arquivos completos sinalizam ausentes sem apagar registros. Arquivos XLS antigos ainda não são aceitos.
 
-As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. Armas e drogas têm adaptadores e análises iniciais por fonte; guarnições têm apenas cadastro genérico, sem adaptador ou indicador completo. A autenticação local usa senhas derivadas, sessões de oito horas e perfis; revisão de segurança operacional, sincronização, relatórios completos e empacotamento ainda faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
+As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. As seis fontes têm adaptadores e análises iniciais; armas, drogas e guarnições ainda exigem validação de layout e paridade oficial. A autenticação local usa senhas derivadas, sessões de oito horas e perfis; revisão de segurança operacional, sincronização, relatórios completos e empacotamento ainda faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
 
-O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **71% concluído e 29% restante**; somente a Fase 1 está concluída. O [benchmark local](docs/BENCHMARKS.md) registra os ensaios sintéticos de 10 mil e 100 mil ocorrências.
+O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **72% concluído e 28% restante**; somente a Fase 1 está concluída. O [benchmark local](docs/BENCHMARKS.md) registra os ensaios sintéticos de 10 mil e 100 mil ocorrências.
 
 O código antigo continua dois diretórios acima e na URL de produção. Seu backup de código está em `../legacy-v4.6.256-2026-10-22.bundle`. O bundle não contém dados privados do navegador nem exportação atual do Firestore.

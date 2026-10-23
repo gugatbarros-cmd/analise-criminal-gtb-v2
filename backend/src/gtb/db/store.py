@@ -15,6 +15,7 @@ import duckdb
 from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
 from gtb.indicators.drugs import drug_field, drug_quantity, drug_weight_grams
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain
+from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
@@ -530,6 +531,61 @@ class Store:
                                     for name, grams in sorted(weights.items(),
                                                               key=lambda item: (-item[1], item[0]))]}
 
+    def teams_analysis(self, year: int | None = None,
+                       municipality: str | None = None) -> dict:
+        clauses = ["source = 'guarnicoes'", "is_current", "eligible"]
+        params: list[object] = []
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        with self.lock, self._connect() as db:
+            rows = db.execute(f"""SELECT natural_key, raw_json, occurrence, nature, category
+                FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
+        team_scores: dict[str, dict[str, int]] = {}
+        officer_scores: dict[str, dict] = {}
+        officer_occurrences: set[tuple[str, str]] = set()
+        natures: dict[str, int] = {}
+        roster = extra = unlisted = points = 0
+        for natural_key, raw_json, occurrence, nature, team in rows:
+            row = json.loads(raw_json)
+            score, _level = team_complexity(nature, pick(row, "solution"))
+            group = team_group(team)
+            if group == "roster":
+                roster += 1
+                points += score
+                item = team_scores.setdefault(team, {"occurrences": 0, "points": 0})
+                item["occurrences"] += 1
+                item["points"] += score
+                label = nature or "Não informada"
+                natures[label] = natures.get(label, 0) + 1
+            elif group == "extra":
+                extra += 1
+            else:
+                unlisted += 1
+            for officer in team_officers(team_field(row, "officers")):
+                registration = officer["registration"]
+                occurrence_key = occurrence or natural_key
+                if (registration, occurrence_key) in officer_occurrences:
+                    continue
+                officer_occurrences.add((registration, occurrence_key))
+                item = officer_scores.setdefault(registration, {"name": officer["name"],
+                    "registration": registration, "occurrences": 0, "points": 0})
+                item["occurrences"] += 1
+                item["points"] += score
+        return {"roster_occurrences": roster, "weighted_points": points,
+                "teams": len(team_scores), "officers": len(officer_scores),
+                "extra_occurrences": extra, "unlisted_occurrences": unlisted,
+                "ranking": [{"name": name, **item} for name, item in
+                            sorted(team_scores.items(), key=lambda pair:
+                                   (-pair[1]["points"], -pair[1]["occurrences"], pair[0]))],
+                "officer_ranking": sorted(officer_scores.values(), key=lambda item:
+                                          (-item["points"], -item["occurrences"], item["name"])),
+                "natures": [{"name": name, "total": total} for name, total in
+                            sorted(natures.items(), key=lambda item: (-item[1], item[0]))[:10]]}
+
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,
@@ -585,6 +641,11 @@ class Store:
                     if source == "drogas" else None,
                     "drug_location": drug_field(json.loads(row[-1]), "location")
                     if source == "drogas" else None,
+                    "team_score": team_complexity(row[5], pick(json.loads(row[-1]), "solution"))[0]
+                    if source == "guarnicoes" else None,
+                    "team_role": team_field(json.loads(row[-1]), "role")
+                    if source == "guarnicoes" else None,
+                    "team_group": team_group(row[6]) if source == "guarnicoes" else None,
                 } for row in rows]}
 
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:

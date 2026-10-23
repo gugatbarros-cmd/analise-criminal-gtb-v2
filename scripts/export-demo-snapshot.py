@@ -9,7 +9,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.23"
+VERSION = "0.1.24"
 
 
 def export() -> dict:
@@ -21,6 +21,7 @@ def export() -> dict:
             ("ocorrencias", "ocorrencias-demo.csv"),
             ("armas", "armas.csv"),
             ("drogas", "drogas.csv"),
+            ("guarnicoes", "guarnicoes.csv"),
         ):
             fixture = ROOT / "fixtures" / "synthetic" / filename
             store.import_file(source, filename, fixture.read_bytes())
@@ -38,6 +39,7 @@ def export() -> dict:
                     "domestic": store.domestic_analysis(year, city),
                     "arms": store.arms_analysis(year, city),
                     "drugs": store.drugs_analysis(year, city),
+                    "teams": store.teams_analysis(year, city),
                     "operations": {kind: store.operational_analysis(kind, year, city)
                                    for kind in ("Mandados", "Visitas", "Sossego")},
                     "mvi": {source: store.mvi_analysis(source, year, city)

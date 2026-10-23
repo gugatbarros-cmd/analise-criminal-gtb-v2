@@ -12,6 +12,7 @@ for source, filename in (
     ("ocorrencias", "ocorrencias-demo.csv"),
     ("armas", "armas.csv"),
     ("drogas", "drogas.csv"),
+    ("guarnicoes", "guarnicoes.csv"),
 ):
     fixture = ROOT / "fixtures" / "synthetic" / filename
     result = store.import_file(source, filename, fixture.read_bytes())

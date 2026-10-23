@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getArmsAnalysis, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -37,6 +37,15 @@ describe('contrato de importação e indicadores', () => {
     const url = new URL(request.mock.calls[0][0] as string)
     expect(url.pathname).toBe('/indicators/drugs/analysis')
     expect(url.searchParams.get('year')).toBe('2026')
+  })
+
+  it('consulta guarnições por fonte própria com filtros', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ roster_occurrences: 3, weighted_points: 11 }) })
+    vi.stubGlobal('fetch', request)
+    await expect(getTeamsAnalysis(2026, 'Igaci')).resolves.toMatchObject({ roster_occurrences: 3, weighted_points: 11 })
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.pathname).toBe('/indicators/teams/analysis')
+    expect(url.searchParams.get('municipality')).toBe('Igaci')
   })
 
   it('solicita apenas CVP tentado no recorte selecionado', async () => {

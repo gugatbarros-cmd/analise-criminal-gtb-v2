@@ -18,13 +18,17 @@ from gtb.indicators.rules import (
     operational_action,
     victim_role,
 )
+from gtb.indicators.teams import canonical_team, team_field, team_identity
 
 SOURCES = ("mvi_cad", "mvi_neac", "ocorrencias", "armas", "drogas", "guarnicoes")
 
 ALIASES = {
-    "occurrence": ("numero da ocorrencia", "n da ocorrencia", "numero ocorrencia", "ocorrencia",
+    "occurrence": ("numero da ocorrencia", "n da ocorrencia", "numero ocorrencia", "n ocorrencia",
+                   "ocorrencia atual", "ocorrencia",
                    "cad", "bo", "numero do boletim"),
-    "date": ("data da ocorrencia", "data do fato", "data do evento", "data apreensao",
+    "date": ("data da ocorrencia", "data do fato", "data do evento",
+             "dt hora registro ocorrencia", "data de servico", "dt hora incluiu o recurso",
+             "data apreensao",
              "data inclusao arma",
              "data da inclusao", "data inclusao", "dt incluiu", "data registro", "data", "dia"),
     "city": ("cidade ocorrencia", "municipio", "cidade", "municipio do fato"),
@@ -32,7 +36,8 @@ ALIASES = {
     "nic": ("n nic", "numero nic", "nic", "identificador da vitima"),
     "role": ("envolvimento", "tipo de envolvimento", "papel"),
     "death": ("obito", "obito?", "obito da vitima"),
-    "dispatch": ("tipificacao no despacho", "tipicidade no despacho", "natureza no despacho"),
+    "dispatch": ("tipificacao no despacho", "tipicidade no despacho", "natureza no despacho",
+                 "tipicidade geral"),
     "type": ("classificacao", "natureza final", "tipificacao geral", "tipicidade geral",
              "natureza geral", "natureza", "tipo de ocorrencia", "tipo",
              "tipificacao no atendimento", "tipo de crime"),
@@ -96,7 +101,7 @@ def normalize(source: str, row: dict[str, str]) -> Record:
         city = "Tanque d'Arca"
     victim = pick(row, "victim")
     nic = pick(row, "nic")
-    nature = pick(row, "dispatch") if source == "mvi_cad" else ""
+    nature = pick(row, "dispatch") if source in {"mvi_cad", "guarnicoes"} else ""
     nature = nature or pick(row, "type")
     if not when:
         raise ValueError("Data do fato inválida ou ausente")
@@ -133,6 +138,11 @@ def normalize(source: str, row: dict[str, str]) -> Record:
     elif source == "drogas":
         natural_key = drug_identity(row, when.year)
         category = drug_type(row)
+        indicators = ()
+        eligible, reason = True, ""
+    elif source == "guarnicoes":
+        natural_key = team_identity(row, occurrence, when.year)
+        category = canonical_team(team_field(row, "team"))
         indicators = ()
         eligible, reason = True, ""
     else:

@@ -297,6 +297,7 @@ def event_date(value: object) -> date | None:
         return None
     if text.isdigit() and 1 <= int(text) <= 100000:
         return date(1899, 12, 30) + timedelta(days=int(text))
+    text = re.sub(r"\s+às\s+", " ", text, flags=re.IGNORECASE)
     for fmt in ("%d/%m/%Y", "%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S",
                 "%Y-%m-%d", "%Y-%m-%d %H:%M:%S"):
         try:
