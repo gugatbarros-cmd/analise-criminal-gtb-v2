@@ -9,6 +9,7 @@ import { TcoAnalysis } from './components/TcoAnalysis'
 import { MviAnalysis } from './components/MviAnalysis'
 import { OperationalAnalysis } from './components/OperationalAnalysis'
 import { DomesticAnalysis } from './components/DomesticAnalysis'
+import { SummaryReport } from './components/SummaryReport'
 import { getBatches, getSummary, upload, type Source } from './services/api'
 import { getHealth } from './services/health'
 import './style.css'
@@ -30,6 +31,7 @@ function App() {
   const [file, setFile] = useState<File | null>(null)
   const [year, setYear] = useState('')
   const [municipality, setMunicipality] = useState('')
+  const [reportOpen, setReportOpen] = useState(false)
   const [activeSource, setActiveSource] = useState<'mvi_cad' | 'mvi_neac'>('mvi_cad')
   const health = useQuery({ queryKey: ['health'], queryFn: () => getHealth(apiUrl), retry: 1 })
   const demo = health.data?.mode === 'demo'
@@ -44,15 +46,16 @@ function App() {
   })
 
   return <main className="shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">{demo ? 'Demonstração' : 'Local'} · v{health.data?.version || '0.1.17'}</span></header>
+    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">{demo ? 'Demonstração' : 'Local'} · v{health.data?.version || '0.1.18'}</span></header>
     <section className="hero"><div><p className="eyebrow">{demo ? 'Prévia com dados sintéticos' : 'Ambiente paralelo de validação'}</p><h1>Dados separados. Resultados auditáveis.</h1><p>{demo ? 'Explore indicadores, casos e histórico com exemplos fictícios. Esta demonstração é somente para consulta e fica neste computador.' : 'Importe bases de teste, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.'}</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'API local indisponível' : 'API local ativa'}</div></section>
     {demo && <nav className="quick-nav" aria-label="Explorar demonstração"><a href="#andamento">Andamento</a><a href="#indicadores">Indicadores</a><a href="#mvi">MVI por fonte</a><a href="#operacoes">Outros indicadores</a><a href="#importacoes">Importações sintéticas</a></nav>}
     {demo && <div className="demo-banner" role="status"><strong>Demonstração isolada</strong><span>Os números abaixo vêm apenas de planilhas fictícias. A importação está bloqueada nesta prévia.</span></div>}
     <div className="notice">Indicadores provisórios: regras extraídas do legado. A paridade ainda precisa ser conferida com amostras anonimizadas e números oficiais.</div>
     <div id="andamento"><ProjectProgress /></div>
-    <section className="filters" aria-label="Filtros de indicadores"><label>Ano<input type="number" min="1900" max="2100" placeholder="Todos" value={year} onChange={event => setYear(event.target.value)} /></label><label>Município<input type="search" placeholder="Todos os municípios" value={municipality} onChange={event => setMunicipality(event.target.value)} /></label><button type="button" onClick={() => { setYear(''); setMunicipality('') }}>Limpar filtros</button></section>
+    <section className="filters" aria-label="Filtros de indicadores"><label>Ano<input type="number" min="1900" max="2100" placeholder="Todos" value={year} onChange={event => setYear(event.target.value)} /></label><label>Município<input type="search" placeholder="Todos os municípios" value={municipality} onChange={event => setMunicipality(event.target.value)} /></label><button type="button" onClick={() => { setYear(''); setMunicipality('') }}>Limpar filtros</button><button type="button" className="primary" onClick={() => setReportOpen(true)}>Ver relatório</button></section>
     <section id="indicadores" className="metrics five" aria-label="Indicadores"><article><span>MVI CAD</span><strong>{summary.data?.mvi_cad ?? '—'}</strong><small>Vítimas · fonte CAD</small></article><article><span>MVI NEAC</span><strong>{summary.data?.mvi_neac ?? '—'}</strong><small>Vítimas · fonte NEAC</small></article><article><span>CVP</span><strong>{summary.data?.cvp ?? '—'}</strong><small>Ocorrências de roubo</small></article><article><span>Tentativas</span><strong>{summary.data?.tentativas ?? '—'}</strong><small>Ocorrências de homicídio tentado</small></article><article><span>TCO</span><strong>{summary.data?.tco ?? '—'}</strong><small>Termos elaborados pela PM</small></article><article><span>Mandados</span><strong>{summary.data?.mandados ?? '—'}</strong><small>Cumprimentos reconhecidos</small></article><article><span>Visitas</span><strong>{summary.data?.visitas ?? '—'}</strong><small>Orientativas e preventivas</small></article><article><span>Sossego</span><strong>{summary.data?.sossego ?? '—'}</strong><small>Perturbação reconhecida</small></article><article><span>Doméstica</span><strong>{summary.data?.domestica ?? '—'}</strong><small>Casos reconhecidos para revisão</small></article></section>
     {summary.isError && <p className="error" role="alert">Não foi possível consultar os indicadores.</p>}
+    {reportOpen && <SummaryReport summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} onClose={() => setReportOpen(false)} />}
     <section className="panel"><div className="section-head"><div><p className="eyebrow">Evolução mensal</p><h2>MVI por fonte</h2></div><span>CAD e NEAC permanecem independentes</span></div><Suspense fallback={<p className="empty">Carregando gráfico…</p>}><MonthlyChart monthly={summary.data?.monthly || {}} /></Suspense></section>
     <section className="panel"><div className="section-head"><div><p className="eyebrow">Relação individual</p><h2>Vítimas elegíveis</h2></div></div><div className="tabs" role="tablist" aria-label="Fonte MVI"><button type="button" role="tab" aria-selected={activeSource === 'mvi_cad'} onClick={() => setActiveSource('mvi_cad')}>MVI CAD</button><button type="button" role="tab" aria-selected={activeSource === 'mvi_neac'} onClick={() => setActiveSource('mvi_neac')}>MVI NEAC</button></div><SourceTable source="mvi_cad" active={activeSource === 'mvi_cad'} /><SourceTable source="mvi_neac" active={activeSource === 'mvi_neac'} /></section>
     <div id="mvi" className="section-anchor" />
