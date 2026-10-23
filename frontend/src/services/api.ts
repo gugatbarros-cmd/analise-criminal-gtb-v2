@@ -1,4 +1,5 @@
 import { demoFetch } from './static-demo'
+import { getSessionToken } from './auth'
 
 export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas' | 'guarnicoes'
 export type Summary = { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; domestica: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
@@ -15,8 +16,17 @@ export type MviAnalysis = { source: MviSource; total: number; yearly: { year: nu
 export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; is_current: boolean; fields: Record<string, string> }
 export type MviRecordVersion = { version: number; is_current: boolean; valid_from: string; valid_to: string | null; batch_id: string; eligible: boolean; category: string }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
-const apiFetch: typeof fetch = (input, init) => import.meta.env.VITE_STATIC_DEMO === '1'
-  ? demoFetch(String(input), init) : fetch(input, init)
+const apiFetch: typeof fetch = (input, init) => {
+  if (import.meta.env.VITE_STATIC_DEMO === '1') return demoFetch(String(input), init)
+  const token = getSessionToken()
+  if (!token) return fetch(input, init)
+  const headers = new Headers(init?.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  return fetch(input, { ...init, headers }).then(response => {
+    if (response.status === 401) window.dispatchEvent(new Event('gtb-session-expired'))
+    return response
+  })
+}
 
 async function json<T>(response: Response): Promise<T> {
   if (!response.ok) {

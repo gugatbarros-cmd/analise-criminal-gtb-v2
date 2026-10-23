@@ -7,6 +7,6 @@
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, quarentena, restauração e benchmark de 10 mil e 100 mil linhas com gravação por lote", "remaining": "Validar os seis layouts anonimizados, medir memória e ampliar escala" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 8, "total": 10, "done": "Regras e filtros separados, histórico anual/mensal, dia da semana, perfis, meio declarado, ficha e versões", "remaining": "Paridade oficial, inferência por relato, campos derivados e análise de horários" },
     { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 10, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica e relatório resumido imprimível", "remaining": "Armas, drogas, relatórios detalhados e paridade oficial com bases de referência" },
-    { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 0, "total": 5, "done": "Prévias sintéticas local e estática preparadas; nenhuma entrega de troca concluída", "remaining": "Segurança, empacotamento, dados, operação paralela e plano de troca" }
+    { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 1, "total": 5, "done": "Contas locais, senha derivada, sessão temporária, perfis e bloqueio de importação para consulta", "remaining": "Empacotamento, backup de dados novos, operação paralela e plano de troca" }
   ]
 }
