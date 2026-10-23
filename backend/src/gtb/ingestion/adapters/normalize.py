@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from gtb.indicators.rules import (
     cvp_class,
     death_confirmed,
+    domestic_triage,
     elaborated_tco,
     event_date,
     homicide_attempt,
@@ -148,6 +149,11 @@ def normalize(source: str, row: dict[str, str]) -> Record:
             for action in ("Mandados", "Visitas", "Sossego"):
                 if operational_action(row, action)[0]:
                     labels.append(action)
+            domestic_status = domestic_triage(row)["status"]
+            if domestic_status == "recognized":
+                labels.append("Doméstica")
+            elif domestic_status in {"pending", "excluded", "outside"}:
+                labels.append(f"Doméstica:{domestic_status}")
         indicators = tuple(labels)
         eligible, reason = True, ""
     return Record(natural_key, when.isoformat(), when.year, city, occurrence, victim,

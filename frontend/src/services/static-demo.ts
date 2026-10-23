@@ -1,8 +1,9 @@
-import type { Batch, MviAnalysis, MviRecordDetail, MviRecordVersion, OperationalAnalysis, RecordItem, Source, Summary } from './api'
+import type { Batch, DomesticAnalysis, MviAnalysis, MviRecordDetail, MviRecordVersion, OperationalAnalysis, RecordItem, Source, Summary } from './api'
 
 type View = {
   summary: Summary
   tco: OperationalAnalysis
+  domestic: DomesticAnalysis
   operations: Record<string, OperationalAnalysis>
   mvi: Record<string, MviAnalysis>
 }
@@ -51,6 +52,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   const view = viewFor(data, url.searchParams)
   if (path === '/indicators/summary') return response(view.summary)
   if (path === '/indicators/tco/analysis') return response(view.tco)
+  if (path === '/indicators/domestic/analysis') return response(view.domestic)
   const operation = path.match(/^\/indicators\/operations\/(Mandados|Visitas|Sossego)\/analysis$/)
   if (operation) return response(view.operations[operation[1]])
   const mvi = path.match(/^\/indicators\/mvi\/(mvi_cad|mvi_neac)\/analysis$/)

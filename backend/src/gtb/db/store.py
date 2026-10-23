@@ -12,12 +12,25 @@ from pathlib import Path
 
 import duckdb
 
-from gtb.indicators.rules import key, operational_action, plain
+from gtb.indicators.rules import domestic_triage, key, operational_action, plain
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
-ADAPTER_VERSION = "0.1.14"
+ADAPTER_VERSION = "0.1.17"
+
+
+def indicator_evidence(raw_json: str, source: str, indicator: str | None) -> str:
+    if source != "ocorrencias" or not indicator:
+        return ""
+    row = json.loads(raw_json)
+    if indicator in {"Mandados", "Visitas", "Sossego"}:
+        return operational_action(row, indicator)[1]
+    if indicator.startswith("Doméstica"):
+        decision = domestic_triage(row)
+        return decision["reason"] + (" · " + decision["evidence"]
+                                     if decision["evidence"] else "")
+    return ""
 
 
 class Store:
@@ -330,7 +343,9 @@ class Store:
                 "visitas": sum(total for source, _category, indicators, *_rest, total in rows
                               if source == "ocorrencias" and "Visitas" in indicators),
                 "sossego": sum(total for source, _category, indicators, *_rest, total in rows
-                              if source == "ocorrencias" and "Sossego" in indicators)}
+                                if source == "ocorrencias" and "Sossego" in indicators),
+                "domestica": sum(total for source, _category, indicators, *_rest, total in rows
+                                 if source == "ocorrencias" and "Doméstica" in indicators)}
 
     def tco_analysis(self, year: int | None = None,
                      municipality: str | None = None) -> dict:
@@ -341,6 +356,14 @@ class Store:
         if kind not in {"Mandados", "Visitas", "Sossego"}:
             raise ValueError("Ação operacional desconhecida")
         return self._occurrence_analysis(kind, year, municipality)
+
+    def domestic_analysis(self, year: int | None = None,
+                          municipality: str | None = None) -> dict:
+        result = self._occurrence_analysis("Doméstica", year, municipality)
+        result["reviews"] = {status: self._occurrence_analysis(
+            f"Doméstica:{status}", year, municipality)["total"]
+            for status in ("pending", "excluded", "outside")}
+        return result
 
     def _occurrence_analysis(self, indicator: str, year: int | None,
                              municipality: str | None) -> dict:
@@ -449,8 +472,7 @@ class Store:
                     "solution": pick(json.loads(row[-1]), "solution") if source == "ocorrencias" else "",
                     "instrument": declared_instrument(json.loads(row[-1]))
                     if source.startswith("mvi_") else "",
-                    "action_evidence": operational_action(json.loads(row[-1]), indicator)[1]
-                    if source == "ocorrencias" and indicator in {"Mandados", "Visitas", "Sossego"} else "",
+                    "action_evidence": indicator_evidence(row[-1], source, indicator),
                 } for row in rows]}
 
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:

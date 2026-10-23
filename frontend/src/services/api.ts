@@ -1,7 +1,7 @@
 import { demoFetch } from './static-demo'
 
 export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas' | 'guarnicoes'
-export type Summary = { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
+export type Summary = { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; domestica: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
 export type Batch = { id: string; source: Source; filename: string; imported_at: string; row_count: number; inserted: number; updated: number; unchanged: number; quarantined: number; differences: number; status: string }
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
 export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[] }
@@ -9,6 +9,7 @@ export type RecordPage = { total: number; page: number; size: number; items: Rec
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
 export type OperationalKind = 'Mandados' | 'Visitas' | 'Sossego'
 export type OperationalAnalysis = TcoAnalysis
+export type DomesticAnalysis = TcoAnalysis & { reviews: { pending: number; excluded: number; outside: number } }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
 export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[]; instruments: { name: string; total: number }[] }
 export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; is_current: boolean; fields: Record<string, string> }
@@ -37,6 +38,13 @@ export async function getTcoAnalysis(year?: number, municipality?: string): Prom
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   return json(await apiFetch(`${baseUrl}/indicators/tco/analysis?${params}`))
+}
+
+export async function getDomesticAnalysis(year?: number, municipality?: string): Promise<DomesticAnalysis> {
+  const params = new URLSearchParams()
+  if (year) params.set('year', String(year))
+  if (municipality) params.set('municipality', municipality)
+  return json(await apiFetch(`${baseUrl}/indicators/domestic/analysis?${params}`))
 }
 
 export async function getOperationalAnalysis(kind: OperationalKind, year?: number, municipality?: string): Promise<OperationalAnalysis> {

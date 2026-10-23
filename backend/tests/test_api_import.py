@@ -86,6 +86,26 @@ def test_tco_api_filter_keeps_overlapping_cvp(tmp_path, monkeypatch):
     assert client.get("/indicators/tco/analysis?year=2025").json()["total"] == 0
 
 
+def test_domestic_api_exposes_review_counts_and_evidence(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([{
+        "Número da ocorrência": "D-1", "Data": "05/01/2026", "Cidade": "Igaci",
+        "Natureza": "Violência doméstica", "Tipificação geral": "Violência doméstica",
+        "Sexo da vítima": "F",
+    }])
+    assert client.post("/imports/ocorrencias", content=content,
+                       headers={"X-Filename": "domestic.csv"}).status_code == 200
+    assert client.get("/indicators/summary").json()["domestica"] == 1
+    analysis = client.get("/indicators/domestic/analysis?year=2026")
+    assert analysis.status_code == 200
+    assert analysis.json()["total"] == 1
+    assert analysis.json()["reviews"] == {"pending": 0, "excluded": 0, "outside": 0}
+    cases = client.get("/records/ocorrencias?indicator=Dom%C3%A9stica").json()
+    assert cases["total"] == 1
+    assert "Tipificação geral" in cases["items"][0]["action_evidence"]
+
+
 def test_mvi_analysis_api_rejects_other_sources(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
     client = TestClient(main.app)

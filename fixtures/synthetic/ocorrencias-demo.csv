@@ -1,10 +1,15 @@
-Número da ocorrência;Data da ocorrência;Cidade ocorrência;Natureza;Solução da ocorrência;Relato
-O-DEMO-001;05/01/2026;Igaci;Roubo consumado;Fato registrado;Exemplo fictício de roubo
-O-DEMO-002;06/01/2026;Igaci;Tentativa de homicídio;Fato registrado;Exemplo fictício de tentativa
-O-DEMO-003;07/01/2026;Palmeira dos Índios;Perturbação do sossego;Elaborou TCO PM;Exemplo fictício com TCO
-O-DEMO-004;08/02/2026;Igaci;Cumprimento de mandado;Prisão efetuada;Cumprimento de mandado judicial com êxito
-O-DEMO-005;09/02/2026;Tanque d'Arca;Visita orientativa;Visita realizada;Visita orientativa à comunidade
-O-DEMO-006;10/03/2026;Igaci;Perturbação do trabalho e descanso;Fato confirmado;Exemplo fictício de perturbação
-O-DEMO-007;11/03/2026;Palmeira dos Índios;Roubo tentado;Fato registrado;Exemplo fictício de roubo tentado
-O-DEMO-008;12/03/2026;Igaci;Perturbação do sossego;Não constatado;Exemplo fictício descartado
-O-DEMO-009;13/03/2026;Igaci;Mandado pendente;Sem êxito;Mandado ainda a cumprir
+Número da ocorrência;Data da ocorrência;Cidade ocorrência;Natureza;Solução da ocorrência;Relato;Tipificação geral;Sexo da vítima
+O-DEMO-001;05/01/2026;Igaci;Roubo consumado;Fato registrado;Exemplo fictício de roubo;;
+O-DEMO-002;06/01/2026;Igaci;Tentativa de homicídio;Fato registrado;Exemplo fictício de tentativa;;
+O-DEMO-003;07/01/2026;Palmeira dos Índios;Perturbação do sossego;Elaborou TCO PM;Exemplo fictício com TCO;;
+O-DEMO-004;08/02/2026;Igaci;Cumprimento de mandado;Prisão efetuada;Cumprimento de mandado judicial com êxito;;
+O-DEMO-005;09/02/2026;Tanque d'Arca;Visita orientativa;Visita realizada;Visita orientativa à comunidade;;
+O-DEMO-006;10/03/2026;Igaci;Perturbação do trabalho e descanso;Fato confirmado;Exemplo fictício de perturbação;;
+O-DEMO-007;11/03/2026;Palmeira dos Índios;Roubo tentado;Fato registrado;Exemplo fictício de roubo tentado;;
+O-DEMO-008;12/03/2026;Igaci;Perturbação do sossego;Não constatado;Exemplo fictício descartado;;
+O-DEMO-009;13/03/2026;Igaci;Mandado pendente;Sem êxito;Mandado ainda a cumprir;;
+O-DEMO-010;14/03/2026;Igaci;Violência doméstica;Fato registrado;Exemplo fictício classificado;Violência doméstica;F
+O-DEMO-011;15/03/2026;Igaci;Violência doméstica;Averiguar;Menção inicial sem descrição conclusiva;;F
+O-DEMO-012;16/03/2026;Palmeira dos Índios;Violência doméstica;Fato não constatado;Conclusão fictícia do atendimento;;F
+O-DEMO-013;17/03/2026;Igaci;Violência doméstica;Fato registrado;Perfil explícito fora do recorte;Violência doméstica;M
+O-DEMO-014;18/03/2026;Tanque d'Arca;Ameaça;Fato registrado;A vítima relatou que foi ameaçada pelo companheiro;;F

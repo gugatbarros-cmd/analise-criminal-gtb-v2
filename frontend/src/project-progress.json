@@ -6,7 +6,7 @@
     { "id": 1, "name": "Base local", "weight": 10, "completed": 4, "total": 4, "done": "Repositório separado, API, interface, scripts e testes", "remaining": "Concluída" },
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, quarentena, restauração e benchmark de 10 mil e 100 mil linhas com gravação por lote", "remaining": "Validar os seis layouts anonimizados, medir memória e ampliar escala" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 7, "total": 10, "done": "Regras iniciais separadas, filtros, séries e perfis, meio declarado, ficha original e histórico consultável", "remaining": "Paridade oficial, inferência por relato, campos derivados e demais análises" },
-    { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 8, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas e sossego; relações auditáveis, evolução mensal e rankings", "remaining": "Migrar e validar os demais indicadores, tabelas e relatórios com bases de referência" },
+    { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 9, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas, sossego e triagem doméstica com revisão; relações, séries e rankings", "remaining": "Armas, drogas, relatórios e paridade oficial com bases de referência" },
     { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 0, "total": 5, "done": "Prévias sintéticas local e estática preparadas; nenhuma entrega de troca concluída", "remaining": "Segurança, empacotamento, dados, operação paralela e plano de troca" }
   ]
 }

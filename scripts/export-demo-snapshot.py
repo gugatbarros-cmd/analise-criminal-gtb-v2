@@ -9,7 +9,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.16"
+VERSION = "0.1.17"
 
 
 def export() -> dict:
@@ -33,6 +33,7 @@ def export() -> dict:
                 views[lookup] = {
                     "summary": store.summary(year, city),
                     "tco": store.tco_analysis(year, city),
+                    "domestic": store.domestic_analysis(year, city),
                     "operations": {kind: store.operational_analysis(kind, year, city)
                                    for kind in ("Mandados", "Visitas", "Sossego")},
                     "mvi": {source: store.mvi_analysis(source, year, city)
@@ -43,6 +44,10 @@ def export() -> dict:
         for kind in ("Mandados", "Visitas", "Sossego"):
             for item in store.records("ocorrencias", size=100, indicator=kind)["items"]:
                 evidence[f"{kind}|{item['natural_key']}"] = item["action_evidence"]
+        for indicator in ("Doméstica", "Doméstica:pending", "Doméstica:excluded",
+                          "Doméstica:outside"):
+            for item in store.records("ocorrencias", size=100, indicator=indicator)["items"]:
+                evidence[f"{indicator}|{item['natural_key']}"] = item["action_evidence"]
 
         details = {}
         for source in ("mvi_cad", "mvi_neac"):

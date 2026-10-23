@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
+import { getDomesticAnalysis, getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -114,5 +114,15 @@ describe('contrato de importação e indicadores', () => {
     await getRecords('ocorrencias', 1, 2026, 'Igaci', undefined, undefined, 'Sossego')
     expect(new URL(request.mock.calls[0][0] as string).pathname).toBe('/indicators/operations/Sossego/analysis')
     expect(new URL(request.mock.calls[1][0] as string).searchParams.get('indicator')).toBe('Sossego')
+  })
+
+  it('consulta a triagem doméstica no recorte mestre', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 1, reviews: { pending: 1, excluded: 0, outside: 0 } }) })
+    vi.stubGlobal('fetch', request)
+    const result = await getDomesticAnalysis(2026, 'Igaci')
+    expect(result.reviews.pending).toBe(1)
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.pathname).toBe('/indicators/domestic/analysis')
+    expect(url.searchParams.get('municipality')).toBe('Igaci')
   })
 })
