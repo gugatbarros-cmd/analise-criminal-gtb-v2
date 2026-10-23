@@ -43,7 +43,7 @@ function App() {
   })
 
   return <main className="shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">{demo ? 'Demonstração' : 'Local'} · v{health.data?.version || '0.1.15'}</span></header>
+    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">{demo ? 'Demonstração' : 'Local'} · v{health.data?.version || '0.1.16'}</span></header>
     <section className="hero"><div><p className="eyebrow">{demo ? 'Prévia com dados sintéticos' : 'Ambiente paralelo de validação'}</p><h1>Dados separados. Resultados auditáveis.</h1><p>{demo ? 'Explore indicadores, casos e histórico com exemplos fictícios. Esta demonstração é somente para consulta e fica neste computador.' : 'Importe bases de teste, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.'}</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'API local indisponível' : 'API local ativa'}</div></section>
     {demo && <nav className="quick-nav" aria-label="Explorar demonstração"><a href="#andamento">Andamento</a><a href="#indicadores">Indicadores</a><a href="#mvi">MVI por fonte</a><a href="#operacoes">Outros indicadores</a><a href="#importacoes">Importações sintéticas</a></nav>}
     {demo && <div className="demo-banner" role="status"><strong>Demonstração isolada</strong><span>Os números abaixo vêm apenas de planilhas fictícias. A importação está bloqueada nesta prévia.</span></div>}

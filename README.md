@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo, local e independente do sistema legado em produção. A versão 0.1.15 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas e sossego, relações paginadas, evolução e rankings, perfis independentes de MVI e ficha original com navegação por versões. Inclui demonstração local somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados.
+Projeto novo e independente do sistema legado em produção. A versão 0.1.16 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas e sossego, relações paginadas, evolução e rankings, perfis independentes de MVI e ficha original com navegação por versões. Inclui demonstração local e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
 
 ## Requisitos
 
@@ -15,13 +15,17 @@ Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar
 
 Na pasta deste projeto, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\iniciar-demonstracao.ps1` e abra `http://127.0.0.1:5173/` no mesmo computador. A prévia usa exclusivamente `fixtures/synthetic/` e seu banco fica em `data/demo/`, separado do banco local normal. Ela bloqueia importações via API e mostra um aviso de dados fictícios. As portas 8000 e 5173 precisam estar livres. Para encerrar apenas os processos iniciados pela demonstração, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\parar-demonstracao.ps1`. Os dados sintéticos permanecem em `data/demo/` para a próxima abertura.
 
+Para gerar a prévia estática com as mesmas planilhas fictícias, execute `.venv\Scripts\python.exe scripts\export-demo-snapshot.py` e, na pasta `frontend`, defina `VITE_STATIC_DEMO=1` antes de `npm.cmd run build`. O resultado em `frontend/dist/` funciona sem API e bloqueia importações. `frontend/public/demo-data.json` contém somente dados sintéticos e é recriado pelo exportador. A prévia estática permite testar a interface; o backend completo permanece local.
+
+A prévia privada da versão 0.1.16 foi publicada em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 14 registros sintéticos; não recebe dados nem substitui o sistema antigo.
+
 Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para restaurar um backup do **banco novo**, pare a API e execute `.venv\Scripts\python.exe scripts\restore-local.py data\backups\<arquivo>.duckdb`; o estado anterior também será salvo.
 
 ## Estado
 
 Fases 2, 3 e 4 em andamento: CSV/XLSX com versões, quarentena, backup antes do lote, filtros e indicadores provisórios. O arquivo bruto e o banco ficam em `data/`, ignorados pelo Git. A API oferece `/sources`, `/imports`, `/imports/{id}/divergences`, `/indicators/summary`, `/indicators/operations/{kind}/analysis` e `/records/{source}`. O upload usa `POST /imports/{source}` com corpo binário, cabeçalho `X-Filename` e `scope=partial|complete`. O limite é 30 MB. Arquivos completos sinalizam ausentes sem apagar registros. Arquivos XLS antigos ainda não são aceitos.
 
-As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. Armas, drogas e guarnições têm apenas cadastro genérico no banco, sem adaptadores ou indicadores completos. Autenticação multiusuário, sincronização, relatórios, empacotamento e publicação também faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
+As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. Armas, drogas e guarnições têm apenas cadastro genérico no banco, sem adaptadores ou indicadores completos. Autenticação multiusuário, sincronização, relatórios e empacotamento também faltam. Use apenas dados sintéticos. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
 
 O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A estimativa atual é **58% concluído e 42% restante**; somente a Fase 1 está concluída. O [benchmark local](docs/BENCHMARKS.md) registra os ensaios sintéticos de 10 mil e 100 mil ocorrências.
 
