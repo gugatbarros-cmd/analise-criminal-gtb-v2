@@ -5,11 +5,11 @@ describe('andamento da implantação', () => {
   it('soma 100% de peso e mostra apenas fases aceitas como concluídas', () => {
     expect(phases.reduce((total, phase) => total + phase.weight, 0)).toBe(100)
     expect(completedPhases.map(phase => phase.id)).toEqual([1])
-    expect(completionPercent).toBe(77)
-    expect(remainingPercent).toBe(23)
+    expect(completionPercent).toBe(78)
+    expect(remainingPercent).toBe(22)
   })
 
   it('calcula cada fase a partir das entregas concluídas', () => {
-    expect(phases.map(phasePercent)).toEqual([50, 100, 80, 90, 65, 60])
+    expect(phases.map(phasePercent)).toEqual([50, 100, 80, 90, 70, 60])
   })
 })
