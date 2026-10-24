@@ -1,5 +1,6 @@
 """A cópia integral protege versões, contas e arquivos de entrada."""
 
+import hashlib
 import json
 import zipfile
 
@@ -56,3 +57,47 @@ def test_restore_rejects_archive_outside_backup_directory(tmp_path):
     external.write_bytes(b"unused")
     with pytest.raises(ValueError, match="data/backups"):
         restore_backup(data_dir, external)
+
+
+def test_restore_invalidates_sessions_from_the_backup(tmp_path):
+    data_dir = tmp_path / "data"
+    manager = AuthManager(data_dir / "auth.sqlite3")
+    manager.create_user("admin", "a-strong-password", "admin")
+    session = manager.authenticate("admin", "a-strong-password")
+    assert manager.user_for_token(session["token"])
+    backup = create_backup(data_dir)
+
+    restore_backup(data_dir, backup)
+
+    restored = AuthManager(data_dir / "auth.sqlite3")
+    assert restored.has_users()
+    assert restored.user_for_token(session["token"]) is None
+    assert restored.authenticate("admin", "a-strong-password")
+
+
+@pytest.mark.parametrize("database_name", ["gtb.duckdb", "auth.sqlite3"])
+def test_restore_rejects_hash_valid_but_invalid_database(tmp_path, database_name):
+    data_dir = tmp_path / "data"
+    store = Store(data_dir / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([cad()]))
+    manager = AuthManager(data_dir / "auth.sqlite3")
+    manager.create_user("admin", "a-strong-password", "admin")
+    original = create_backup(data_dir)
+    invalid = data_dir / "backups" / f"invalid-{database_name}.zip"
+    with zipfile.ZipFile(original) as archive:
+        content = {name: archive.read(name) for name in archive.namelist()}
+    content[database_name] = b"invalid database"
+    manifest = json.loads(content["manifest.json"])
+    for entry in manifest["files"]:
+        if entry["name"] == database_name:
+            entry["size"] = len(content[database_name])
+            entry["sha256"] = hashlib.sha256(content[database_name]).hexdigest()
+    content["manifest.json"] = json.dumps(manifest).encode()
+    with zipfile.ZipFile(invalid, "w") as archive:
+        for name, payload in content.items():
+            archive.writestr(name, payload)
+
+    with pytest.raises(ValueError, match="inválido"):
+        restore_backup(data_dir, invalid)
+    assert Store(data_dir / "gtb.duckdb").summary()["mvi_cad"] == 1
+    assert AuthManager(data_dir / "auth.sqlite3").has_users()

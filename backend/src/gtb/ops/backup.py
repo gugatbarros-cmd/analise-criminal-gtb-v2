@@ -87,6 +87,33 @@ def create_backup(data_dir: Path) -> Path:
         staging.unlink(missing_ok=True)
 
 
+def _validate_staged_databases(staging: Path, listed: list[str]) -> None:
+    """Rejeita bancos ilegíveis antes da troca e invalida sessões recuperadas."""
+    if "gtb.duckdb" in listed:
+        try:
+            with closing(duckdb.connect(str(staging / "gtb.duckdb"), read_only=True)) as db:
+                db.execute("SELECT id, source, raw_path FROM import_batches LIMIT 1").fetchall()
+                db.execute("SELECT source, natural_key, event_date, raw_json, indicators "
+                           "FROM record_versions LIMIT 1").fetchall()
+        except duckdb.Error as error:
+            raise ValueError("Banco de indicadores inválido no backup") from error
+    if "auth.sqlite3" in listed:
+        try:
+            with closing(sqlite3.connect(staging / "auth.sqlite3")) as db:
+                if db.execute("PRAGMA quick_check").fetchone() != ("ok",):
+                    raise ValueError("Banco de contas inválido no backup")
+                required = {"users": {"username", "role", "salt", "password_hash"},
+                            "sessions": {"token_hash", "username", "expires_at"}}
+                for table, columns in required.items():
+                    present = {row[1] for row in db.execute(f"PRAGMA table_info({table})")}
+                    if not columns <= present:
+                        raise ValueError("Banco de contas incompleto no backup")
+                db.execute("DELETE FROM sessions")
+                db.commit()
+        except sqlite3.DatabaseError as error:
+            raise ValueError("Banco de contas inválido no backup") from error
+
+
 def restore_backup(data_dir: Path, archive_path: Path) -> Path | None:
     """Confere hashes antes de substituir os dados; guarda o estado anterior."""
     data_dir = data_dir.resolve()
@@ -128,6 +155,7 @@ def restore_backup(data_dir: Path, archive_path: Path) -> Path | None:
                         output.write(chunk)
                 if destination.stat().st_size != item["size"] or _digest(destination) != item["sha256"]:
                     raise ValueError("Arquivo de backup corrompido")
+        _validate_staged_databases(staging, listed)
         previous = create_backup(data_dir) if _files(data_dir) else None
         raw_dir = data_dir / "raw"
         if raw_dir.exists():
