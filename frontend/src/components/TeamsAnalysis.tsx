@@ -3,12 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { getRecords, getTeamsAnalysis, type TeamsFilters } from '../services/api'
 import { Ranking } from './Ranking'
 import { useAnalysisScope } from './useAnalysisScope'
+import type { SpecializedReportRequest } from './SpecializedReport'
 
 const groupName = { roster: 'Escala', extra: 'Força-tarefa', unlisted: 'Fora da escala' }
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-export function TeamsAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
+export function TeamsAnalysis({ year, municipality, onReport }: { year?: number; municipality?: string; onReport: (request: SpecializedReportRequest) => void }) {
   const { scopeYear, scopeMunicipality, controls } = useAnalysisScope(year, municipality)
   const [page, setPage] = useState(1)
   const [month, setMonth] = useState('')
@@ -50,6 +51,7 @@ export function TeamsAnalysis({ year, municipality }: { year?: number; municipal
     {invalidRange && <p className="error" role="alert">A data inicial deve ser anterior ou igual à data final.</p>}
     {analysis.isError && <p className="error" role="alert">Não foi possível carregar a análise de guarnições.</p>}
     {analysis.data && <><div className="analysis-grid"><p>Atendimentos na escala <strong>{analysis.data.roster_occurrences}</strong></p><p>Pontos ponderados <strong>{analysis.data.weighted_points}</strong></p><p>Guarnições <strong>{analysis.data.teams}</strong></p><p>Policiais identificados <strong>{analysis.data.officers}</strong></p><p>Força-tarefa <strong>{analysis.data.extra_occurrences}</strong></p><p>Outros recursos <strong>{analysis.data.unlisted_occurrences}</strong></p></div><div className="analysis-grid"><Ranking title="Equipes · pontos" items={analysis.data.ranking.map(item => ({ name: item.name, total: item.points }))} /><Ranking title="Policiais · pontos" items={analysis.data.officer_ranking.map(item => ({ name: item.name, total: item.points }))} /><Ranking title="Naturezas da escala" items={analysis.data.natures} /></div></>}
+    <div className="report-actions"><button type="button" disabled={!analysis.data || analysis.isFetching || invalidRange} onClick={() => { if (analysis.data) onReport({ kind: 'teams', scope: { year: scopeYear, municipality: scopeMunicipality }, filters, data: analysis.data }) }}>Ver relatório de guarnições</button></div>
     {records.isPending && <p className="empty">Carregando vínculos…</p>}
     {records.isError && <p className="error" role="alert">Não foi possível carregar a relação de guarnições.</p>}
     {records.data?.total === 0 && <p className="empty">Nenhum vínculo neste recorte.</p>}

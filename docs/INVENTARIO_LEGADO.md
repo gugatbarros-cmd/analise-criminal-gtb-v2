@@ -28,9 +28,9 @@ Leitura estática dos controles em `index.html` da versão 4.6.256; a existênci
 | Tentativas | Todo período, intervalo mestre, ano e mês; município e natureza | Períodos, mês e natureza |
 | TCO | Todo período, intervalo mestre, ano e mês; município, natureza e busca por número | Períodos, mês, natureza e busca por número |
 | Sossego | Todo período, intervalo personalizado, ano e mês; datas inicial/final, município e natureza | Recortes de período e natureza |
-| Armas | Ano, mês, município, situação, tipo e datas inicial/final | Recorte próprio de ano e município, mês, situação, tipo e intervalo implementados; relatório especializado e paridade oficial pendentes |
-| Drogas | Ano, mês, datas inicial/final, município e tipo | Recorte próprio de ano e município, mês, tipo e intervalo implementados; relatório especializado e paridade oficial pendentes |
-| Guarnições | Datas inicial/final, tipo de ocorrência, policial, guarnição, município, ano e mês | Recorte próprio de ano e município, mês, datas, equipe, policial por matrícula e natureza implementados; especialidades e paridade oficial pendentes |
+| Armas | Ano, mês, município, situação, tipo e datas inicial/final | Recorte próprio de ano e município, mês, situação, tipo, intervalo e relatório focado implementados; marcas/fabricantes e paridade oficial pendentes |
+| Drogas | Ano, mês, datas inicial/final, município e tipo | Recorte próprio de ano e município, mês, tipo, intervalo e relatório focado implementados; paridade oficial pendente |
+| Guarnições | Datas inicial/final, tipo de ocorrência, policial, guarnição, município, ano e mês | Recorte próprio de ano e município, mês, datas, equipe, policial por matrícula, natureza e relatório focado implementados; especialidades e paridade oficial pendentes |
 | Tabela consolidada | Busca, indicador e origem | Conferir cobertura integral das seis fontes |
 | Inteligência estatística | Janela móvel de 7/14/28/90 dias, territórios A/B e pesquisa textual | Módulo ainda não migrado |
 

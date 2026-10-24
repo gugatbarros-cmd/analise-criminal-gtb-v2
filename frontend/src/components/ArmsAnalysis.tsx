@@ -3,11 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { getArmsAnalysis, getRecords, type ArmsFilters } from '../services/api'
 import { Ranking } from './Ranking'
 import { useAnalysisScope } from './useAnalysisScope'
+import type { SpecializedReportRequest } from './SpecializedReport'
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
-export function ArmsAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
+export function ArmsAnalysis({ year, municipality, onReport }: { year?: number; municipality?: string; onReport: (request: SpecializedReportRequest) => void }) {
   const { scopeYear, scopeMunicipality, controls } = useAnalysisScope(year, municipality)
   const [page, setPage] = useState(1)
   const [month, setMonth] = useState('')
@@ -47,6 +48,7 @@ export function ArmsAnalysis({ year, municipality }: { year?: number; municipali
     {invalidRange && <p className="error" role="alert">A data inicial deve ser anterior ou igual à data final.</p>}
     {analysis.isError && <p className="error" role="alert">Não foi possível carregar a análise de armas.</p>}
     {analysis.data && <><div className="analysis-grid"><p>Unidades <strong>{analysis.data.total}</strong></p><p>Apreendidas <strong>{analysis.data.seized}</strong></p><p>Uso restrito <strong>{analysis.data.restricted}</strong></p></div><div className="analysis-grid"><Ranking title="Apreensões por mês" items={monthly} /><Ranking title="Municípios · unidades" items={analysis.data.municipalities} /><Ranking title="Tipos · unidades" items={analysis.data.types} /><Ranking title="Calibres · unidades" items={analysis.data.calibers} /><Ranking title="Situações · unidades" items={analysis.data.situations} /></div></>}
+    <div className="report-actions"><button type="button" disabled={!analysis.data || analysis.isFetching || invalidRange} onClick={() => { if (analysis.data) onReport({ kind: 'arms', scope: { year: scopeYear, municipality: scopeMunicipality }, filters, data: analysis.data }) }}>Ver relatório de armas</button></div>
     {records.isPending && !invalidRange && <p className="empty">Carregando armas…</p>}
     {records.isError && <p className="error" role="alert">Não foi possível carregar a relação de armas.</p>}
     {records.data?.total === 0 && <p className="empty">Nenhuma arma neste recorte.</p>}

@@ -3,12 +3,13 @@ import { useQuery } from '@tanstack/react-query'
 import { getDrugsAnalysis, getRecords, type DrugsFilters } from '../services/api'
 import { Ranking } from './Ranking'
 import { useAnalysisScope } from './useAnalysisScope'
+import type { SpecializedReportRequest } from './SpecializedReport'
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const weight = (grams: number) => `${(grams / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg · ${grams.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} g`
 
-export function DrugsAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
+export function DrugsAnalysis({ year, municipality, onReport }: { year?: number; municipality?: string; onReport: (request: SpecializedReportRequest) => void }) {
   const { scopeYear, scopeMunicipality, controls } = useAnalysisScope(year, municipality)
   const [page, setPage] = useState(1)
   const [month, setMonth] = useState('')
@@ -46,6 +47,7 @@ export function DrugsAnalysis({ year, municipality }: { year?: number; municipal
     {invalidRange && <p className="error" role="alert">A data inicial deve ser anterior ou igual à data final.</p>}
     {analysis.isError && <p className="error" role="alert">Não foi possível carregar a análise de drogas.</p>}
     {analysis.data && <><div className="analysis-grid"><p>Registros <strong>{analysis.data.total}</strong></p><p>Peso reconhecido <strong>{weight(analysis.data.total_weight_grams)}</strong></p><p>Com peso <strong>{analysis.data.weighted_records}/{analysis.data.total}</strong></p></div><div className="analysis-grid"><Ranking title="Evolução mensal · registros" items={monthly} /><Ranking title="Tipos · registros" items={analysis.data.types} /><Ranking title="Municípios · registros" items={analysis.data.municipalities} /><Ranking title="Locais · registros" items={analysis.data.locations} /><Ranking title="Peso por tipo · g" items={analysis.data.weights_by_type.map(item => ({ name: item.name, total: item.grams }))} /></div></>}
+    <div className="report-actions"><button type="button" disabled={!analysis.data || analysis.isFetching || invalidRange} onClick={() => { if (analysis.data) onReport({ kind: 'drugs', scope: { year: scopeYear, municipality: scopeMunicipality }, filters, data: analysis.data }) }}>Ver relatório de drogas</button></div>
     {records.isPending && !invalidRange && <p className="empty">Carregando registros de drogas…</p>}
     {records.isError && <p className="error" role="alert">Não foi possível carregar a relação de drogas.</p>}
     {records.data?.total === 0 && <p className="empty">Nenhum registro neste recorte.</p>}
