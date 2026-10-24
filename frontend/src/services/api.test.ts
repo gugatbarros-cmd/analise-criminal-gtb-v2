@@ -47,6 +47,13 @@ describe('contrato de importação e indicadores', () => {
     const url = new URL(request.mock.calls[0][0] as string)
     expect(url.pathname).toBe('/indicators/arms/analysis')
     expect(url.searchParams.get('municipality')).toBe('Igaci')
+    await getArmsAnalysis(2026, 'Igaci', { month: 2, armType: 'Pistola', situation: 'Apreendida', startDate: '2026-02-01' })
+    const filtered = new URL(request.mock.calls[1][0] as string)
+    expect(filtered.searchParams.get('month')).toBe('2')
+    expect(filtered.searchParams.get('situation')).toBe('Apreendida')
+    await getRecords('armas', 1, 2026, 'Igaci', undefined, undefined, undefined,
+      '2026-02-01', undefined, 2, 'Pistola', 'Apreendida')
+    expect(new URL(request.mock.calls[2][0] as string).searchParams.get('arm_type')).toBe('Pistola')
   })
 
   it('consulta drogas por fonte própria com filtros', async () => {

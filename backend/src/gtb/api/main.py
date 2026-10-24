@@ -15,7 +15,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.33"
+APP_VERSION = "0.1.34"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -207,8 +207,15 @@ def domestic_analysis(year: int | None = None, municipality: str | None = None) 
 
 
 @app.get("/indicators/arms/analysis")
-def arms_analysis(year: int | None = None, municipality: str | None = None) -> dict:
-    return store.arms_analysis(year, municipality)
+def arms_analysis(year: int | None = None, municipality: str | None = None,
+                  month: int | None = Query(None, ge=1, le=12),
+                  start_date: date | None = None, end_date: date | None = None,
+                  arm_type: str | None = None, situation: str | None = None) -> dict:
+    try:
+        return store.arms_analysis(year, municipality, month, start_date, end_date,
+                                   arm_type, situation)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 @app.get("/indicators/drugs/analysis")
@@ -249,10 +256,13 @@ def records(source: str, page: int = 1, size: int = 20, year: int | None = None,
             municipality: str | None = None, victim: str | None = None,
             eligible_only: bool = False, category_prefix: str | None = None,
             indicator: str | None = None, start_date: date | None = None,
-            end_date: date | None = None) -> dict:
+            end_date: date | None = None,
+            month: int | None = Query(None, ge=1, le=12),
+            arm_type: str | None = None, situation: str | None = None) -> dict:
     try:
         return store.records(source, page, size, year, municipality, victim, eligible_only,
-                             category_prefix, indicator, start_date, end_date)
+                             category_prefix, indicator, start_date, end_date,
+                             month, arm_type, situation)
     except ValueError as error:
         raise HTTPException(404 if source not in SOURCES else 422, str(error)) from error
 

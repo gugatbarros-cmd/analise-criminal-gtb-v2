@@ -561,7 +561,15 @@ class Store:
                 **counts, "examples": examples}
 
     def arms_analysis(self, year: int | None = None,
-                      municipality: str | None = None) -> dict:
+                      municipality: str | None = None, month: int | None = None,
+                      start_date: calendar_date | None = None,
+                      end_date: calendar_date | None = None,
+                      arm_type: str | None = None,
+                      situation: str | None = None) -> dict:
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("Data inicial posterior à data final")
+        if month is not None and not 1 <= month <= 12:
+            raise ValueError("Mês deve ficar entre 1 e 12")
         clauses = ["source = 'armas'", "is_current", "eligible"]
         params: list[object] = []
         if year:
@@ -570,15 +578,29 @@ class Store:
         if municipality:
             clauses.append("lower(municipality) = lower(?)")
             params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        if month is not None:
+            clauses.append("month(event_date) = ?")
+            params.append(month)
+        if start_date:
+            clauses.append("event_date >= ?")
+            params.append(start_date)
+        if end_date:
+            clauses.append("event_date <= ?")
+            params.append(end_date)
         with self.lock, self._connect() as db:
             rows = db.execute(f"""SELECT raw_json, event_date, municipality, category
                 FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
-        total = seized = restricted = 0
+        total = seized = restricted = record_count = 0
         monthly: dict[str, int] = {}
         groups: dict[str, dict[str, int]] = {name: {} for name in
                                             ("municipalities", "types", "calibers", "situations")}
         for raw_json, event_date, city, category in rows:
             row = json.loads(raw_json)
+            if arm_type and key(arm_type) != key(category or "Não informado"):
+                continue
+            if situation and key(situation) != key(arm_field(row, "situation") or "Não informado"):
+                continue
+            record_count += 1
             units = arm_quantity(row)
             total += units
             seized_item = arm_seized(row)
@@ -588,12 +610,14 @@ class Store:
                 monthly[month] = monthly.get(month, 0) + units
             if arm_restricted(row):
                 restricted += units
-            values = (city, category, arm_field(row, "caliber") or "Não informado",
+            values = (city, category or "Não informado", arm_field(row, "caliber") or "Não informado",
                       arm_field(row, "situation") or "Não informado")
             for group, value in zip(groups.values(), values):
                 group[value] = group.get(value, 0) + units
         return {"total": total, "seized": seized, "restricted": restricted,
-                "records": len(rows),
+                "records": record_count,
+                "available_types": sorted(groups["types"]),
+                "available_situations": sorted(groups["situations"]),
                 "monthly": [{"period": period, "total": value}
                             for period, value in sorted(monthly.items())],
                 **{name: [{"name": value, "total": count} for value, count in
@@ -702,17 +726,26 @@ class Store:
                 victim: str | None = None, eligible_only: bool = False,
                 category_prefix: str | None = None, indicator: str | None = None,
                 start_date: calendar_date | None = None,
-                end_date: calendar_date | None = None) -> dict:
+                end_date: calendar_date | None = None,
+                month: int | None = None, arm_type: str | None = None,
+                situation: str | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
+        if (arm_type or situation) and source != "armas":
+            raise ValueError("Filtros de arma exigem a fonte armas")
         if start_date and end_date and start_date > end_date:
             raise ValueError("Data inicial posterior à data final")
+        if month is not None and not 1 <= month <= 12:
+            raise ValueError("Mês deve ficar entre 1 e 12")
         page, size = max(page, 1), min(max(size, 1), 100)
         clauses = ["source = ?", "is_current"]
         params: list[object] = [source]
         if year:
             clauses.append("year = ?")
             params.append(year)
+        if month is not None:
+            clauses.append("month(event_date) = ?")
+            params.append(month)
         if start_date:
             clauses.append("event_date >= ?")
             params.append(start_date)
@@ -735,11 +768,29 @@ class Store:
             params.append(indicator)
         where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
-            total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}", params).fetchone()[0]
-            rows = db.execute(f"""SELECT natural_key, event_date, municipality, occurrence, victim, nature,
+            selection = f"""SELECT natural_key, event_date, municipality, occurrence, victim, nature,
                 category, eligible, reason, version, indicators, raw_json FROM record_versions
-                WHERE {where} ORDER BY event_date DESC, occurrence, victim
-                LIMIT ? OFFSET ?""", [*params, size, (page - 1) * size]).fetchall()
+                WHERE {where} ORDER BY event_date DESC, occurrence, victim, natural_key"""
+            if arm_type or situation:
+                rows = []
+                total = 0
+                cursor = db.execute(selection, params)
+                while batch := cursor.fetchmany(1000):
+                    for row in batch:
+                        original = json.loads(row[-1])
+                        if arm_type and key(arm_type) != key(row[6] or "Não informado"):
+                            continue
+                        if situation and key(situation) != key(arm_field(original, "situation") or
+                                                               "Não informado"):
+                            continue
+                        if (page - 1) * size <= total < page * size:
+                            rows.append(row)
+                        total += 1
+            else:
+                total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}",
+                                   params).fetchone()[0]
+                rows = db.execute(selection + " LIMIT ? OFFSET ?",
+                                  [*params, size, (page - 1) * size]).fetchall()
         columns = ("natural_key", "event_date", "municipality", "occurrence", "victim", "nature", "category",
                    "eligible", "reason", "version", "indicators")
         return {"total": total, "page": page, "size": size,
@@ -754,6 +805,8 @@ class Store:
                     "arm_caliber": arm_field(json.loads(row[-1]), "caliber")
                     if source == "armas" else None,
                     "arm_seized": arm_seized(json.loads(row[-1])) if source == "armas" else None,
+                    "arm_restricted": arm_restricted(json.loads(row[-1]))
+                    if source == "armas" else None,
                     "drug_quantity": drug_quantity(json.loads(row[-1]))
                     if source == "drogas" else None,
                     "drug_unit": drug_field(json.loads(row[-1]), "unit")

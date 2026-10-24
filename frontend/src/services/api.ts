@@ -11,13 +11,14 @@ export type BatchAudit = {
   quarantine: AuditPage<{ row_number: number; reason: string; fields: Record<string, string> }>
 }
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
-export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[]; arm_quantity?: number; arm_situation?: string; arm_caliber?: string; arm_seized?: boolean; drug_quantity?: number; drug_unit?: string; drug_weight_grams?: number; drug_location?: string; team_score?: number; team_role?: string; team_group?: 'roster' | 'extra' | 'unlisted' }
+export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[]; arm_quantity?: number; arm_situation?: string; arm_caliber?: string; arm_seized?: boolean; arm_restricted?: boolean; drug_quantity?: number; drug_unit?: string; drug_weight_grams?: number; drug_location?: string; team_score?: number; team_role?: string; team_group?: 'roster' | 'extra' | 'unlisted' }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
 export type OperationalKind = 'Mandados' | 'Visitas' | 'Sossego'
 export type OperationalAnalysis = TcoAnalysis
 export type DomesticAnalysis = TcoAnalysis & { reviews: { pending: number; excluded: number; outside: number } }
-export type ArmsAnalysis = { total: number; seized: number; restricted: number; records: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; calibers: { name: string; total: number }[]; situations: { name: string; total: number }[] }
+export type ArmsAnalysis = { total: number; seized: number; restricted: number; records: number; available_types: string[]; available_situations: string[]; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; calibers: { name: string; total: number }[]; situations: { name: string; total: number }[] }
+export type ArmsFilters = { month?: number; startDate?: string; endDate?: string; armType?: string; situation?: string }
 export type DrugsAnalysis = { total: number; total_weight_grams: number; weighted_records: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; locations: { name: string; total: number }[]; weights_by_type: { name: string; grams: number }[] }
 export type TeamsAnalysis = { roster_occurrences: number; weighted_points: number; teams: number; officers: number; extra_occurrences: number; unlisted_occurrences: number; ranking: { name: string; occurrences: number; points: number }[]; officer_ranking: { name: string; registration: string; occurrences: number; points: number }[]; natures: { name: string; total: number }[] }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
@@ -67,10 +68,15 @@ export async function getDomesticAnalysis(year?: number, municipality?: string):
   return json(await apiFetch(`${baseUrl}/indicators/domestic/analysis?${params}`))
 }
 
-export async function getArmsAnalysis(year?: number, municipality?: string): Promise<ArmsAnalysis> {
+export async function getArmsAnalysis(year?: number, municipality?: string, filters: ArmsFilters = {}): Promise<ArmsAnalysis> {
   const params = new URLSearchParams()
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
+  if (filters.month) params.set('month', String(filters.month))
+  if (filters.startDate) params.set('start_date', filters.startDate)
+  if (filters.endDate) params.set('end_date', filters.endDate)
+  if (filters.armType) params.set('arm_type', filters.armType)
+  if (filters.situation) params.set('situation', filters.situation)
   return json(await apiFetch(`${baseUrl}/indicators/arms/analysis?${params}`))
 }
 
@@ -132,7 +138,7 @@ export async function getBatchAudit(batchId: string, quarantinePage = 1, diverge
   return { divergences, quarantine }
 }
 
-export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string): Promise<RecordPage> {
+export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string, month?: number, armType?: string, situation?: string): Promise<RecordPage> {
   const params = new URLSearchParams({ page: String(page), size: '20', eligible_only: 'true' })
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
@@ -141,6 +147,9 @@ export async function getRecords(source: Source, page: number, year?: number, mu
   if (indicator) params.set('indicator', indicator)
   if (startDate) params.set('start_date', startDate)
   if (endDate) params.set('end_date', endDate)
+  if (month) params.set('month', String(month))
+  if (armType) params.set('arm_type', armType)
+  if (situation) params.set('situation', situation)
   return json(await apiFetch(`${baseUrl}/records/${source}?${params}`))
 }
 

@@ -1,5 +1,8 @@
 """Contagem de armas por unidade e chave individual, com dados fictícios."""
 
+from datetime import date
+
+import pytest
 from test_imports import csv_bytes
 
 from gtb.db.store import Store
@@ -34,6 +37,15 @@ def test_arm_units_seizures_and_separate_items(tmp_path):
     records = store.records("armas")["items"]
     assert len({record["natural_key"] for record in records}) == 3
     assert any(record["arm_quantity"] == 2 and record["arm_seized"] for record in records)
+    assert store.arms_analysis(month=1)["total"] == 3
+    assert store.arms_analysis(start_date=date(2026, 2, 1))["total"] == 1
+    assert store.arms_analysis(arm_type="Pistola", situation="Apreendida")["total"] == 2
+    assert store.arms_analysis(situation="Não apreendida")["seized"] == 0
+    assert store.records("armas", month=1, arm_type="Revólver")["total"] == 1
+    assert store.records("armas", situation="Apreendida")["total"] == 1
+    assert store.records("armas", start_date=date(2026, 2, 1))["total"] == 1
+    with pytest.raises(ValueError, match="Mês"):
+        store.arms_analysis(month=13)
 
 
 def test_arm_without_stable_identity_is_quarantined_and_negation_excluded(tmp_path):

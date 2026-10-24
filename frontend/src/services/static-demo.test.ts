@@ -10,10 +10,16 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
     eligible: true, reason: '', version: 1, solution: '', instrument: '',
     action_evidence: '', indicators: ['Visitas'],
   }
+  const armItem = { ...caseItem, natural_key: '2026|arm1', occurrence: 'ARM-1',
+    category: 'Pistola', arm_quantity: 2, arm_situation: 'Apreendida',
+    arm_caliber: '9 mm', arm_seized: true, arm_restricted: true }
+  const armOther = { ...armItem, natural_key: '2026|arm2', occurrence: 'ARM-2',
+    event_date: '2026-02-05', arm_quantity: 1, arm_situation: 'Não apreendida',
+    arm_seized: false, arm_restricted: false }
   const data = {
-    version: '0.1.33', years: [2026], cities: ['Igaci'],
+    version: '0.1.34', years: [2026], cities: ['Igaci'],
     views: { '*|*': { summary: { visitas: 1 }, arms: { total: 4, seized: 3 }, drugs: { total: 4, total_weight_grams: 1000.1 }, teams: { roster_occurrences: 3, weighted_points: 11 }, mvi_comparison: { candidate_pairs: 1 } }, '1900|*': { summary: { visitas: 0 }, arms: { total: 0, seized: 0 }, drugs: { total: 0, total_weight_grams: 0 }, teams: { roster_occurrences: 0, weighted_points: 0 }, mvi_comparison: { candidate_pairs: 0 } } },
-    records: { ocorrencias: [caseItem] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
+    records: { ocorrencias: [caseItem], armas: [armItem, armOther] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
     details: {}, batches: [{ id: 'demo-batch-mvi_cad', source: 'mvi_cad' }], audit: { 'demo-batch-mvi_cad': { divergences: [{ source: 'mvi_cad', natural_key: 'k', reason: 'ausente' }], quarantine: [{ row_number: 2, reason: 'sem chave', fields: { Nome: 'Pessoa Fictícia' } }] } },
   }
   const read = vi.fn().mockResolvedValue(Response.json(data))
@@ -22,6 +28,12 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
   expect((await summary.json()).visitas).toBe(1)
   const arms = await demoFetch('http://127.0.0.1:8000/indicators/arms/analysis')
   expect((await arms.json()).seized).toBe(3)
+  const armsFiltered = await demoFetch('http://127.0.0.1:8000/indicators/arms/analysis?month=1&arm_type=Pistola&situation=Apreendida')
+  expect(await armsFiltered.json()).toMatchObject({ total: 2, seized: 2, restricted: 2, records: 1 })
+  const notSeized = await demoFetch('http://127.0.0.1:8000/indicators/arms/analysis?situation=N%C3%A3o%20apreendida')
+  expect(await notSeized.json()).toMatchObject({ total: 1, seized: 0, records: 1 })
+  const armRecords = await demoFetch('http://127.0.0.1:8000/records/armas?month=2')
+  expect((await armRecords.json()).total).toBe(1)
   const drugs = await demoFetch('http://127.0.0.1:8000/indicators/drugs/analysis')
   expect((await drugs.json()).total_weight_grams).toBe(1000.1)
   const teams = await demoFetch('http://127.0.0.1:8000/indicators/teams/analysis')

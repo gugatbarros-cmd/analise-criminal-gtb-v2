@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from test_arms import arm
 from test_imports import cad, csv_bytes, neac
 
 from gtb.api import main
@@ -61,6 +62,20 @@ def test_import_batch_history_has_pages(tmp_path, monkeypatch):
     assert result.json()["total"] == 2
     assert result.json()["items"][0]["id"] == first["id"]
     assert client.get("/imports?size=101").status_code == 422
+
+
+def test_arms_api_applies_the_same_filters_to_totals_and_records(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([arm(), arm(**{"Número de série": "SER-SYN-002", "Data": "18/02/2026",
+                                        "Tipo": "Revólver", "Situação": "Não apreendida"})])
+    assert client.post("/imports/armas", content=content,
+                       headers={"X-Filename": "arms.csv"}).status_code == 200
+    filtered = client.get("/indicators/arms/analysis?month=1&arm_type=Pistola&situation=Apreendida")
+    assert filtered.json()["total"] == 2
+    assert filtered.json()["records"] == 1
+    assert client.get("/records/armas?month=1&arm_type=Pistola&situation=Apreendida").json()["total"] == 1
+    assert client.get("/indicators/arms/analysis?month=13").status_code == 422
 
 
 def test_cvp_records_api_filter(tmp_path, monkeypatch):

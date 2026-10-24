@@ -49,6 +49,56 @@ function response(value: unknown, status = 200): Response {
   return Response.json(value, { status })
 }
 
+function filteredArms(data: Snapshot, params: URLSearchParams): RecordItem[] {
+  const year = Number(params.get('year'))
+  const city = params.get('municipality')
+  const month = Number(params.get('month'))
+  const start = params.get('start_date')
+  const end = params.get('end_date')
+  const type = params.get('arm_type')
+  const situation = params.get('situation')
+  return data.records.armas.filter(item => item.eligible &&
+    (!year || Number(item.event_date.slice(0, 4)) === year) &&
+    (!city || fold(item.municipality) === fold(city)) &&
+    (!month || Number(item.event_date.slice(5, 7)) === month) &&
+    (!start || item.event_date >= start) && (!end || item.event_date <= end) &&
+    (!type || fold(item.category || 'Não informado') === fold(type)) &&
+    (!situation || fold(item.arm_situation || 'Não informado') === fold(situation)))
+}
+
+function armsAnalysis(items: RecordItem[]): ArmsAnalysis {
+  const monthly: Record<string, number> = {}
+  const groups: Record<string, Record<string, number>> = {
+    municipalities: {}, types: {}, calibers: {}, situations: {},
+  }
+  let total = 0; let seized = 0; let restricted = 0
+  for (const item of items) {
+    const units = item.arm_quantity || 1
+    total += units
+    if (item.arm_seized) {
+      seized += units
+      const period = item.event_date.slice(0, 7)
+      monthly[period] = (monthly[period] || 0) + units
+    }
+    if (item.arm_restricted) restricted += units
+    for (const [group, value] of Object.entries({ municipalities: item.municipality,
+      types: item.category || 'Não informado', calibers: item.arm_caliber || 'Não informado',
+      situations: item.arm_situation || 'Não informado' })) {
+      groups[group][value] = (groups[group][value] || 0) + units
+    }
+  }
+  const ranking = (values: Record<string, number>) => Object.entries(values)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 10)
+    .map(([name, amount]) => ({ name, total: amount }))
+  return { total, seized, restricted, records: items.length,
+    available_types: Object.keys(groups.types).sort(),
+    available_situations: Object.keys(groups.situations).sort(),
+    monthly: Object.entries(monthly).sort(([a], [b]) => a < b ? -1 : 1)
+      .map(([period, amount]) => ({ period, total: amount })),
+    municipalities: ranking(groups.municipalities), types: ranking(groups.types),
+    calibers: ranking(groups.calibers), situations: ranking(groups.situations) }
+}
+
 export async function demoFetch(input: string, init?: RequestInit): Promise<Response> {
   if (init?.method && init.method !== 'GET') return response({ detail: 'Demonstração somente para consulta' }, 403)
   const data = await snapshot()
@@ -58,7 +108,9 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   if (path === '/indicators/summary') return response(view.summary)
   if (path === '/indicators/tco/analysis') return response(view.tco)
   if (path === '/indicators/domestic/analysis') return response(view.domestic)
-  if (path === '/indicators/arms/analysis') return response(view.arms)
+  if (path === '/indicators/arms/analysis') return response(
+    ['month', 'start_date', 'end_date', 'arm_type', 'situation'].some(name => url.searchParams.has(name))
+      ? armsAnalysis(filteredArms(data, url.searchParams)) : view.arms)
   if (path === '/indicators/drugs/analysis') return response(view.drugs)
   if (path === '/indicators/teams/analysis') return response(view.teams)
   const operation = path.match(/^\/indicators\/operations\/(Mandados|Visitas|Sossego)\/analysis$/)
@@ -89,13 +141,19 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     const victim = url.searchParams.get('victim')
     const prefix = url.searchParams.get('category_prefix')
     const indicator = url.searchParams.get('indicator')
+    const month = Number(url.searchParams.get('month'))
+    const armType = url.searchParams.get('arm_type')
+    const situation = url.searchParams.get('situation')
     const onlyEligible = url.searchParams.get('eligible_only') === 'true'
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
     const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 20))
     const items = data.records[source].filter(item =>
       (!year || Number(item.event_date.slice(0, 4)) === year) &&
+      (!month || Number(item.event_date.slice(5, 7)) === month) &&
       (!startDate || item.event_date >= startDate) &&
       (!endDate || item.event_date <= endDate) &&
+      (!armType || fold(item.category || 'Não informado') === fold(armType)) &&
+      (!situation || fold(item.arm_situation || 'Não informado') === fold(situation)) &&
       (!city || fold(item.municipality) === fold(city)) &&
       (!victim || item.victim.toLowerCase().includes(victim.toLowerCase())) &&
       (!prefix || item.category.startsWith(prefix)) &&
