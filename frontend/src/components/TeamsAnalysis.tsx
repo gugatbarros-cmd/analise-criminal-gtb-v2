@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getRecords, getTeamsAnalysis, type TeamsFilters } from '../services/api'
 import { Ranking } from './Ranking'
+import { useAnalysisScope } from './useAnalysisScope'
 
 const groupName = { roster: 'Escala', extra: 'Força-tarefa', unlisted: 'Fora da escala' }
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 export function TeamsAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
+  const { scopeYear, scopeMunicipality, controls } = useAnalysisScope(year, municipality)
   const [page, setPage] = useState(1)
   const [month, setMonth] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -21,21 +23,22 @@ export function TeamsAnalysis({ year, municipality }: { year?: number; municipal
     startDate: startDate || undefined, endDate: endDate || undefined,
     teamName: teamName || undefined, officerRegistration: officerRegistration || undefined,
     natureFilter: natureFilter || undefined }
-  useEffect(() => setPage(1), [year, municipality, month, startDate, endDate, teamName,
+  useEffect(() => setPage(1), [scopeYear, scopeMunicipality, month, startDate, endDate, teamName,
     officerRegistration, natureFilter])
-  const base = useQuery({ queryKey: ['teams-analysis', year, municipality],
-    queryFn: () => getTeamsAnalysis(year, municipality) })
-  const filtered = useQuery({ queryKey: ['teams-analysis', year, municipality, filters],
-    queryFn: () => getTeamsAnalysis(year, municipality, filters), enabled: hasFilters && !invalidRange })
+  const base = useQuery({ queryKey: ['teams-analysis', scopeYear, scopeMunicipality],
+    queryFn: () => getTeamsAnalysis(scopeYear, scopeMunicipality) })
+  const filtered = useQuery({ queryKey: ['teams-analysis', scopeYear, scopeMunicipality, filters],
+    queryFn: () => getTeamsAnalysis(scopeYear, scopeMunicipality, filters), enabled: hasFilters && !invalidRange })
   const analysis = hasFilters ? filtered : base
-  const records = useQuery({ queryKey: ['records', 'guarnicoes', page, year, municipality, filters],
-    queryFn: () => getRecords('guarnicoes', page, year, municipality, undefined, undefined,
+  const records = useQuery({ queryKey: ['records', 'guarnicoes', page, scopeYear, scopeMunicipality, filters],
+    queryFn: () => getRecords('guarnicoes', page, scopeYear, scopeMunicipality, undefined, undefined,
       undefined, filters.startDate, filters.endDate, filters.month, undefined, undefined,
       undefined, filters.teamName, filters.officerRegistration, filters.natureFilter),
     enabled: !invalidRange })
   return <section className="panel" aria-label="Produtividade das guarnições">
     <div className="section-head"><div><p className="eyebrow">Vínculos operacionais · base própria</p><h2>Guarnições</h2></div><span>Provisório · validar layout oficial</span></div>
     <p className="muted">A pontuação usa a complexidade da natureza registrada, de 1 a 5 pontos. O ranking de equipes inclui apenas guarnições reconhecidas da escala. Força-tarefa e outros recursos aparecem separadamente; um mesmo atendimento pode ter mais de uma equipe.</p>
+    {controls}
     <div className="filters">
       <label>Mês<select value={month} onChange={event => setMonth(event.target.value)}><option value="">Todos</option>{months.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>
       <label>Data inicial<input type="date" value={startDate} onChange={event => setStartDate(event.target.value)} /></label>

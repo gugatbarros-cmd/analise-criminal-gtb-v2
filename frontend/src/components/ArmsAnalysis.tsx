@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getArmsAnalysis, getRecords, type ArmsFilters } from '../services/api'
 import { Ranking } from './Ranking'
+import { useAnalysisScope } from './useAnalysisScope'
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 export function ArmsAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
+  const { scopeYear, scopeMunicipality, controls } = useAnalysisScope(year, municipality)
   const [page, setPage] = useState(1)
   const [month, setMonth] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -18,14 +20,14 @@ export function ArmsAnalysis({ year, municipality }: { year?: number; municipali
   const filters: ArmsFilters = { month: month ? Number(month) : undefined,
     startDate: startDate || undefined, endDate: endDate || undefined,
     armType: armType || undefined, situation: situation || undefined }
-  useEffect(() => setPage(1), [year, municipality, month, startDate, endDate, armType, situation])
-  const base = useQuery({ queryKey: ['arms-analysis', year, municipality],
-    queryFn: () => getArmsAnalysis(year, municipality) })
-  const filtered = useQuery({ queryKey: ['arms-analysis', year, municipality, filters],
-    queryFn: () => getArmsAnalysis(year, municipality, filters), enabled: hasFilters && !invalidRange })
+  useEffect(() => setPage(1), [scopeYear, scopeMunicipality, month, startDate, endDate, armType, situation])
+  const base = useQuery({ queryKey: ['arms-analysis', scopeYear, scopeMunicipality],
+    queryFn: () => getArmsAnalysis(scopeYear, scopeMunicipality) })
+  const filtered = useQuery({ queryKey: ['arms-analysis', scopeYear, scopeMunicipality, filters],
+    queryFn: () => getArmsAnalysis(scopeYear, scopeMunicipality, filters), enabled: hasFilters && !invalidRange })
   const analysis = hasFilters ? filtered : base
-  const records = useQuery({ queryKey: ['records', 'armas', page, year, municipality, filters],
-    queryFn: () => getRecords('armas', page, year, municipality, undefined, undefined, undefined,
+  const records = useQuery({ queryKey: ['records', 'armas', page, scopeYear, scopeMunicipality, filters],
+    queryFn: () => getRecords('armas', page, scopeYear, scopeMunicipality, undefined, undefined, undefined,
       filters.startDate, filters.endDate, filters.month, filters.armType, filters.situation),
     enabled: !invalidRange })
   const monthly = analysis.data?.monthly.map(item => ({
@@ -34,6 +36,7 @@ export function ArmsAnalysis({ year, municipality }: { year?: number; municipali
   return <section className="panel" aria-label="Análise de armas">
     <div className="section-head"><div><p className="eyebrow">Fonte própria · contagem por unidade</p><h2>Armas</h2></div><span>Provisório · validar layout oficial</span></div>
     <p className="muted">Cada arma é identificada pela série ou pelo número da ocorrência e ID do item. A quantidade soma unidades, sem somar munições. Apreensão depende da situação informada.</p>
+    {controls}
     <div className="filters">
       <label>Mês<select value={month} onChange={event => setMonth(event.target.value)}><option value="">Todos</option>{months.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>
       <label>Data inicial<input type="date" value={startDate} onChange={event => setStartDate(event.target.value)} /></label>

@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getDrugsAnalysis, getRecords, type DrugsFilters } from '../services/api'
 import { Ranking } from './Ranking'
+import { useAnalysisScope } from './useAnalysisScope'
 
 const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const weight = (grams: number) => `${(grams / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg · ${grams.toLocaleString('pt-BR', { maximumFractionDigits: 3 })} g`
 
 export function DrugsAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
+  const { scopeYear, scopeMunicipality, controls } = useAnalysisScope(year, municipality)
   const [page, setPage] = useState(1)
   const [month, setMonth] = useState('')
   const [startDate, setStartDate] = useState('')
@@ -18,14 +20,14 @@ export function DrugsAnalysis({ year, municipality }: { year?: number; municipal
   const filters: DrugsFilters = { month: month ? Number(month) : undefined,
     startDate: startDate || undefined, endDate: endDate || undefined,
     drugType: drugType || undefined }
-  useEffect(() => setPage(1), [year, municipality, month, startDate, endDate, drugType])
-  const base = useQuery({ queryKey: ['drugs-analysis', year, municipality],
-    queryFn: () => getDrugsAnalysis(year, municipality) })
-  const filtered = useQuery({ queryKey: ['drugs-analysis', year, municipality, filters],
-    queryFn: () => getDrugsAnalysis(year, municipality, filters), enabled: hasFilters && !invalidRange })
+  useEffect(() => setPage(1), [scopeYear, scopeMunicipality, month, startDate, endDate, drugType])
+  const base = useQuery({ queryKey: ['drugs-analysis', scopeYear, scopeMunicipality],
+    queryFn: () => getDrugsAnalysis(scopeYear, scopeMunicipality) })
+  const filtered = useQuery({ queryKey: ['drugs-analysis', scopeYear, scopeMunicipality, filters],
+    queryFn: () => getDrugsAnalysis(scopeYear, scopeMunicipality, filters), enabled: hasFilters && !invalidRange })
   const analysis = hasFilters ? filtered : base
-  const records = useQuery({ queryKey: ['records', 'drogas', page, year, municipality, filters],
-    queryFn: () => getRecords('drogas', page, year, municipality, undefined, undefined, undefined,
+  const records = useQuery({ queryKey: ['records', 'drogas', page, scopeYear, scopeMunicipality, filters],
+    queryFn: () => getRecords('drogas', page, scopeYear, scopeMunicipality, undefined, undefined, undefined,
       filters.startDate, filters.endDate, filters.month, undefined, undefined, filters.drugType),
     enabled: !invalidRange })
   const monthly = analysis.data?.monthly.map(item => ({
@@ -34,6 +36,7 @@ export function DrugsAnalysis({ year, municipality }: { year?: number; municipal
   return <section className="panel" aria-label="Análise de drogas">
     <div className="section-head"><div><p className="eyebrow">Fonte própria · peso reconhecido</p><h2>Drogas</h2></div><span>Estimativa · validar layout oficial</span></div>
     <p className="muted">Registros e peso são medidas distintas. O peso só soma quantidades com unidade reconhecida em g, kg ou mg; outras unidades permanecem na relação sem virar gramas.</p>
+    {controls}
     <div className="filters">
       <label>Mês<select value={month} onChange={event => setMonth(event.target.value)}><option value="">Todos</option>{months.map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>
       <label>Data inicial<input type="date" value={startDate} onChange={event => setStartDate(event.target.value)} /></label>
