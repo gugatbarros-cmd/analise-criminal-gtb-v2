@@ -483,6 +483,56 @@ class Store:
                                sorted(bands.items(), key=lambda item: (-item[1], item[0]))],
                 "city_time_bands": city_time}
 
+    def mvi_comparison(self, year: int | None = None,
+                       municipality: str | None = None) -> dict:
+        """Aponta correspondências exatas potenciais sem fundir ou somar as fontes."""
+        clauses = ["source IN ('mvi_cad', 'mvi_neac')", "is_current", "eligible"]
+        params: list[object] = []
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        with self.lock, self._connect() as db:
+            rows = db.execute(f"""SELECT source, year, occurrence, victim, natural_key,
+                event_date, municipality, category FROM record_versions
+                WHERE {' AND '.join(clauses)}""", params).fetchall()
+        groups: dict[tuple[int, str, str], dict[str, list[dict]]] = {}
+        totals = {"mvi_cad": 0, "mvi_neac": 0}
+        unmatched_identity = {"mvi_cad": 0, "mvi_neac": 0}
+        for source, row_year, occurrence, victim, natural_key, date, city, category in rows:
+            totals[source] += 1
+            if not key(occurrence) or not key(victim):
+                unmatched_identity[source] += 1
+                continue
+            identity = (row_year, key(occurrence), key(victim))
+            groups.setdefault(identity, {"mvi_cad": [], "mvi_neac": []})[source].append({
+                "natural_key": natural_key, "occurrence": occurrence,
+                "victim": victim, "date": date.isoformat(),
+                "municipality": city, "category": category,
+            })
+        counts = {"candidate_pairs": 0, "cad_only": unmatched_identity["mvi_cad"],
+                  "neac_only": unmatched_identity["mvi_neac"], "ambiguous": 0}
+        examples = []
+        for identity, sources in sorted(groups.items()):
+            cad, neac = sources["mvi_cad"], sources["mvi_neac"]
+            if len(cad) > 1 or len(neac) > 1:
+                counts["ambiguous"] += len(cad) + len(neac)
+            elif cad and neac:
+                counts["candidate_pairs"] += 1
+                if len(examples) < 20:
+                    examples.append({"cad": cad[0], "neac": neac[0],
+                                     "same_date": cad[0]["date"] == neac[0]["date"],
+                                     "same_municipality": key(cad[0]["municipality"]) ==
+                                     key(neac[0]["municipality"])})
+            elif cad:
+                counts["cad_only"] += 1
+            elif neac:
+                counts["neac_only"] += 1
+        return {"cad_total": totals["mvi_cad"], "neac_total": totals["mvi_neac"],
+                **counts, "examples": examples}
+
     def arms_analysis(self, year: int | None = None,
                       municipality: str | None = None) -> dict:
         clauses = ["source = 'armas'", "is_current", "eligible"]

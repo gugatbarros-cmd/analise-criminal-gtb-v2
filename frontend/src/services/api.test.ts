@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
+import { getArmsAnalysis, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -100,6 +100,16 @@ describe('contrato de importação e indicadores', () => {
     expect(neac.pathname).toBe('/indicators/mvi/mvi_neac/analysis')
     expect(neac.searchParams.get('year')).toBe('2025')
     expect(neac.searchParams.has('municipality')).toBe(false)
+  })
+
+  it('consulta correspondências potenciais com o mesmo recorte', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ candidate_pairs: 1 }) })
+    vi.stubGlobal('fetch', request)
+    await getMviComparison(2026, 'Igaci')
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.pathname).toBe('/indicators/mvi/comparison')
+    expect(url.searchParams.get('year')).toBe('2026')
+    expect(url.searchParams.get('municipality')).toBe('Igaci')
   })
 
   it('busca a ficha original do caso pela fonte e chave codificada', async () => {

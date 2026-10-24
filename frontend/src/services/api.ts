@@ -16,6 +16,7 @@ export type DrugsAnalysis = { total: number; total_weight_grams: number; weighte
 export type TeamsAnalysis = { roster_occurrences: number; weighted_points: number; teams: number; officers: number; extra_occurrences: number; unlisted_occurrences: number; ranking: { name: string; occurrences: number; points: number }[]; officer_ranking: { name: string; registration: string; occurrences: number; points: number }[]; natures: { name: string; total: number }[] }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
 export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; monthly: { period: string; total: number }[]; weekdays: { name: string; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[]; instruments: { name: string; total: number }[]; time_coverage: { valid: number; total: number }; time_bands: { name: string; total: number }[]; city_time_bands: { municipality: string; total: number; valid: number; top_band: string | null; top_band_total: number; top_category: string | null }[] }
+export type MviComparison = { cad_total: number; neac_total: number; candidate_pairs: number; cad_only: number; neac_only: number; ambiguous: number; examples: { cad: { natural_key: string; occurrence: string; victim: string; date: string; municipality: string; category: string }; neac: { natural_key: string; occurrence: string; victim: string; date: string; municipality: string; category: string }; same_date: boolean; same_municipality: boolean }[] }
 export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; is_current: boolean; fields: Record<string, string> }
 export type MviRecordVersion = { version: number; is_current: boolean; valid_from: string; valid_to: string | null; batch_id: string; eligible: boolean; category: string }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
@@ -93,6 +94,13 @@ export async function getMviAnalysis(source: MviSource, year?: number, municipal
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   return json(await apiFetch(`${baseUrl}/indicators/mvi/${source}/analysis?${params}`))
+}
+
+export async function getMviComparison(year?: number, municipality?: string): Promise<MviComparison> {
+  const params = new URLSearchParams()
+  if (year) params.set('year', String(year))
+  if (municipality) params.set('municipality', municipality)
+  return json(await apiFetch(`${baseUrl}/indicators/mvi/comparison?${params}`))
 }
 
 export async function getMviRecordDetail(source: MviSource, naturalKey: string, version?: number): Promise<MviRecordDetail> {

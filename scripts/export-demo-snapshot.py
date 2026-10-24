@@ -9,7 +9,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.26"
+VERSION = "0.1.27"
 
 
 def export() -> dict:
@@ -44,6 +44,7 @@ def export() -> dict:
                                    for kind in ("Mandados", "Visitas", "Sossego")},
                     "mvi": {source: store.mvi_analysis(source, year, city)
                             for source in ("mvi_cad", "mvi_neac")},
+                    "mvi_comparison": store.mvi_comparison(year, city),
                 }
 
         evidence = {}

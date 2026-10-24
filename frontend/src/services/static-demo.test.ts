@@ -11,8 +11,8 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
     action_evidence: '', indicators: ['Visitas'],
   }
   const data = {
-    version: '0.1.26', years: [2026], cities: ['Igaci'],
-    views: { '*|*': { summary: { visitas: 1 }, arms: { total: 4, seized: 3 }, drugs: { total: 4, total_weight_grams: 1000.1 }, teams: { roster_occurrences: 3, weighted_points: 11 } }, '1900|*': { summary: { visitas: 0 }, arms: { total: 0, seized: 0 }, drugs: { total: 0, total_weight_grams: 0 }, teams: { roster_occurrences: 0, weighted_points: 0 } } },
+    version: '0.1.27', years: [2026], cities: ['Igaci'],
+    views: { '*|*': { summary: { visitas: 1 }, arms: { total: 4, seized: 3 }, drugs: { total: 4, total_weight_grams: 1000.1 }, teams: { roster_occurrences: 3, weighted_points: 11 }, mvi_comparison: { candidate_pairs: 1 } }, '1900|*': { summary: { visitas: 0 }, arms: { total: 0, seized: 0 }, drugs: { total: 0, total_weight_grams: 0 }, teams: { roster_occurrences: 0, weighted_points: 0 }, mvi_comparison: { candidate_pairs: 0 } } },
     records: { ocorrencias: [caseItem] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
     details: {}, batches: [],
   }
@@ -26,6 +26,8 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
   expect((await drugs.json()).total_weight_grams).toBe(1000.1)
   const teams = await demoFetch('http://127.0.0.1:8000/indicators/teams/analysis')
   expect((await teams.json()).weighted_points).toBe(11)
+  const comparison = await demoFetch('http://127.0.0.1:8000/indicators/mvi/comparison')
+  expect((await comparison.json()).candidate_pairs).toBe(1)
   const matching = await demoFetch('http://127.0.0.1:8000/records/ocorrencias?indicator=Visitas&municipality=igaci')
   expect((await matching.json()).items[0].action_evidence).toBe('Visita confirmada')
   const excluded = await demoFetch('http://127.0.0.1:8000/records/ocorrencias?year=2025')

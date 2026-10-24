@@ -6,7 +6,7 @@ from gtb.api.main import app
 def test_health_contract() -> None:
     response = TestClient(app).get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.1.26", "mode": "local"}
+    assert response.json() == {"status": "ok", "version": "0.1.27", "mode": "local"}
 
 
 def test_demo_mode_is_read_only(monkeypatch) -> None:

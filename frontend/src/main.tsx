@@ -7,6 +7,7 @@ import { CvpAnalysis } from './components/CvpAnalysis'
 import { AttemptAnalysis } from './components/AttemptAnalysis'
 import { TcoAnalysis } from './components/TcoAnalysis'
 import { MviAnalysis } from './components/MviAnalysis'
+import { MviComparison } from './components/MviComparison'
 import { OperationalAnalysis } from './components/OperationalAnalysis'
 import { DomesticAnalysis } from './components/DomesticAnalysis'
 import { SummaryReport } from './components/SummaryReport'
@@ -58,7 +59,7 @@ function App() {
       if (!file) throw new Error('Selecione um arquivo CSV ou XLSX.')
       return upload(source, file, scope)
     },
-    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }); void queryClient.invalidateQueries({ queryKey: ['tco-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['domestic-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['arms-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['drugs-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['teams-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-detail'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-versions'] }); void queryClient.invalidateQueries({ queryKey: ['operational-analysis'] }) },
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }); void queryClient.invalidateQueries({ queryKey: ['tco-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['domestic-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['arms-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['drugs-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['teams-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-comparison'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-detail'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-versions'] }); void queryClient.invalidateQueries({ queryKey: ['operational-analysis'] }) },
   })
 
   if (health.data?.mode === 'setup' || (health.data?.mode === 'local' && (!token || auth.isError)))
@@ -67,7 +68,7 @@ function App() {
     return <main className="shell"><p className="empty">Validando sessão local…</p></main>
 
   return <main className="shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><div className="header-actions"><span className="badge">{demo ? 'Demonstração' : 'Local'} · v{health.data?.version || '0.1.26'}</span>{auth.data && <button type="button" onClick={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.clear() }) }}>Sair · {auth.data.username}</button>}</div></header>
+    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><div className="header-actions"><span className="badge">{demo ? 'Demonstração' : 'Local'} · v{health.data?.version || '0.1.27'}</span>{auth.data && <button type="button" onClick={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.clear() }) }}>Sair · {auth.data.username}</button>}</div></header>
     <section className="hero"><div><p className="eyebrow">{demo ? 'Prévia com dados sintéticos' : 'Ambiente paralelo de validação'}</p><h1>Dados separados. Resultados auditáveis.</h1><p>{demo ? 'Explore indicadores, casos e histórico com exemplos fictícios. Esta demonstração é somente para consulta e não recebe arquivos.' : 'Importe bases de teste, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.'}</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'API local indisponível' : 'API local ativa'}</div></section>
     {demo && <nav className="quick-nav" aria-label="Explorar demonstração"><a href="#andamento">Andamento</a><a href="#indicadores">Indicadores</a><a href="#mvi">MVI por fonte</a><a href="#operacoes">Outros indicadores</a><a href="#importacoes">Importações sintéticas</a></nav>}
     {demo && <div className="demo-banner" role="status"><strong>Demonstração isolada</strong><span>Os números abaixo vêm apenas de planilhas fictícias. A importação está bloqueada nesta prévia.</span></div>}
@@ -81,6 +82,7 @@ function App() {
     <section className="panel"><div className="section-head"><div><p className="eyebrow">Relação individual</p><h2>Vítimas elegíveis</h2></div></div><div className="tabs" role="tablist" aria-label="Fonte MVI"><button type="button" role="tab" aria-selected={activeSource === 'mvi_cad'} onClick={() => setActiveSource('mvi_cad')}>MVI CAD</button><button type="button" role="tab" aria-selected={activeSource === 'mvi_neac'} onClick={() => setActiveSource('mvi_neac')}>MVI NEAC</button></div><SourceTable source="mvi_cad" active={activeSource === 'mvi_cad'} /><SourceTable source="mvi_neac" active={activeSource === 'mvi_neac'} /></section>
     <div id="mvi" className="section-anchor" />
     <MviAnalysis source={activeSource} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+    <MviComparison year={year ? Number(year) : undefined} municipality={municipality || undefined} />
     <CvpAnalysis summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
     <AttemptAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
     <TcoAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />

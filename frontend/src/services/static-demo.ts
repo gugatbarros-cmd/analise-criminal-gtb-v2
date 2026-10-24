@@ -1,4 +1,4 @@
-import type { ArmsAnalysis, Batch, DomesticAnalysis, DrugsAnalysis, MviAnalysis, MviRecordDetail, MviRecordVersion, OperationalAnalysis, RecordItem, Source, Summary, TeamsAnalysis } from './api'
+import type { ArmsAnalysis, Batch, DomesticAnalysis, DrugsAnalysis, MviAnalysis, MviComparison, MviRecordDetail, MviRecordVersion, OperationalAnalysis, RecordItem, Source, Summary, TeamsAnalysis } from './api'
 
 type View = {
   summary: Summary
@@ -9,6 +9,7 @@ type View = {
   teams: TeamsAnalysis
   operations: Record<string, OperationalAnalysis>
   mvi: Record<string, MviAnalysis>
+  mvi_comparison: MviComparison
 }
 type Snapshot = {
   version: string
@@ -63,6 +64,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   if (operation) return response(view.operations[operation[1]])
   const mvi = path.match(/^\/indicators\/mvi\/(mvi_cad|mvi_neac)\/analysis$/)
   if (mvi) return response(view.mvi[mvi[1]])
+  if (path === '/indicators/mvi/comparison') return response(view.mvi_comparison)
   if (path === '/imports') return response({ items: data.batches })
   const records = path.match(/^\/records\/(mvi_cad|mvi_neac|ocorrencias|armas|drogas|guarnicoes)$/)
   if (records) {

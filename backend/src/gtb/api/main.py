@@ -14,7 +14,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.26"
+APP_VERSION = "0.1.27"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -206,6 +206,11 @@ def mvi_analysis(source: str, year: int | None = None,
         return store.mvi_analysis(source, year, municipality)
     except ValueError as error:
         raise HTTPException(404, str(error)) from error
+
+
+@app.get("/indicators/mvi/comparison")
+def mvi_comparison(year: int | None = None, municipality: str | None = None) -> dict:
+    return store.mvi_comparison(year, municipality)
 
 
 @app.get("/records/{source}")
