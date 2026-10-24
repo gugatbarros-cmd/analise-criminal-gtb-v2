@@ -10,7 +10,8 @@ Ambiente desta medição: Windows 11 (`10.0.26200`), Python 3.12.10, 16 CPUs ló
 | 10.000, gravação por lote | 1 | 616.714 B | 3.420.160 B | 8,5245 s | não medido | 0,0403 s | 0,0410 s | 0,0343 s | 2.500 |
 | 100.000, gravação por lote | 1 | 6.166.714 B | 13.905.920 B | 83,2414 s | não medido | 0,0680 s | 0,0585 s | 0,0458 s | 25.000 |
 | 100.000, gravação por lote | 2 × 50.000 | 6.166.769 B | 19.410.944 B | 102,2644 s | 205.549.568 B | 0,0502 s | 0,0526 s | 0,0413 s | 25.000 |
+| 1.000.000, gravação por lote | 10 × 100.000 | 61.667.209 B | 137.637.888 B | 1.090,7001 s | 420.069.376 B | 0,0886 s | 0,0868 s | 0,0598 s | 250.000 |
 
 A gravação por lote reduziu o tempo da amostra de 10 mil linhas em cerca de **18 vezes**. O importador continua validando e normalizando cada registro, mas compara chaves e grava versões com operações SQL em conjunto. Os testes verificam idempotência, retificação, quarentena, separação de fontes, texto original com aspas e quebras de linha e limpeza dos arquivos temporários.
 
-Ainda faltam avaliação de CSV/XLSX reais anonimizados, comparação com o legado sob o mesmo cenário e ensaio de 1 milhão de linhas. O limite atual de 30 MB por arquivo impede usar a amostra de 1 milhão em um único lote; o script agora divide a carga em lotes únicos. Estes tempos não comprovam paridade estatística.
+O ensaio de um milhão usou dez arquivos abaixo do limite de 30 MB, com chaves únicas entre lotes. Cada lote confirmou 100 mil novos registros e nenhuma quarentena; o resumo e a primeira página confirmaram 250 mil mandados. O computador também executou testes e empacotamento durante parte desse ensaio, portanto o tempo não deve ser comparado diretamente às execuções anteriores. Ainda faltam avaliação de CSV/XLSX reais anonimizados e comparação com o legado sob o mesmo cenário. Estes tempos não comprovam paridade estatística.

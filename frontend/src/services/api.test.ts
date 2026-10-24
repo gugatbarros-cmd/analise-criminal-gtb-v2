@@ -110,6 +110,17 @@ describe('contrato de importação e indicadores', () => {
     expect(neac.searchParams.has('municipality')).toBe(false)
   })
 
+  it('envia datas apenas à relação MVI consultada', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ total: 0, items: [] }) })
+    vi.stubGlobal('fetch', request)
+    await getRecords('mvi_neac', 1, 2026, undefined, 'Maria', undefined, undefined, '2026-01-01', '2026-01-31')
+    const url = new URL(request.mock.calls[0][0] as string)
+    expect(url.pathname).toBe('/records/mvi_neac')
+    expect(url.searchParams.get('start_date')).toBe('2026-01-01')
+    expect(url.searchParams.get('end_date')).toBe('2026-01-31')
+    expect(url.searchParams.get('victim')).toBe('Maria')
+  })
+
   it('consulta correspondências potenciais com o mesmo recorte', async () => {
     const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ candidate_pairs: 1 }) })
     vi.stubGlobal('fetch', request)

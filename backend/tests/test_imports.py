@@ -1,7 +1,9 @@
 import csv
 import io
+from datetime import date
 from pathlib import Path
 
+import pytest
 from openpyxl import Workbook
 
 from gtb.db.store import Store
@@ -61,6 +63,22 @@ def test_sources_independent_and_idempotent(tmp_path):
     assert store.summary()["mvi_neac"] == 1
     assert store.records("mvi_neac")["total"] == 2
     assert not list((tmp_path / "data" / "raw").glob("stage-*"))
+
+
+def test_mvi_record_date_range_keeps_source_separate(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([
+        cad(), cad(**{"Número da ocorrência": "CAD-002", "Data da ocorrência": "08/02/2026"}),
+    ]))
+    store.import_file("mvi_neac", "neac.csv", csv_bytes([neac()]))
+    first = store.records("mvi_cad", eligible_only=True,
+                          start_date=date(2026, 1, 1), end_date=date(2026, 1, 31))
+    assert first["total"] == 1
+    assert first["items"][0]["occurrence"] == "CAD-001"
+    assert store.records("mvi_neac", eligible_only=True,
+                         start_date=date(2026, 2, 1))["total"] == 0
+    with pytest.raises(ValueError, match="Data inicial"):
+        store.records("mvi_cad", start_date=date(2026, 2, 1), end_date=date(2026, 1, 1))
 
 
 def test_staged_import_preserves_original_text_with_quotes_and_newlines(tmp_path):

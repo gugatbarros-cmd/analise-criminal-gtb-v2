@@ -7,18 +7,22 @@ export function SourceTable({ source, active }: { source: MviSource; active: boo
   const [year, setYear] = useState('')
   const [municipality, setMunicipality] = useState('')
   const [victim, setVictim] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const invalidRange = !!startDate && !!endDate && startDate > endDate
   const records = useQuery({
-    queryKey: ['records', source, page, year, municipality, victim],
-    queryFn: () => getRecords(source, page, year ? Number(year) : undefined, municipality || undefined, victim || undefined),
-    enabled: active,
+    queryKey: ['records', source, page, year, municipality, victim, startDate, endDate],
+    queryFn: () => getRecords(source, page, year ? Number(year) : undefined, municipality || undefined, victim || undefined, undefined, undefined, startDate || undefined, endDate || undefined),
+    enabled: active && !invalidRange,
   })
   const resetSelection = () => { setPage(1); setSelectedKey(null) }
   return <div hidden={!active}>
-    <div className="filters source-filters"><label>Ano<input type="number" placeholder="Todos" value={year} onChange={event => { setYear(event.target.value); resetSelection() }} /></label><label>Município<input type="search" placeholder="Todos" value={municipality} onChange={event => { setMunicipality(event.target.value); resetSelection() }} /></label><label>Vítima<input type="search" placeholder="Buscar nome" value={victim} onChange={event => { setVictim(event.target.value); resetSelection() }} /></label></div>
+    <div className="filters source-filters"><label>Ano<input type="number" placeholder="Todos" value={year} onChange={event => { setYear(event.target.value); resetSelection() }} /></label><label>Município<input type="search" placeholder="Todos" value={municipality} onChange={event => { setMunicipality(event.target.value); resetSelection() }} /></label><label>Vítima<input type="search" placeholder="Buscar nome" value={victim} onChange={event => { setVictim(event.target.value); resetSelection() }} /></label><label>Data inicial<input type="date" value={startDate} onChange={event => { setStartDate(event.target.value); resetSelection() }} /></label><label>Data final<input type="date" value={endDate} onChange={event => { setEndDate(event.target.value); resetSelection() }} /></label></div>
+    {invalidRange && <p className="error" role="alert">A data inicial deve ser anterior ou igual à data final.</p>}
     {records.isError && <p className="error" role="alert">Não foi possível carregar os registros.</p>}
-    {records.isPending && active && <p className="empty">Carregando registros…</p>}
+    {records.isPending && active && !invalidRange && <p className="empty">Carregando registros…</p>}
     {records.data?.total === 0 && <p className="empty">Nenhum registro elegível neste filtro.</p>}
     {!!records.data?.total && <><div className="table-scroll"><table><thead><tr><th>Data</th><th>Ocorrência</th><th>Vítima</th><th>Município</th><th>Classificação</th><th>Meio declarado</th><th>Ficha</th></tr></thead><tbody>{records.data.items.map(item => <tr key={item.natural_key}><td>{item.event_date}</td><td>{item.occurrence}</td><td>{item.victim}</td><td>{item.municipality}</td><td>{item.category}</td><td>{item.instrument}</td><td><button type="button" aria-label={`Abrir ficha de ${item.victim}`} onClick={() => setSelectedKey(item.natural_key)}>Ver ficha</button></td></tr>)}</tbody></table></div><div className="pagination"><span>{records.data.total} vítima(s) · página {page}</span><div><button type="button" disabled={page <= 1} onClick={() => { setPage(value => value - 1); setSelectedKey(null) }}>Anterior</button><button type="button" disabled={page * 20 >= records.data.total} onClick={() => { setPage(value => value + 1); setSelectedKey(null) }}>Próxima</button></div></div></>}
     {selectedKey && <MviRecordDetail key={`${source}:${selectedKey}`} source={source} naturalKey={selectedKey} onClose={() => setSelectedKey(null)} />}

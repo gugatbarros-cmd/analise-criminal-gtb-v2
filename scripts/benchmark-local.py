@@ -7,6 +7,7 @@ import io
 import json
 import os
 import platform
+import sys
 import tempfile
 import threading
 from pathlib import Path
@@ -114,6 +115,8 @@ def main() -> None:
                 seconds = round(perf_counter() - start, 4)
                 assert imported["inserted"] == count and imported["quarantined"] == 0
                 batch_times.append(seconds)
+                print(f"Lote {len(batch_times)}: {offset + count}/{args.rows} linhas "
+                      f"em {seconds:.1f} s", file=sys.stderr, flush=True)
                 del payload
             summary, summary_seconds = timed(lambda: store.summary(year=2026))
             analysis, analysis_seconds = timed(
@@ -132,6 +135,8 @@ def main() -> None:
             "python": platform.python_version(), "platform": platform.platform(),
             "logical_cpus": os.cpu_count(),
             "import_seconds": round(sum(batch_times), 4),
+            "batch_seconds": batch_times,
+            "import_rows_per_second": round(args.rows / sum(batch_times), 1),
             "peak_working_set_bytes": memory.peak,
             "summary_seconds": summary_seconds,
             "filtered_analysis_seconds": analysis_seconds,

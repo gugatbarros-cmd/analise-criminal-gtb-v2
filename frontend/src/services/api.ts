@@ -127,13 +127,15 @@ export async function getBatchAudit(batchId: string): Promise<BatchAudit> {
   return { divergences: divergences.items, quarantine: quarantine.items }
 }
 
-export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string): Promise<RecordPage> {
+export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string): Promise<RecordPage> {
   const params = new URLSearchParams({ page: String(page), size: '20', eligible_only: 'true' })
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
   if (victim) params.set('victim', victim)
   if (categoryPrefix) params.set('category_prefix', categoryPrefix)
   if (indicator) params.set('indicator', indicator)
+  if (startDate) params.set('start_date', startDate)
+  if (endDate) params.set('end_date', endDate)
   return json(await apiFetch(`${baseUrl}/records/${source}?${params}`))
 }
 

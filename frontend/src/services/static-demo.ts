@@ -73,6 +73,8 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   if (records) {
     const source = records[1] as Source
     const year = Number(url.searchParams.get('year'))
+    const startDate = url.searchParams.get('start_date')
+    const endDate = url.searchParams.get('end_date')
     const city = url.searchParams.get('municipality')
     const victim = url.searchParams.get('victim')
     const prefix = url.searchParams.get('category_prefix')
@@ -82,6 +84,8 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 20))
     const items = data.records[source].filter(item =>
       (!year || Number(item.event_date.slice(0, 4)) === year) &&
+      (!startDate || item.event_date >= startDate) &&
+      (!endDate || item.event_date <= endDate) &&
       (!city || fold(item.municipality) === fold(city)) &&
       (!victim || item.victim.toLowerCase().includes(victim.toLowerCase())) &&
       (!prefix || item.category.startsWith(prefix)) &&

@@ -8,6 +8,7 @@ import shutil
 import threading
 import uuid
 from datetime import UTC, datetime
+from datetime import date as calendar_date
 from pathlib import Path
 
 import duckdb
@@ -682,15 +683,25 @@ class Store:
     def records(self, source: str, page: int = 1, size: int = 20,
                 year: int | None = None, municipality: str | None = None,
                 victim: str | None = None, eligible_only: bool = False,
-                category_prefix: str | None = None, indicator: str | None = None) -> dict:
+                category_prefix: str | None = None, indicator: str | None = None,
+                start_date: calendar_date | None = None,
+                end_date: calendar_date | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("Data inicial posterior à data final")
         page, size = max(page, 1), min(max(size, 1), 100)
         clauses = ["source = ?", "is_current"]
         params: list[object] = [source]
         if year:
             clauses.append("year = ?")
             params.append(year)
+        if start_date:
+            clauses.append("event_date >= ?")
+            params.append(start_date)
+        if end_date:
+            clauses.append("event_date <= ?")
+            params.append(end_date)
         if municipality:
             clauses.append("lower(municipality) = lower(?)")
             params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)

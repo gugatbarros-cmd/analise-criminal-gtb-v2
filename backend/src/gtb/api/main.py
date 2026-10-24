@@ -1,6 +1,7 @@
 """API local para importações auditáveis e indicadores provisórios."""
 
 import os
+from datetime import date
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -14,7 +15,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.31"
+APP_VERSION = "0.1.32"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -239,12 +240,13 @@ def mvi_comparison(year: int | None = None, municipality: str | None = None) -> 
 def records(source: str, page: int = 1, size: int = 20, year: int | None = None,
             municipality: str | None = None, victim: str | None = None,
             eligible_only: bool = False, category_prefix: str | None = None,
-            indicator: str | None = None) -> dict:
+            indicator: str | None = None, start_date: date | None = None,
+            end_date: date | None = None) -> dict:
     try:
         return store.records(source, page, size, year, municipality, victim, eligible_only,
-                             category_prefix, indicator)
+                             category_prefix, indicator, start_date, end_date)
     except ValueError as error:
-        raise HTTPException(404, str(error)) from error
+        raise HTTPException(404 if source not in SOURCES else 422, str(error)) from error
 
 
 @app.get("/mvi/{source}/records/{natural_key}/versions")
