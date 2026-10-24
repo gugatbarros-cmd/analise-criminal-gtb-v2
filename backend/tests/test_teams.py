@@ -34,6 +34,11 @@ def test_team_ranking_uses_roster_and_complexity(tmp_path):
     assert store.records("guarnicoes", team_name="RP 01")["total"] == 2
     assert store.records("guarnicoes", month=2)["total"] == 2
     assert store.records("guarnicoes", team_name="RP 01")["items"][0]["team_officers"]
+    assert store.teams_analysis(officer_registration="SYN001")["weighted_points"] == 7
+    assert store.records("guarnicoes", officer_registration="SYN001")["total"] == 2
+    assert store.teams_analysis(nature_filter="Homicídio doloso")["weighted_points"] == 5
+    assert store.records("guarnicoes", nature_filter="Homicídio doloso")["total"] == 1
+    assert "SYN001" in store.teams_analysis()["available_officers"]
 
 
 def test_team_identity_date_and_scope_are_conservative(tmp_path):

@@ -693,7 +693,9 @@ class Store:
                        month: int | None = None,
                        start_date: calendar_date | None = None,
                        end_date: calendar_date | None = None,
-                       team_name: str | None = None) -> dict:
+                       team_name: str | None = None,
+                       officer_registration: str | None = None,
+                       nature_filter: str | None = None) -> dict:
         if start_date and end_date and start_date > end_date:
             raise ValueError("Data inicial posterior à data final")
         if month is not None and not 1 <= month <= 12:
@@ -719,6 +721,10 @@ class Store:
             rows = db.execute(f"""SELECT natural_key, raw_json, occurrence, nature, category
                 FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
         available_teams = sorted({row[4] for row in rows if row[4]})
+        available_natures = sorted({row[3] for row in rows if row[3]})
+        available_officers = sorted({officer["registration"]
+            for row in rows for officer in team_officers(team_field(json.loads(row[1]),
+                                                           "officers"))})
         team_scores: dict[str, dict[str, int]] = {}
         officer_scores: dict[str, dict] = {}
         officer_occurrences: set[tuple[str, str]] = set()
@@ -727,7 +733,14 @@ class Store:
         for natural_key, raw_json, occurrence, nature, team in rows:
             if team_name and key(team_name) != key(team or "Não informado"):
                 continue
+            if nature_filter and key(nature_filter) != key(nature or "Não informada"):
+                continue
             row = json.loads(raw_json)
+            members = team_officers(team_field(row, "officers"))
+            if officer_registration and not any(
+                    key(member["registration"]) == key(officer_registration)
+                    for member in members):
+                continue
             score, _level = team_complexity(nature, pick(row, "solution"))
             group = team_group(team)
             if group == "roster":
@@ -742,7 +755,7 @@ class Store:
                 extra += 1
             else:
                 unlisted += 1
-            for officer in team_officers(team_field(row, "officers")):
+            for officer in members:
                 registration = officer["registration"]
                 occurrence_key = occurrence or natural_key
                 if (registration, occurrence_key) in officer_occurrences:
@@ -754,6 +767,8 @@ class Store:
                 item["points"] += score
         return {"roster_occurrences": roster, "weighted_points": points,
                 "available_teams": available_teams,
+                "available_natures": available_natures,
+                "available_officers": available_officers,
                 "teams": len(team_scores), "officers": len(officer_scores),
                 "extra_occurrences": extra, "unlisted_occurrences": unlisted,
                 "ranking": [{"name": name, **item} for name, item in
@@ -773,7 +788,9 @@ class Store:
                 month: int | None = None, arm_type: str | None = None,
                 situation: str | None = None,
                 drug_type: str | None = None,
-                team_name: str | None = None) -> dict:
+                team_name: str | None = None,
+                officer_registration: str | None = None,
+                nature_filter: str | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
         if (arm_type or situation) and source != "armas":
@@ -782,6 +799,8 @@ class Store:
             raise ValueError("Filtro de droga exige a fonte drogas")
         if team_name and source != "guarnicoes":
             raise ValueError("Filtro de equipe exige a fonte guarnicoes")
+        if (officer_registration or nature_filter) and source != "guarnicoes":
+            raise ValueError("Filtros de policial e natureza exigem a fonte guarnicoes")
         if start_date and end_date and start_date > end_date:
             raise ValueError("Data inicial posterior à data final")
         if month is not None and not 1 <= month <= 12:
@@ -820,13 +839,13 @@ class Store:
             selection = f"""SELECT natural_key, event_date, municipality, occurrence, victim, nature,
                 category, eligible, reason, version, indicators, raw_json FROM record_versions
                 WHERE {where} ORDER BY event_date DESC, occurrence, victim, natural_key"""
-            if arm_type or situation or drug_type or team_name:
+            if arm_type or situation or drug_type or team_name or officer_registration or nature_filter:
                 rows = []
                 total = 0
                 cursor = db.execute(selection, params)
                 while batch := cursor.fetchmany(1000):
                     for row in batch:
-                        original = json.loads(row[-1]) if situation else None
+                        original = json.loads(row[-1]) if situation or officer_registration else None
                         if arm_type and key(arm_type) != key(row[6] or "Não informado"):
                             continue
                         if situation and key(situation) != key(arm_field(original, "situation") or
@@ -835,6 +854,12 @@ class Store:
                         if drug_type and key(drug_type) != key(row[6] or "Não informado"):
                             continue
                         if team_name and key(team_name) != key(row[6] or "Não informado"):
+                            continue
+                        if nature_filter and key(nature_filter) != key(row[5] or "Não informada"):
+                            continue
+                        if officer_registration and not any(
+                                key(member["registration"]) == key(officer_registration)
+                                for member in team_officers(team_field(original, "officers"))):
                             continue
                         if (page - 1) * size <= total < page * size:
                             rows.append(row)

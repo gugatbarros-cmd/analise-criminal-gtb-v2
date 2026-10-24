@@ -21,8 +21,8 @@ export type ArmsAnalysis = { total: number; seized: number; restricted: number; 
 export type ArmsFilters = { month?: number; startDate?: string; endDate?: string; armType?: string; situation?: string }
 export type DrugsAnalysis = { total: number; total_weight_grams: number; weighted_records: number; available_types: string[]; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; locations: { name: string; total: number }[]; weights_by_type: { name: string; grams: number }[] }
 export type DrugsFilters = { month?: number; startDate?: string; endDate?: string; drugType?: string }
-export type TeamsAnalysis = { roster_occurrences: number; weighted_points: number; teams: number; officers: number; extra_occurrences: number; unlisted_occurrences: number; available_teams: string[]; ranking: { name: string; occurrences: number; points: number }[]; officer_ranking: { name: string; registration: string; occurrences: number; points: number }[]; natures: { name: string; total: number }[] }
-export type TeamsFilters = { month?: number; startDate?: string; endDate?: string; teamName?: string }
+export type TeamsAnalysis = { roster_occurrences: number; weighted_points: number; teams: number; officers: number; extra_occurrences: number; unlisted_occurrences: number; available_teams: string[]; available_natures: string[]; available_officers: string[]; ranking: { name: string; occurrences: number; points: number }[]; officer_ranking: { name: string; registration: string; occurrences: number; points: number }[]; natures: { name: string; total: number }[] }
+export type TeamsFilters = { month?: number; startDate?: string; endDate?: string; teamName?: string; officerRegistration?: string; natureFilter?: string }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
 export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; monthly: { period: string; total: number }[]; weekdays: { name: string; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[]; instruments: { name: string; total: number }[]; time_coverage: { valid: number; total: number }; time_bands: { name: string; total: number }[]; city_time_bands: { municipality: string; total: number; valid: number; top_band: string | null; top_band_total: number; top_category: string | null }[] }
 export type MviComparison = { cad_total: number; neac_total: number; candidate_pairs: number; cad_only: number; neac_only: number; ambiguous: number; examples: { cad: { natural_key: string; occurrence: string; victim: string; date: string; municipality: string; category: string }; neac: { natural_key: string; occurrence: string; victim: string; date: string; municipality: string; category: string }; same_date: boolean; same_municipality: boolean }[] }
@@ -101,6 +101,8 @@ export async function getTeamsAnalysis(year?: number, municipality?: string, fil
   if (filters.startDate) params.set('start_date', filters.startDate)
   if (filters.endDate) params.set('end_date', filters.endDate)
   if (filters.teamName) params.set('team_name', filters.teamName)
+  if (filters.officerRegistration) params.set('officer_registration', filters.officerRegistration)
+  if (filters.natureFilter) params.set('nature_filter', filters.natureFilter)
   return json(await apiFetch(`${baseUrl}/indicators/teams/analysis?${params}`))
 }
 
@@ -148,7 +150,7 @@ export async function getBatchAudit(batchId: string, quarantinePage = 1, diverge
   return { divergences, quarantine }
 }
 
-export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string, month?: number, armType?: string, situation?: string, drugType?: string, teamName?: string): Promise<RecordPage> {
+export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string, month?: number, armType?: string, situation?: string, drugType?: string, teamName?: string, officerRegistration?: string, natureFilter?: string): Promise<RecordPage> {
   const params = new URLSearchParams({ page: String(page), size: '20', eligible_only: 'true' })
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
@@ -162,6 +164,8 @@ export async function getRecords(source: Source, page: number, year?: number, mu
   if (situation) params.set('situation', situation)
   if (drugType) params.set('drug_type', drugType)
   if (teamName) params.set('team_name', teamName)
+  if (officerRegistration) params.set('officer_registration', officerRegistration)
+  if (natureFilter) params.set('nature_filter', natureFilter)
   return json(await apiFetch(`${baseUrl}/records/${source}?${params}`))
 }
 

@@ -5,9 +5,9 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('API local', () => {
   it('lê o estado de saúde', async () => {
-    const mock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok', version: '0.1.36', mode: 'local' }) })
+    const mock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'ok', version: '0.1.37', mode: 'local' }) })
     vi.stubGlobal('fetch', mock)
-    await expect(getHealth('http://127.0.0.1:8000')).resolves.toEqual({ status: 'ok', version: '0.1.36', mode: 'local' })
+    await expect(getHealth('http://127.0.0.1:8000')).resolves.toEqual({ status: 'ok', version: '0.1.37', mode: 'local' })
     expect(mock).toHaveBeenCalledWith('http://127.0.0.1:8000/health')
   })
 

@@ -13,12 +13,16 @@ export function TeamsAnalysis({ year, municipality }: { year?: number; municipal
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [teamName, setTeamName] = useState('')
+  const [officerRegistration, setOfficerRegistration] = useState('')
+  const [natureFilter, setNatureFilter] = useState('')
   const invalidRange = !!startDate && !!endDate && startDate > endDate
-  const hasFilters = !!(month || startDate || endDate || teamName)
+  const hasFilters = !!(month || startDate || endDate || teamName || officerRegistration || natureFilter)
   const filters: TeamsFilters = { month: month ? Number(month) : undefined,
     startDate: startDate || undefined, endDate: endDate || undefined,
-    teamName: teamName || undefined }
-  useEffect(() => setPage(1), [year, municipality, month, startDate, endDate, teamName])
+    teamName: teamName || undefined, officerRegistration: officerRegistration || undefined,
+    natureFilter: natureFilter || undefined }
+  useEffect(() => setPage(1), [year, municipality, month, startDate, endDate, teamName,
+    officerRegistration, natureFilter])
   const base = useQuery({ queryKey: ['teams-analysis', year, municipality],
     queryFn: () => getTeamsAnalysis(year, municipality) })
   const filtered = useQuery({ queryKey: ['teams-analysis', year, municipality, filters],
@@ -27,7 +31,8 @@ export function TeamsAnalysis({ year, municipality }: { year?: number; municipal
   const records = useQuery({ queryKey: ['records', 'guarnicoes', page, year, municipality, filters],
     queryFn: () => getRecords('guarnicoes', page, year, municipality, undefined, undefined,
       undefined, filters.startDate, filters.endDate, filters.month, undefined, undefined,
-      undefined, filters.teamName), enabled: !invalidRange })
+      undefined, filters.teamName, filters.officerRegistration, filters.natureFilter),
+    enabled: !invalidRange })
   return <section className="panel" aria-label="Produtividade das guarnições">
     <div className="section-head"><div><p className="eyebrow">Vínculos operacionais · base própria</p><h2>Guarnições</h2></div><span>Provisório · validar layout oficial</span></div>
     <p className="muted">A pontuação usa a complexidade da natureza registrada, de 1 a 5 pontos. O ranking de equipes inclui apenas guarnições reconhecidas da escala. Força-tarefa e outros recursos aparecem separadamente; um mesmo atendimento pode ter mais de uma equipe.</p>
@@ -36,6 +41,8 @@ export function TeamsAnalysis({ year, municipality }: { year?: number; municipal
       <label>Data inicial<input type="date" value={startDate} onChange={event => setStartDate(event.target.value)} /></label>
       <label>Data final<input type="date" value={endDate} onChange={event => setEndDate(event.target.value)} /></label>
       <label>Equipe<select value={teamName} onChange={event => setTeamName(event.target.value)}><option value="">Todas</option>{(base.data?.available_teams || []).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>Policial · matrícula<select value={officerRegistration} onChange={event => setOfficerRegistration(event.target.value)}><option value="">Todos</option>{(base.data?.available_officers || []).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>Natureza<select value={natureFilter} onChange={event => setNatureFilter(event.target.value)}><option value="">Todas</option>{(base.data?.available_natures || []).map(value => <option key={value} value={value}>{value}</option>)}</select></label>
     </div>
     {invalidRange && <p className="error" role="alert">A data inicial deve ser anterior ou igual à data final.</p>}
     {analysis.isError && <p className="error" role="alert">Não foi possível carregar a análise de guarnições.</p>}

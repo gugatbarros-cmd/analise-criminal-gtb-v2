@@ -262,5 +262,8 @@ def test_teams_api_filters_match_record_relation(tmp_path, monkeypatch):
     params = "?year=2026&month=1&team_name=RP%2001"
     assert client.get("/indicators/teams/analysis" + params).json()["weighted_points"] == 7
     assert client.get("/records/guarnicoes" + params).json()["total"] == 2
+    params = "?officer_registration=SYN001&nature_filter=Homic%C3%ADdio%20doloso"
+    assert client.get("/indicators/teams/analysis" + params).json()["weighted_points"] == 5
+    assert client.get("/records/guarnicoes" + params).json()["total"] == 1
     assert client.get("/indicators/teams/analysis?start_date=2026-02-01&end_date=2026-01-01").status_code == 422
     assert client.get("/records/drogas?team_name=RP%2001").status_code == 422

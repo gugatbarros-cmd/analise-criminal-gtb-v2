@@ -22,7 +22,7 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
     team_group: 'roster', team_score: 5,
     team_officers: [{ name: 'AGENTE FICTÍCIO', registration: 'SYN001', role: 'COMANDANTE' }] }
   const data = {
-    version: '0.1.36', years: [2026], cities: ['Igaci'],
+    version: '0.1.37', years: [2026], cities: ['Igaci'],
     views: { '*|*': { summary: { visitas: 1 }, arms: { total: 4, seized: 3 }, drugs: { total: 4, total_weight_grams: 1000.1 }, teams: { roster_occurrences: 3, weighted_points: 11 }, mvi_comparison: { candidate_pairs: 1 } }, '1900|*': { summary: { visitas: 0 }, arms: { total: 0, seized: 0 }, drugs: { total: 0, total_weight_grams: 0 }, teams: { roster_occurrences: 0, weighted_points: 0 }, mvi_comparison: { candidate_pairs: 0 } } },
     records: { ocorrencias: [caseItem], armas: [armItem, armOther], drogas: [drugItem], guarnicoes: [teamItem] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
     details: {}, batches: [{ id: 'demo-batch-mvi_cad', source: 'mvi_cad' }], audit: { 'demo-batch-mvi_cad': { divergences: [{ source: 'mvi_cad', natural_key: 'k', reason: 'ausente' }], quarantine: [{ row_number: 2, reason: 'sem chave', fields: { Nome: 'Pessoa Fictícia' } }] } },
@@ -49,6 +49,8 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
   expect((await teams.json()).weighted_points).toBe(11)
   const teamsFiltered = await demoFetch('http://127.0.0.1:8000/indicators/teams/analysis?month=1&team_name=RP%2001')
   expect(await teamsFiltered.json()).toMatchObject({ roster_occurrences: 1, weighted_points: 5, officers: 1 })
+  const officerFiltered = await demoFetch('http://127.0.0.1:8000/indicators/teams/analysis?officer_registration=SYN001&nature_filter=Visita%20orientativa')
+  expect(await officerFiltered.json()).toMatchObject({ roster_occurrences: 1, weighted_points: 5 })
   const teamRecords = await demoFetch('http://127.0.0.1:8000/records/guarnicoes?month=2')
   expect((await teamRecords.json()).total).toBe(0)
   const comparison = await demoFetch('http://127.0.0.1:8000/indicators/mvi/comparison')

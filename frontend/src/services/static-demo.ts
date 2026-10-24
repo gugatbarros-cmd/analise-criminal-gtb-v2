@@ -156,12 +156,16 @@ function filteredTeams(data: Snapshot, params: URLSearchParams): RecordItem[] {
   const start = params.get('start_date')
   const end = params.get('end_date')
   const team = params.get('team_name')
+  const officer = params.get('officer_registration')
+  const nature = params.get('nature_filter')
   return data.records.guarnicoes.filter(item => item.eligible &&
     (!year || Number(item.event_date.slice(0, 4)) === year) &&
     (!city || fold(item.municipality) === fold(city)) &&
     (!month || Number(item.event_date.slice(5, 7)) === month) &&
     (!start || item.event_date >= start) && (!end || item.event_date <= end) &&
-    (!team || fold(item.category || 'Não informado') === fold(team)))
+    (!team || fold(item.category || 'Não informado') === fold(team)) &&
+    (!officer || (item.team_officers || []).some(member => fold(member.registration) === fold(officer))) &&
+    (!nature || fold(item.nature || 'Não informada') === fold(nature)))
 }
 
 function teamsAnalysis(items: RecordItem[]): TeamsAnalysis {
@@ -193,6 +197,9 @@ function teamsAnalysis(items: RecordItem[]): TeamsAnalysis {
     teams: Object.keys(teams).length, officers: Object.keys(officers).length,
     extra_occurrences: extra, unlisted_occurrences: unlisted,
     available_teams: [...new Set(items.map(item => item.category).filter(Boolean))].sort(),
+    available_natures: [...new Set(items.map(item => item.nature).filter(Boolean))].sort(),
+    available_officers: [...new Set(items.flatMap(item =>
+      (item.team_officers || []).map(officer => officer.registration)))].sort(),
     ranking: Object.entries(teams).sort((a, b) => b[1].points - a[1].points ||
       b[1].occurrences - a[1].occurrences || a[0].localeCompare(b[0]))
       .map(([name, value]) => ({ name, ...value })),
@@ -218,7 +225,8 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     ['month', 'start_date', 'end_date', 'drug_type'].some(name => url.searchParams.has(name))
       ? drugsAnalysis(filteredDrugs(data, url.searchParams)) : view.drugs)
   if (path === '/indicators/teams/analysis') return response(
-    ['month', 'start_date', 'end_date', 'team_name'].some(name => url.searchParams.has(name))
+    ['month', 'start_date', 'end_date', 'team_name', 'officer_registration', 'nature_filter']
+      .some(name => url.searchParams.has(name))
       ? teamsAnalysis(filteredTeams(data, url.searchParams)) : view.teams)
   const operation = path.match(/^\/indicators\/operations\/(Mandados|Visitas|Sossego)\/analysis$/)
   if (operation) return response(view.operations[operation[1]])
@@ -253,6 +261,8 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     const situation = url.searchParams.get('situation')
     const drugType = url.searchParams.get('drug_type')
     const teamName = url.searchParams.get('team_name')
+    const officerRegistration = url.searchParams.get('officer_registration')
+    const natureFilter = url.searchParams.get('nature_filter')
     const onlyEligible = url.searchParams.get('eligible_only') === 'true'
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
     const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 20))
@@ -265,6 +275,9 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
       (!situation || fold(item.arm_situation || 'Não informado') === fold(situation)) &&
       (!drugType || fold(item.category || 'Não informado') === fold(drugType)) &&
       (!teamName || fold(item.category || 'Não informado') === fold(teamName)) &&
+      (!officerRegistration || (item.team_officers || []).some(member =>
+        fold(member.registration) === fold(officerRegistration))) &&
+      (!natureFilter || fold(item.nature || 'Não informada') === fold(natureFilter)) &&
       (!city || fold(item.municipality) === fold(city)) &&
       (!victim || item.victim.toLowerCase().includes(victim.toLowerCase())) &&
       (!prefix || item.category.startsWith(prefix)) &&

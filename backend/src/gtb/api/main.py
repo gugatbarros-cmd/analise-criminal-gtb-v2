@@ -15,7 +15,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.36"
+APP_VERSION = "0.1.37"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -234,10 +234,12 @@ def drugs_analysis(year: int | None = None, municipality: str | None = None,
 def teams_analysis(year: int | None = None, municipality: str | None = None,
                    month: int | None = Query(None, ge=1, le=12),
                    start_date: date | None = None, end_date: date | None = None,
-                   team_name: str | None = None) -> dict:
+                   team_name: str | None = None,
+                   officer_registration: str | None = None,
+                   nature_filter: str | None = None) -> dict:
     try:
         return store.teams_analysis(year, municipality, month, start_date, end_date,
-                                    team_name)
+                                    team_name, officer_registration, nature_filter)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 
@@ -273,11 +275,14 @@ def records(source: str, page: int = 1, size: int = 20, year: int | None = None,
             end_date: date | None = None,
             month: int | None = Query(None, ge=1, le=12),
             arm_type: str | None = None, situation: str | None = None,
-            drug_type: str | None = None, team_name: str | None = None) -> dict:
+            drug_type: str | None = None, team_name: str | None = None,
+            officer_registration: str | None = None,
+            nature_filter: str | None = None) -> dict:
     try:
         return store.records(source, page, size, year, municipality, victim, eligible_only,
                              category_prefix, indicator, start_date, end_date,
-                             month, arm_type, situation, drug_type, team_name)
+                             month, arm_type, situation, drug_type, team_name,
+                             officer_registration, nature_filter)
     except ValueError as error:
         raise HTTPException(404 if source not in SOURCES else 422, str(error)) from error
 
