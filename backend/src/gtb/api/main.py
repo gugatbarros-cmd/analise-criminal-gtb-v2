@@ -14,7 +14,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.27"
+APP_VERSION = "0.1.28"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -60,13 +60,14 @@ async def authorize(request: Request, call_next):
     if request.method == "OPTIONS":
         return await call_next(request)
     path = request.url.path
-    if path == "/health":
+    if path == "/health" or (request.method == "GET" and
+                             (path in {"/", "/index.html"} or path.startswith("/assets/"))):
         response = await call_next(request)
     elif demo_mode():
         if request.method != "GET" or path.startswith("/auth/"):
             return JSONResponse({"detail": "Demonstração somente para consulta"}, status_code=403)
         response = await call_next(request)
-    elif path == "/auth/login":
+    elif path in {"/auth/login", "/auth/setup"}:
         response = await call_next(request)
     elif not auth_manager.has_users():
         return JSONResponse({"detail": "Crie a primeira conta administradora local"},
@@ -102,6 +103,22 @@ def login(body: LoginRequest) -> dict:
     if not result:
         raise HTTPException(401, "Usuário ou senha inválidos")
     return result
+
+
+@app.post("/auth/setup")
+def setup_first_admin(body: LoginRequest) -> dict:
+    if auth_manager.has_users():
+        raise HTTPException(409, "A primeira conta já foi criada")
+    try:
+        auth_manager.create_user(body.username, body.password, "admin")
+    except PermissionError as error:
+        raise HTTPException(409, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    session = auth_manager.authenticate(body.username, body.password)
+    if session is None:
+        raise HTTPException(500, "Conta criada, mas não foi possível iniciar a sessão")
+    return session
 
 
 @app.get("/auth/me")

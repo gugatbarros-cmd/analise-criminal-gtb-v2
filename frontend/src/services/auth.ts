@@ -31,6 +31,13 @@ export function login(username: string, password: string): Promise<LocalSession>
   }).then(response => read<LocalSession>(response))
 }
 
+export function createFirstUser(username: string, password: string): Promise<LocalSession> {
+  return fetch(`${baseUrl}/auth/setup`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  }).then(response => read<LocalSession>(response))
+}
+
 export function getMe(token: string): Promise<LocalUser> {
   return fetch(`${baseUrl}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },

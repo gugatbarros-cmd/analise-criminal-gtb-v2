@@ -9,3 +9,5 @@ Esta rotina copia somente os dados **do projeto novo**: `data/gtb.duckdb`, `data
 5. A rotina confere os hashes, cria um novo ZIP do estado anterior quando há dados e substitui o banco, as contas e os arquivos brutos pelo conteúdo do backup. Ela mostra o caminho da cópia anterior.
 
 É possível definir `GTB_DATA_DIR` para trabalhar em um diretório local de testes separado. O ZIP de restauração precisa estar dentro de `backups/` desse diretório. Cópias de um único DuckDB feitas antes de importações continuam compatíveis com `scripts/restore-local.py`, mas não incluem contas nem arquivos brutos.
+
+No executável Windows, o diretório padrão é `%LOCALAPPDATA%\GTB2\data`. Os comandos `GTB2-Local.exe backup` e `GTB2-Local.exe restore <caminho-do-zip>` executam o mesmo backup integral sem exigir Python instalado. Feche a interface antes dos dois comandos. Veja [Empacotamento Windows](EMPACOTAMENTO_WINDOWS.md).

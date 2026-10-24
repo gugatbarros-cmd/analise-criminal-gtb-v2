@@ -1,6 +1,9 @@
 .venv/
 node_modules/
 dist/
+dist-local/
+build/
+*.spec
 *.pyc
 *.egg-info/
 *.tsbuildinfo
