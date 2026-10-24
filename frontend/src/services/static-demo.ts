@@ -20,6 +20,7 @@ type Snapshot = {
   evidence: Record<string, string>
   details: Record<string, Record<string, { current: MviRecordDetail; versions: MviRecordVersion[] }>>
   batches: Batch[]
+  audit: Record<string, { divergences: { source: Source; natural_key: string; reason: string }[]; quarantine: { row_number: number; reason: string; fields: Record<string, string> }[] }>
 }
 
 let snapshotPromise: Promise<Snapshot> | undefined
@@ -66,6 +67,8 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   if (mvi) return response(view.mvi[mvi[1]])
   if (path === '/indicators/mvi/comparison') return response(view.mvi_comparison)
   if (path === '/imports') return response({ items: data.batches })
+  const audit = path.match(/^\/imports\/([^/]+)\/(divergences|quarantine)$/)
+  if (audit) return response({ items: data.audit[decodeURIComponent(audit[1])]?.[audit[2] as 'divergences' | 'quarantine'] || [] })
   const records = path.match(/^\/records\/(mvi_cad|mvi_neac|ocorrencias|armas|drogas|guarnicoes)$/)
   if (records) {
     const source = records[1] as Source

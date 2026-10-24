@@ -14,7 +14,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.29"
+APP_VERSION = "0.1.30"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -175,6 +175,11 @@ def imports() -> dict:
 @app.get("/imports/{batch_id}/divergences")
 def import_divergences(batch_id: str) -> dict:
     return {"items": store.divergences(batch_id)}
+
+
+@app.get("/imports/{batch_id}/quarantine")
+def import_quarantine(batch_id: str) -> dict:
+    return {"items": store.quarantines(batch_id)}
 
 
 @app.get("/indicators/summary")

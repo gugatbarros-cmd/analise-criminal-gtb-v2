@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
+import { getArmsAnalysis, getBatchAudit, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('contrato de importação e indicadores', () => {
+  it('consulta quarentena e divergências sem alterar o lote', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+    vi.stubGlobal('fetch', request)
+    await expect(getBatchAudit('lote / 1')).resolves.toEqual({ divergences: [], quarantine: [] })
+    expect(request.mock.calls.map(call => new URL(call[0] as string).pathname)).toEqual([
+      '/imports/lote%20%2F%201/divergences', '/imports/lote%20%2F%201/quarantine',
+    ])
+  })
   it('envia fonte, escopo e nome codificado do arquivo local', async () => {
     const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ inserted: 1 }) })
     vi.stubGlobal('fetch', request)

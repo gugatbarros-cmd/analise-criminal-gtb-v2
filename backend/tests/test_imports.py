@@ -104,6 +104,8 @@ def test_quarantine_and_complete_import_never_delete(tmp_path):
     assert report["quarantined"] == 1
     assert report["differences"] == 1
     assert len(store.divergences(report["id"])) == 1
+    assert store.quarantines(report["id"])[0]["reason"] == "Sem ocorrência e contexto estável para identificar a vítima"
+    assert store.quarantines(report["id"])[0]["fields"]["Nº NIC"] == "NIC-999"
     assert store.records("mvi_cad")["total"] == 2
     assert store.summary()["mvi_cad"] == 2
 

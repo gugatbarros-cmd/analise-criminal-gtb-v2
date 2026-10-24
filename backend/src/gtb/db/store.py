@@ -283,6 +283,13 @@ class Store:
                 WHERE batch_id = ? ORDER BY natural_key LIMIT 1000""", [batch_id]).fetchall()
         return [dict(zip(("source", "natural_key", "reason"), row)) for row in rows]
 
+    def quarantines(self, batch_id: str) -> list[dict]:
+        with self.lock, self._connect() as db:
+            rows = db.execute("""SELECT row_number, reason, raw_json FROM quarantine
+                WHERE batch_id = ? ORDER BY row_number LIMIT 1000""", [batch_id]).fetchall()
+        return [{"row_number": number, "reason": reason, "fields": json.loads(raw_json)}
+                for number, reason, raw_json in rows]
+
     def restore_backup(self, backup: Path) -> Path:
         """Restaura cópia local explícita, guardando antes o estado atual."""
         backup_dir = (self.path.parent / "backups").resolve()

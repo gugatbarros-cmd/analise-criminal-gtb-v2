@@ -9,7 +9,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.29"
+VERSION = "0.1.30"
 
 
 def export() -> dict:
@@ -67,6 +67,10 @@ def export() -> dict:
                 }
         batches = store.batches()
         batch_ids = {batch["id"]: f"demo-batch-{batch['source']}" for batch in batches}
+        audit = {batch_ids[batch["id"]]: {
+            "divergences": store.divergences(batch["id"]),
+            "quarantine": store.quarantines(batch["id"]),
+        } for batch in batches}
         for batch in batches:
             batch["id"] = batch_ids[batch["id"]]
             batch["imported_at"] = "2026-10-23 09:00:00"
@@ -78,7 +82,7 @@ def export() -> dict:
                     version["valid_from"] = "2026-10-23 09:00:00"
         return {"version": VERSION, "years": years, "cities": cities, "views": views,
                 "records": records, "evidence": evidence, "details": details,
-                "batches": batches}
+                "batches": batches, "audit": audit}
 
 
 if __name__ == "__main__":
