@@ -14,6 +14,7 @@ import duckdb
 
 from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
 from gtb.indicators.drugs import drug_field, drug_quantity, drug_weight_grams
+from gtb.indicators.mvi_time import mvi_hour, time_band
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain
 from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
@@ -428,12 +429,41 @@ class Store:
             classifications = db.execute(f"""SELECT category, count(*) AS total
                 FROM record_versions WHERE {where}
                 GROUP BY category ORDER BY total DESC, category""", params).fetchall()
-            instrument_rows = db.execute(f"""SELECT raw_json FROM record_versions
+            instrument_rows = db.execute(f"""SELECT raw_json, municipality, category FROM record_versions
                 WHERE {where}""", params).fetchall()
         instruments: dict[str, int] = {}
-        for (raw_json,) in instrument_rows:
-            group = declared_instrument(json.loads(raw_json))
+        bands: dict[str, int] = {}
+        city_bands: dict[str, dict[str, object]] = {}
+        valid_hours = 0
+        for raw_json, city, category in instrument_rows:
+            raw = json.loads(raw_json)
+            group = declared_instrument(raw)
             instruments[group] = instruments.get(group, 0) + 1
+            city_profile = city_bands.setdefault(city, {"total": 0, "valid": 0, "bands": {}})
+            city_profile["total"] += 1
+            hour = mvi_hour(raw)
+            if hour is None:
+                continue
+            valid_hours += 1
+            city_profile["valid"] += 1
+            band = time_band(hour)
+            bands[band] = bands.get(band, 0) + 1
+            city_band = city_profile["bands"].setdefault(band, {"total": 0, "categories": {}})
+            city_band["total"] += 1
+            city_band["categories"][category] = city_band["categories"].get(category, 0) + 1
+        city_time = []
+        for city, profile in city_bands.items():
+            ranked = sorted(profile["bands"].items(),
+                            key=lambda item: (-item[1]["total"], item[0]))
+            top_band, top = ranked[0] if ranked else (None, None)
+            top_category = (min(top["categories"].items(),
+                                key=lambda item: (-item[1], item[0]))[0]
+                            if top else None)
+            city_time.append({"municipality": city, "total": profile["total"],
+                              "valid": profile["valid"], "top_band": top_band,
+                              "top_band_total": top["total"] if top else 0,
+                              "top_category": top_category})
+        city_time.sort(key=lambda item: (-item["top_band_total"], item["municipality"]))
         weekday_counts = dict(weekday_rows)
         weekday_names = ("Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira",
                          "Quinta-feira", "Sexta-feira", "Sábado")
@@ -447,7 +477,11 @@ class Store:
                 "classifications": [{"name": name, "total": total}
                                     for name, total in classifications],
                 "instruments": [{"name": name, "total": total} for name, total in
-                                sorted(instruments.items(), key=lambda item: (-item[1], item[0]))]}
+                                sorted(instruments.items(), key=lambda item: (-item[1], item[0]))],
+                "time_coverage": {"valid": valid_hours, "total": len(instrument_rows)},
+                "time_bands": [{"name": name, "total": total} for name, total in
+                               sorted(bands.items(), key=lambda item: (-item[1], item[0]))],
+                "city_time_bands": city_time}
 
     def arms_analysis(self, year: int | None = None,
                       municipality: str | None = None) -> dict:

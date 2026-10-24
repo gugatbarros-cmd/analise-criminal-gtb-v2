@@ -1,4 +1,4 @@
-Número da ocorrência;Data da ocorrência;Cidade ocorrência;Tipificação no despacho;Nome da vítima;Nº NIC;Envolvimento;Óbito?;Texto do Complemento do Quimera
-CAD-SYN-001;05/01/2026;Palmeira dos Índios;Homicídio doloso;Maria Aparecida Silva;SYN-001;Vítima;S;Vítima morreu após disparos de pistola.
-CAD-SYN-001;05/01/2026;Palmeira dos Índios;Homicídio doloso;Ana Paula Souza;SYN-002;Vítima;S;Não houve tiros mas a vítima foi esfaqueada.
-CAD-SYN-002;06/01/2026;Igaci;Tentativa de homicídio;Joana Ribeiro Lima;SYN-003;Vítima;N;Arma apreendida sem relato de uso.
+Número da ocorrência;Data da ocorrência;Hora da ocorrência;Cidade ocorrência;Tipificação no despacho;Nome da vítima;Nº NIC;Envolvimento;Óbito?;Texto do Complemento do Quimera
+CAD-SYN-001;05/01/2026;18:35;Palmeira dos Índios;Homicídio doloso;Maria Aparecida Silva;SYN-001;Vítima;S;Vítima morreu após disparos de pistola.
+CAD-SYN-001;05/01/2026;19:10;Palmeira dos Índios;Homicídio doloso;Ana Paula Souza;SYN-002;Vítima;S;Não houve tiros mas a vítima foi esfaqueada.
+CAD-SYN-002;06/01/2026;;Igaci;Tentativa de homicídio;Joana Ribeiro Lima;SYN-003;Vítima;N;Arma apreendida sem relato de uso.

@@ -1,3 +1,3 @@
-Número da ocorrência;Data;Cidade;Natureza;Nome Vítima;Relato
-NEAC-SYN-001;05/01/2026;Palmeira dos Índios;Homicídio doloso;Maria Aparecida Silva;Vítima morreu por asfixia.
-NEAC-SYN-002;07/01/2026;Tanque d Arca;Resistência com Resultado Morte;Helena Costa Silva;Sem dado sobre o meio empregado.
+Número da ocorrência;Data;Hora;Cidade;Natureza;Nome Vítima;Relato
+NEAC-SYN-001;05/01/2026;21:45;Palmeira dos Índios;Homicídio doloso;Maria Aparecida Silva;Vítima morreu por asfixia.
+NEAC-SYN-002;07/01/2026;;Tanque d Arca;Resistência com Resultado Morte;Helena Costa Silva;Sem dado sobre o meio empregado.

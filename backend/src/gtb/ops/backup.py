@@ -94,7 +94,8 @@ def restore_backup(data_dir: Path, archive_path: Path) -> Path | None:
     archive_path = archive_path.resolve()
     if not archive_path.is_relative_to(backup_dir) or archive_path.suffix.lower() != ".zip":
         raise ValueError("Arquivo deve ser um ZIP em data/backups")
-    with TemporaryDirectory(prefix="gtb-restore-") as directory:
+    # A troca por rename precisa ocorrer no mesmo volume, inclusive no Windows.
+    with TemporaryDirectory(prefix="gtb-restore-", dir=data_dir) as directory:
         staging = Path(directory)
         with zipfile.ZipFile(archive_path) as archive:
             names = archive.namelist()
