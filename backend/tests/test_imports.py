@@ -128,6 +128,24 @@ def test_quarantine_and_complete_import_never_delete(tmp_path):
     assert store.summary()["mvi_cad"] == 2
 
 
+def test_audit_pages_cover_all_quarantined_and_missing_keys(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "first.csv", csv_bytes([
+        cad(**{"Número da ocorrência": f"CAD-{index:03d}"}) for index in range(3)
+    ]))
+    rejected = [cad(**{"Número da ocorrência": "", "Nº NIC": f"NIC-{index}"})
+                for index in range(4)]
+    report = store.import_file("mvi_cad", "complete.csv", csv_bytes([
+        cad(**{"Número da ocorrência": "CAD-000"}), *rejected,
+    ]), scope="complete")
+    assert store.audit_counts(report["id"]) == {"divergences": 2, "quarantine": 4}
+    first = store.quarantines(report["id"], limit=2)
+    second = store.quarantines(report["id"], limit=2, offset=2)
+    assert [item["row_number"] for item in first + second] == [3, 4, 5, 6]
+    assert len(store.divergences(report["id"], limit=1)) == 1
+    assert len(store.divergences(report["id"], limit=1, offset=1)) == 1
+
+
 def test_xlsx_excel_dates_and_legacy_occurrence_indicators(tmp_path):
     workbook = Workbook()
     sheet = workbook.active

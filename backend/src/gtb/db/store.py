@@ -269,29 +269,46 @@ class Store:
                     "updated": updated, "unchanged": unchanged, "quarantined": len(rejected),
                     "status": status, "repeated": False, "differences": differences}
 
-    def batches(self, limit: int = 20) -> list[dict]:
+    def batches(self, limit: int = 20, offset: int = 0) -> list[dict]:
         with self.lock, self._connect() as db:
             rows = db.execute("""SELECT id, source, filename, imported_at, row_count, inserted,
                 updated, unchanged, quarantined, status,
                 (SELECT count(*) FROM import_divergences d WHERE d.batch_id = b.id) AS differences
                 FROM import_batches b
-                ORDER BY imported_at DESC LIMIT ?""", [min(max(limit, 1), 100)]).fetchall()
+                ORDER BY imported_at DESC, id DESC LIMIT ? OFFSET ?""",
+                              [min(max(limit, 1), 100), max(offset, 0)]).fetchall()
         columns = ("id", "source", "filename", "imported_at", "row_count", "inserted",
                    "updated", "unchanged", "quarantined", "status", "differences")
         return [dict(zip(columns, row)) for row in rows]
 
-    def divergences(self, batch_id: str) -> list[dict]:
+    def batch_count(self) -> int:
+        with self.lock, self._connect() as db:
+            return db.execute("SELECT count(*) FROM import_batches").fetchone()[0]
+
+    def divergences(self, batch_id: str, limit: int = 1000,
+                    offset: int = 0) -> list[dict]:
         with self.lock, self._connect() as db:
             rows = db.execute("""SELECT source, natural_key, reason FROM import_divergences
-                WHERE batch_id = ? ORDER BY natural_key LIMIT 1000""", [batch_id]).fetchall()
+                WHERE batch_id = ? ORDER BY natural_key LIMIT ? OFFSET ?""",
+                              [batch_id, min(max(limit, 1), 1000), max(offset, 0)]).fetchall()
         return [dict(zip(("source", "natural_key", "reason"), row)) for row in rows]
 
-    def quarantines(self, batch_id: str) -> list[dict]:
+    def quarantines(self, batch_id: str, limit: int = 1000,
+                    offset: int = 0) -> list[dict]:
         with self.lock, self._connect() as db:
             rows = db.execute("""SELECT row_number, reason, raw_json FROM quarantine
-                WHERE batch_id = ? ORDER BY row_number LIMIT 1000""", [batch_id]).fetchall()
+                WHERE batch_id = ? ORDER BY row_number LIMIT ? OFFSET ?""",
+                              [batch_id, min(max(limit, 1), 1000), max(offset, 0)]).fetchall()
         return [{"row_number": number, "reason": reason, "fields": json.loads(raw_json)}
                 for number, reason, raw_json in rows]
+
+    def audit_counts(self, batch_id: str) -> dict[str, int]:
+        with self.lock, self._connect() as db:
+            row = db.execute("""SELECT
+                (SELECT count(*) FROM import_divergences WHERE batch_id = ?),
+                (SELECT count(*) FROM quarantine WHERE batch_id = ?)""",
+                             [batch_id, batch_id]).fetchone()
+        return {"divergences": row[0], "quarantine": row[1]}
 
     def restore_backup(self, backup: Path) -> Path:
         """Restaura cópia local explícita, guardando antes o estado atual."""

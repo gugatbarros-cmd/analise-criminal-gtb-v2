@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import unquote
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -15,7 +15,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.32"
+APP_VERSION = "0.1.33"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -169,18 +169,26 @@ async def import_source(source: str, request: Request, scope: str = "partial") -
 
 
 @app.get("/imports")
-def imports() -> dict:
-    return {"items": store.batches()}
+def imports(page: int = Query(1, ge=1, le=1_000_000),
+            size: int = Query(20, ge=1, le=100)) -> dict:
+    return {"items": store.batches(size, (page - 1) * size),
+            "total": store.batch_count(), "page": page, "size": size}
 
 
 @app.get("/imports/{batch_id}/divergences")
-def import_divergences(batch_id: str) -> dict:
-    return {"items": store.divergences(batch_id)}
+def import_divergences(batch_id: str, page: int = Query(1, ge=1, le=1_000_000),
+                       size: int = Query(100, ge=1, le=1000)) -> dict:
+    return {"items": store.divergences(batch_id, size, (page - 1) * size),
+            "total": store.audit_counts(batch_id)["divergences"],
+            "page": page, "size": size}
 
 
 @app.get("/imports/{batch_id}/quarantine")
-def import_quarantine(batch_id: str) -> dict:
-    return {"items": store.quarantines(batch_id)}
+def import_quarantine(batch_id: str, page: int = Query(1, ge=1, le=1_000_000),
+                      size: int = Query(100, ge=1, le=1000)) -> dict:
+    return {"items": store.quarantines(batch_id, size, (page - 1) * size),
+            "total": store.audit_counts(batch_id)["quarantine"],
+            "page": page, "size": size}
 
 
 @app.get("/indicators/summary")

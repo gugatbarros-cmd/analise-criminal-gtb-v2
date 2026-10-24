@@ -66,9 +66,19 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   const mvi = path.match(/^\/indicators\/mvi\/(mvi_cad|mvi_neac)\/analysis$/)
   if (mvi) return response(view.mvi[mvi[1]])
   if (path === '/indicators/mvi/comparison') return response(view.mvi_comparison)
-  if (path === '/imports') return response({ items: data.batches })
+  if (path === '/imports') {
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
+    const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 20))
+    return response({ items: data.batches.slice((page - 1) * size, page * size),
+      total: data.batches.length, page, size })
+  }
   const audit = path.match(/^\/imports\/([^/]+)\/(divergences|quarantine)$/)
-  if (audit) return response({ items: data.audit[decodeURIComponent(audit[1])]?.[audit[2] as 'divergences' | 'quarantine'] || [] })
+  if (audit) {
+    const items = data.audit[decodeURIComponent(audit[1])]?.[audit[2] as 'divergences' | 'quarantine'] || []
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
+    const size = Math.min(1000, Math.max(1, Number(url.searchParams.get('size')) || 100))
+    return response({ items: items.slice((page - 1) * size, page * size), total: items.length, page, size })
+  }
   const records = path.match(/^\/records\/(mvi_cad|mvi_neac|ocorrencias|armas|drogas|guarnicoes)$/)
   if (records) {
     const source = records[1] as Source

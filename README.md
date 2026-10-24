@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo e independente do sistema legado em produção. A versão 0.1.32 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, auditoria visual de quarentena e divergências e benchmark sintético de um milhão de linhas em lotes com medição de memória. As relações MVI CAD e NEAC agora aceitam intervalo de datas independente por fonte. Inclui indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições, relatório detalhado imprimível, relações paginadas, evolução e rankings, perfis MVI separados com faixas de horário, comparação conservadora CAD × NEAC e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
+Projeto novo e independente do sistema legado em produção. A versão 0.1.33 oferece importação CSV/XLSX de teste com gravação por lote, histórico no DuckDB, lista de lotes e auditoria visual paginadas de quarentena e divergências e benchmark sintético de um milhão de linhas em lotes com medição de memória. As relações MVI CAD e NEAC aceitam intervalo de datas independente por fonte. Inclui indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições, relatório detalhado imprimível, relações paginadas, evolução e rankings, perfis MVI separados com faixas de horário, comparação conservadora CAD × NEAC e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
 
 ## Requisitos
 
@@ -19,7 +19,7 @@ Na pasta deste projeto, execute `powershell -NoProfile -ExecutionPolicy Bypass -
 
 Para gerar a prévia estática com as mesmas planilhas fictícias, execute `.venv\Scripts\python.exe scripts\export-demo-snapshot.py` e, na pasta `frontend`, defina `VITE_STATIC_DEMO=1` antes de `npm.cmd run build`. O resultado em `frontend/dist/` funciona sem API e bloqueia importações. `frontend/public/demo-data.json` contém somente dados sintéticos e é recriado pelo exportador. A prévia estática permite testar a interface; o backend completo permanece local.
 
-A prévia privada da versão 0.1.32 foi publicada em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos; não recebe dados nem substitui o sistema antigo.
+A prévia privada da versão 0.1.33 foi publicada em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos; não recebe dados nem substitui o sistema antigo.
 
 Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para copiar e restaurar **todos os dados do sistema novo**, siga [o procedimento local](docs/BACKUP_LOCAL.md). O backup antigo de um único banco DuckDB continua disponível em `scripts\restore-local.py`.
 

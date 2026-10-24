@@ -1,16 +1,27 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getBatchAudit, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
+import { getArmsAnalysis, getBatchAudit, getBatches, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('contrato de importação e indicadores', () => {
-  it('consulta quarentena e divergências sem alterar o lote', async () => {
-    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+  it('consulta páginas do histórico de lotes', async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [], total: 42, page: 2, size: 20 }) })
     vi.stubGlobal('fetch', request)
-    await expect(getBatchAudit('lote / 1')).resolves.toEqual({ divergences: [], quarantine: [] })
+    await expect(getBatches(2)).resolves.toMatchObject({ total: 42, page: 2 })
+    expect(request.mock.calls[0][0]).toContain('/imports?page=2&size=20')
+  })
+  it('consulta quarentena e divergências sem alterar o lote', async () => {
+    const page = { items: [], total: 0, page: 1, size: 100 }
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => page })
+    vi.stubGlobal('fetch', request)
+    await expect(getBatchAudit('lote / 1')).resolves.toEqual({ divergences: page, quarantine: page })
     expect(request.mock.calls.map(call => new URL(call[0] as string).pathname)).toEqual([
       '/imports/lote%20%2F%201/divergences', '/imports/lote%20%2F%201/quarantine',
     ])
+    expect(new URL(request.mock.calls[0][0] as string).searchParams.get('page')).toBe('1')
+    await getBatchAudit('lote / 1', 3, 2)
+    expect(new URL(request.mock.calls[2][0] as string).searchParams.get('page')).toBe('2')
+    expect(new URL(request.mock.calls[3][0] as string).searchParams.get('page')).toBe('3')
   })
   it('envia fonte, escopo e nome codificado do arquivo local', async () => {
     const request = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ inserted: 1 }) })

@@ -4,7 +4,12 @@ import { getSessionToken } from './auth'
 export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas' | 'guarnicoes'
 export type Summary = { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; domestica: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
 export type Batch = { id: string; source: Source; filename: string; imported_at: string; row_count: number; inserted: number; updated: number; unchanged: number; quarantined: number; differences: number; status: string }
-export type BatchAudit = { divergences: { source: Source; natural_key: string; reason: string }[]; quarantine: { row_number: number; reason: string; fields: Record<string, string> }[] }
+export type BatchPage = AuditPage<Batch>
+export type AuditPage<T> = { items: T[]; total: number; page: number; size: number }
+export type BatchAudit = {
+  divergences: AuditPage<{ source: Source; natural_key: string; reason: string }>
+  quarantine: AuditPage<{ row_number: number; reason: string; fields: Record<string, string> }>
+}
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
 export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[]; arm_quantity?: number; arm_situation?: string; arm_caliber?: string; arm_seized?: boolean; drug_quantity?: number; drug_unit?: string; drug_weight_grams?: number; drug_location?: string; team_score?: number; team_role?: string; team_group?: 'roster' | 'extra' | 'unlisted' }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
@@ -114,17 +119,17 @@ export async function getMviRecordVersions(source: MviSource, naturalKey: string
   return response.items
 }
 
-export async function getBatches(): Promise<Batch[]> {
-  return (await json<{ items: Batch[] }>(await apiFetch(`${baseUrl}/imports`))).items
+export async function getBatches(page = 1): Promise<BatchPage> {
+  return json(await apiFetch(`${baseUrl}/imports?page=${page}&size=20`))
 }
 
-export async function getBatchAudit(batchId: string): Promise<BatchAudit> {
+export async function getBatchAudit(batchId: string, quarantinePage = 1, divergencePage = 1): Promise<BatchAudit> {
   const prefix = `${baseUrl}/imports/${encodeURIComponent(batchId)}`
   const [divergences, quarantine] = await Promise.all([
-    json<{ items: BatchAudit['divergences'] }>(await apiFetch(`${prefix}/divergences`)),
-    json<{ items: BatchAudit['quarantine'] }>(await apiFetch(`${prefix}/quarantine`)),
+    json<BatchAudit['divergences']>(await apiFetch(`${prefix}/divergences?page=${divergencePage}&size=100`)),
+    json<BatchAudit['quarantine']>(await apiFetch(`${prefix}/quarantine?page=${quarantinePage}&size=100`)),
   ])
-  return { divergences: divergences.items, quarantine: quarantine.items }
+  return { divergences, quarantine }
 }
 
 export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string): Promise<RecordPage> {

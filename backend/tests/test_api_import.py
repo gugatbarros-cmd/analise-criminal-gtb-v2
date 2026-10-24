@@ -32,6 +32,37 @@ def test_rejects_unsafe_upload(tmp_path, monkeypatch):
     assert response.status_code == 422
 
 
+def test_quarantine_api_pages_report_full_total(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([cad(), *[
+        cad(**{"Número da ocorrência": "", "Nº NIC": f"NIC-{index}"})
+        for index in range(4)
+    ]])
+    imported = client.post("/imports/mvi_cad", content=content,
+                           headers={"X-Filename": "audit.csv"}).json()
+    result = client.get(f"/imports/{imported['id']}/quarantine?page=2&size=2")
+    assert result.status_code == 200
+    assert result.json()["total"] == 4
+    assert [item["row_number"] for item in result.json()["items"]] == [5, 6]
+    assert client.get(f"/imports/{imported['id']}/quarantine?page=0").status_code == 422
+
+
+def test_import_batch_history_has_pages(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    first = client.post("/imports/mvi_cad", content=csv_bytes([cad()]),
+                        headers={"X-Filename": "first.csv"}).json()
+    client.post("/imports/mvi_cad", content=csv_bytes([
+        cad(**{"Número da ocorrência": "CAD-002"})
+    ]), headers={"X-Filename": "second.csv"})
+    result = client.get("/imports?page=2&size=1")
+    assert result.status_code == 200
+    assert result.json()["total"] == 2
+    assert result.json()["items"][0]["id"] == first["id"]
+    assert client.get("/imports?size=101").status_code == 422
+
+
 def test_cvp_records_api_filter(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
     client = TestClient(main.app)
