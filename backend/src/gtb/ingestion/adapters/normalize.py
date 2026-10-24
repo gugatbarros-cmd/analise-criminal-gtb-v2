@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from gtb.indicators.arms import arm_field, arm_identity
 from gtb.indicators.drugs import drug_identity, drug_type
+from gtb.indicators.mvi_narrative import infer_narrative_instrument
 from gtb.indicators.rules import (
     cvp_class,
     death_confirmed,
@@ -65,7 +66,7 @@ def pick(row: dict[str, str], field: str) -> str:
 
 
 def declared_instrument(row: dict[str, str]) -> str:
-    """Ignora campos estruturados genéricos antes de consultar os seguintes."""
+    """Prioriza meio estruturado; depois lê relato afirmativo da própria fonte."""
     normalized = {key(column): value for column, value in row.items() if column.strip()}
     for alias in ALIASES["instrument"]:
         value = normalized.get(key(alias))
@@ -73,7 +74,7 @@ def declared_instrument(row: dict[str, str]) -> str:
             group = mvi_instrument(str(value))
             if group != "Não identificado":
                 return group
-    return "Não identificado"
+    return infer_narrative_instrument(row)
 
 
 @dataclass(frozen=True)

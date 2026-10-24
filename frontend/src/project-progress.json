@@ -1,11 +1,11 @@
 {
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-24",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     { "id": 0, "name": "Inventário do legado", "weight": 5, "completed": 2, "total": 4, "done": "Fontes, arquitetura e módulos principais mapeados", "remaining": "Detalhar todos os filtros, cálculos e desempenho de referência" },
     { "id": 1, "name": "Base local", "weight": 10, "completed": 4, "total": 4, "done": "Repositório separado, API, interface, scripts e testes", "remaining": "Concluída" },
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, quarentena, restauração e benchmark de 10 mil e 100 mil linhas com gravação por lote", "remaining": "Validar os seis layouts anonimizados, medir memória e ampliar escala" },
-    { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 8, "total": 10, "done": "Regras e filtros separados, histórico anual/mensal, dia da semana, perfis, meio declarado, ficha e versões", "remaining": "Paridade oficial, inferência por relato, campos derivados e análise de horários" },
+    { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 9, "total": 10, "done": "Regras e filtros separados, histórico anual/mensal, dia da semana, perfis, meio declarado ou inferido da narrativa, ficha e versões", "remaining": "Paridade oficial, campos derivados e análise de horários" },
     { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 13, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições iniciais, relatório resumido imprimível", "remaining": "Filtros completos de armas, drogas e guarnições, relatórios detalhados e paridade oficial" },
     { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 2, "total": 5, "done": "Contas locais, perfis e backup integral verificável do banco novo, contas e arquivos importados", "remaining": "Empacotamento, backup dos dados do legado, operação paralela e plano de troca" }
   ]
