@@ -8,7 +8,7 @@ from gtb.security.local_auth import AuthManager
 def test_health_contract() -> None:
     response = TestClient(app).get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "version": "0.1.30", "mode": "local"}
+    assert response.json() == {"status": "ok", "version": "0.1.31", "mode": "local"}
 
 
 def test_demo_mode_is_read_only(monkeypatch) -> None:

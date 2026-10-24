@@ -240,14 +240,16 @@ class Store:
                         db.execute("INSERT INTO quarantine VALUES (?, ?, ?, ?)",
                                    [batch_id, number, reason, json.dumps(row, ensure_ascii=False)])
                     if scope == "complete":
-                        current_keys = db.execute("""SELECT natural_key FROM record_versions
-                            WHERE source = ? AND is_current""", [source]).fetchall()
-                        for (natural_key,) in current_keys:
-                            if natural_key not in seen:
-                                db.execute("INSERT INTO import_divergences VALUES (?, ?, ?, ?)",
-                                           [batch_id, source, natural_key,
-                                            "Ausente do arquivo completo; revisão necessária"])
-                                differences += 1
+                        db.execute("""INSERT INTO import_divergences
+                            SELECT ?, ?, r.natural_key,
+                                'Ausente do arquivo completo; revisão necessária'
+                            FROM record_versions r
+                            WHERE r.source = ? AND r.is_current
+                                AND NOT EXISTS (SELECT 1 FROM incoming_keys i
+                                    WHERE i.natural_key = r.natural_key)""",
+                                   [batch_id, source, source])
+                        differences = db.execute("""SELECT count(*) FROM import_divergences
+                            WHERE batch_id = ?""", [batch_id]).fetchone()[0]
                     status = "completed_with_quarantine" if rejected else "completed"
                     db.execute("""INSERT INTO import_batches VALUES
                         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
