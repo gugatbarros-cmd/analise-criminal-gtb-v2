@@ -1,5 +1,8 @@
 """Peso de drogas só é calculado quando a unidade é reconhecida."""
 
+from datetime import date
+
+import pytest
 from test_imports import csv_bytes
 
 from gtb.db.store import Store
@@ -33,6 +36,13 @@ def test_drug_count_weight_and_coverage(tmp_path):
     assert store.drugs_analysis(2026, "Igaci")["total"] == 3
     assert store.drugs_analysis(2025)["total"] == 0
     assert len({record["natural_key"] for record in store.records("drogas")["items"]}) == 4
+    assert store.drugs_analysis(month=1)["total"] == 3
+    assert store.drugs_analysis(month=3)["total_weight_grams"] == 0.1
+    assert store.drugs_analysis(drug_type="Cocaína")["total_weight_grams"] == 500
+    assert store.records("drogas", drug_type="Cocaína")["total"] == 1
+    assert store.records("drogas", start_date=date(2026, 3, 1))["total"] == 1
+    with pytest.raises(ValueError, match="Data inicial"):
+        store.drugs_analysis(start_date=date(2026, 4, 1), end_date=date(2026, 1, 1))
 
 
 def test_unknown_unit_is_not_summed_as_grams():

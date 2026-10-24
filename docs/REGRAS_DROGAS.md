@@ -1,4 +1,4 @@
-# Drogas — regra inicial 0.1.23
+# Drogas — regra provisória
 
 Referência: funções `drugColumn`, `buildDrugRowKey`, `getDrugType`, `getDrugQuantity`, `getDrugWeightGrams` e `summarizeDrugDashboard` em `assets/js/app.js` do legado 4.6.256. Os totais ainda não foram comparados com base oficial.
 
@@ -8,6 +8,6 @@ Referência: funções `drugColumn`, `buildDrugRowKey`, `getDrugType`, `getDrugQ
 - **Quantidade:** texto com vírgula decimal é convertido em número. Valor negativo ou ausente não entra na soma de peso.
 - **Peso:** unidades reconhecidas: kg para 1.000 g, g para 1 g e mg para 0,001 g. Outras unidades continuam visíveis na relação, sem conversão presumida. A análise apresenta a cobertura de linhas com peso reconhecido.
 - **Tipo:** usa o campo explícito; quando ausente, procura no texto maconha, cocaína, crack, MDMA/ecstasy, LSD, skunk, pasta base ou inalantes, como no legado.
-- **Filtros atuais:** ano e município. Ainda faltam mês, intervalo de datas e tipo, tabelas e relatórios completos do legado.
+- **Filtros atuais:** ano e município do recorte geral, mais mês, datas inicial/final inclusivas e tipo próprios da análise de drogas. Os mesmos filtros se aplicam aos registros, peso reconhecido, cobertura, séries, rankings e relação individual. Datas invertidas são rejeitadas e tipo usa comparação exata após normalização de acentos e grafia.
 
-O arquivo `fixtures/synthetic/drogas.csv` contém quatro registros fictícios. Três têm peso reconhecido, totalizando 1.000,1 g; a linha em comprimidos não recebe peso presumido. É necessário validar layouts anonimizados e totais oficiais antes de usar dados operacionais.
+O arquivo `fixtures/synthetic/drogas.csv` contém quatro registros fictícios. Três têm peso reconhecido, totalizando 1.000,1 g; a linha em comprimidos não recebe peso presumido. Ainda faltam controles de ano e município independentes do recorte geral, relatório especializado e validação com layout anonimizado e totais oficiais antes de usar dados operacionais.

@@ -29,7 +29,7 @@ Leitura estática dos controles em `index.html` da versão 4.6.256; a existênci
 | TCO | Todo período, intervalo mestre, ano e mês; município, natureza e busca por número | Períodos, mês, natureza e busca por número |
 | Sossego | Todo período, intervalo personalizado, ano e mês; datas inicial/final, município e natureza | Recortes de período e natureza |
 | Armas | Ano, mês, município, situação, tipo e datas inicial/final | Mês, situação, tipo e intervalo aplicados; controles independentes de ano e município e relatório especializado pendentes |
-| Drogas | Ano, mês, datas inicial/final, município e tipo | Mês, tipo e intervalo |
+| Drogas | Ano, mês, datas inicial/final, município e tipo | Filtros locais de mês, tipo e intervalo implementados; faltam controles independentes de ano/município, relatórios especializados e paridade oficial |
 | Guarnições | Datas inicial/final, tipo de ocorrência, policial, guarnição, município, ano e mês | Datas, natureza, policial, guarnição e mês |
 | Tabela consolidada | Busca, indicador e origem | Conferir cobertura integral das seis fontes |
 | Inteligência estatística | Janela móvel de 7/14/28/90 dias, territórios A/B e pesquisa textual | Módulo ainda não migrado |

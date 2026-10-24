@@ -99,6 +99,56 @@ function armsAnalysis(items: RecordItem[]): ArmsAnalysis {
     calibers: ranking(groups.calibers), situations: ranking(groups.situations) }
 }
 
+function filteredDrugs(data: Snapshot, params: URLSearchParams): RecordItem[] {
+  const year = Number(params.get('year'))
+  const city = params.get('municipality')
+  const month = Number(params.get('month'))
+  const start = params.get('start_date')
+  const end = params.get('end_date')
+  const type = params.get('drug_type')
+  return data.records.drogas.filter(item => item.eligible &&
+    (!year || Number(item.event_date.slice(0, 4)) === year) &&
+    (!city || fold(item.municipality) === fold(city)) &&
+    (!month || Number(item.event_date.slice(5, 7)) === month) &&
+    (!start || item.event_date >= start) && (!end || item.event_date <= end) &&
+    (!type || fold(item.category || 'Não informado') === fold(type)))
+}
+
+function drugsAnalysis(items: RecordItem[]): DrugsAnalysis {
+  const monthly: Record<string, number> = {}
+  const groups: Record<string, Record<string, number>> = {
+    types: {}, municipalities: {}, locations: {},
+  }
+  const weights: Record<string, number> = {}
+  let totalWeight = 0; let weightedRecords = 0
+  for (const item of items) {
+    const period = item.event_date.slice(0, 7)
+    monthly[period] = (monthly[period] || 0) + 1
+    const type = item.category || 'Não informado'
+    for (const [group, value] of Object.entries({ types: type,
+      municipalities: item.municipality, locations: item.drug_location || 'Não informado' })) {
+      groups[group][value] = (groups[group][value] || 0) + 1
+    }
+    if (item.drug_weight_grams !== null && item.drug_weight_grams !== undefined) {
+      weightedRecords += 1
+      totalWeight += item.drug_weight_grams
+      weights[type] = (weights[type] || 0) + item.drug_weight_grams
+    }
+  }
+  const ranking = (values: Record<string, number>) => Object.entries(values)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 10)
+    .map(([name, total]) => ({ name, total }))
+  return { total: items.length, total_weight_grams: Number(totalWeight.toFixed(3)),
+    weighted_records: weightedRecords, available_types: Object.keys(groups.types).sort(),
+    monthly: Object.entries(monthly).sort(([a], [b]) => a < b ? -1 : 1)
+      .map(([period, total]) => ({ period, total })),
+    types: ranking(groups.types), municipalities: ranking(groups.municipalities),
+    locations: ranking(groups.locations),
+    weights_by_type: Object.entries(weights)
+      .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))
+      .map(([name, grams]) => ({ name, grams: Number(grams.toFixed(3)) })) }
+}
+
 export async function demoFetch(input: string, init?: RequestInit): Promise<Response> {
   if (init?.method && init.method !== 'GET') return response({ detail: 'Demonstração somente para consulta' }, 403)
   const data = await snapshot()
@@ -111,7 +161,9 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   if (path === '/indicators/arms/analysis') return response(
     ['month', 'start_date', 'end_date', 'arm_type', 'situation'].some(name => url.searchParams.has(name))
       ? armsAnalysis(filteredArms(data, url.searchParams)) : view.arms)
-  if (path === '/indicators/drugs/analysis') return response(view.drugs)
+  if (path === '/indicators/drugs/analysis') return response(
+    ['month', 'start_date', 'end_date', 'drug_type'].some(name => url.searchParams.has(name))
+      ? drugsAnalysis(filteredDrugs(data, url.searchParams)) : view.drugs)
   if (path === '/indicators/teams/analysis') return response(view.teams)
   const operation = path.match(/^\/indicators\/operations\/(Mandados|Visitas|Sossego)\/analysis$/)
   if (operation) return response(view.operations[operation[1]])
@@ -144,6 +196,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     const month = Number(url.searchParams.get('month'))
     const armType = url.searchParams.get('arm_type')
     const situation = url.searchParams.get('situation')
+    const drugType = url.searchParams.get('drug_type')
     const onlyEligible = url.searchParams.get('eligible_only') === 'true'
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
     const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 20))
@@ -154,6 +207,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
       (!endDate || item.event_date <= endDate) &&
       (!armType || fold(item.category || 'Não informado') === fold(armType)) &&
       (!situation || fold(item.arm_situation || 'Não informado') === fold(situation)) &&
+      (!drugType || fold(item.category || 'Não informado') === fold(drugType)) &&
       (!city || fold(item.municipality) === fold(city)) &&
       (!victim || item.victim.toLowerCase().includes(victim.toLowerCase())) &&
       (!prefix || item.category.startsWith(prefix)) &&

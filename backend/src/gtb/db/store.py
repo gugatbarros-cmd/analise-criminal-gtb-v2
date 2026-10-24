@@ -625,7 +625,14 @@ class Store:
                    for name, group in groups.items()}}
 
     def drugs_analysis(self, year: int | None = None,
-                       municipality: str | None = None) -> dict:
+                       municipality: str | None = None, month: int | None = None,
+                       start_date: calendar_date | None = None,
+                       end_date: calendar_date | None = None,
+                       drug_type: str | None = None) -> dict:
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("Data inicial posterior à data final")
+        if month is not None and not 1 <= month <= 12:
+            raise ValueError("Mês deve ficar entre 1 e 12")
         clauses = ["source = 'drogas'", "is_current", "eligible"]
         params: list[object] = []
         if year:
@@ -634,6 +641,15 @@ class Store:
         if municipality:
             clauses.append("lower(municipality) = lower(?)")
             params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        if month is not None:
+            clauses.append("month(event_date) = ?")
+            params.append(month)
+        if start_date:
+            clauses.append("event_date >= ?")
+            params.append(start_date)
+        if end_date:
+            clauses.append("event_date <= ?")
+            params.append(end_date)
         with self.lock, self._connect() as db:
             rows = db.execute(f"""SELECT raw_json, event_date, municipality, category
                 FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
@@ -643,20 +659,26 @@ class Store:
         weights: dict[str, float] = {}
         total_weight = 0.0
         weighted_records = 0
+        record_count = 0
         for raw_json, event_date, city, category in rows:
+            if drug_type and key(drug_type) != key(category or "Não informado"):
+                continue
+            record_count += 1
             row = json.loads(raw_json)
             month = event_date.strftime("%Y-%m")
             monthly[month] = monthly.get(month, 0) + 1
             location = drug_field(row, "location") or "Não informado"
-            for group, value in zip(groups.values(), (category, city, location)):
+            for group, value in zip(groups.values(), (category or "Não informado", city, location)):
                 group[value] = group.get(value, 0) + 1
             weight = drug_weight_grams(row)
             if weight is not None:
                 weighted_records += 1
                 total_weight += weight
-                weights[category] = weights.get(category, 0) + weight
-        return {"total": len(rows), "total_weight_grams": round(total_weight, 3),
+                label = category or "Não informado"
+                weights[label] = weights.get(label, 0) + weight
+        return {"total": record_count, "total_weight_grams": round(total_weight, 3),
                 "weighted_records": weighted_records,
+                "available_types": sorted(groups["types"]),
                 "monthly": [{"period": period, "total": count}
                             for period, count in sorted(monthly.items())],
                 **{name: [{"name": value, "total": count} for value, count in
@@ -728,11 +750,14 @@ class Store:
                 start_date: calendar_date | None = None,
                 end_date: calendar_date | None = None,
                 month: int | None = None, arm_type: str | None = None,
-                situation: str | None = None) -> dict:
+                situation: str | None = None,
+                drug_type: str | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
         if (arm_type or situation) and source != "armas":
             raise ValueError("Filtros de arma exigem a fonte armas")
+        if drug_type and source != "drogas":
+            raise ValueError("Filtro de droga exige a fonte drogas")
         if start_date and end_date and start_date > end_date:
             raise ValueError("Data inicial posterior à data final")
         if month is not None and not 1 <= month <= 12:
@@ -771,17 +796,19 @@ class Store:
             selection = f"""SELECT natural_key, event_date, municipality, occurrence, victim, nature,
                 category, eligible, reason, version, indicators, raw_json FROM record_versions
                 WHERE {where} ORDER BY event_date DESC, occurrence, victim, natural_key"""
-            if arm_type or situation:
+            if arm_type or situation or drug_type:
                 rows = []
                 total = 0
                 cursor = db.execute(selection, params)
                 while batch := cursor.fetchmany(1000):
                     for row in batch:
-                        original = json.loads(row[-1])
+                        original = json.loads(row[-1]) if situation else None
                         if arm_type and key(arm_type) != key(row[6] or "Não informado"):
                             continue
                         if situation and key(situation) != key(arm_field(original, "situation") or
                                                                "Não informado"):
+                            continue
+                        if drug_type and key(drug_type) != key(row[6] or "Não informado"):
                             continue
                         if (page - 1) * size <= total < page * size:
                             rows.append(row)

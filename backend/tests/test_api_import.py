@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from test_arms import arm
+from test_drugs import drug
 from test_imports import cad, csv_bytes, neac
 
 from gtb.api import main
@@ -76,6 +77,22 @@ def test_arms_api_applies_the_same_filters_to_totals_and_records(tmp_path, monke
     assert filtered.json()["records"] == 1
     assert client.get("/records/armas?month=1&arm_type=Pistola&situation=Apreendida").json()["total"] == 1
     assert client.get("/indicators/arms/analysis?month=13").status_code == 422
+
+
+def test_drugs_api_filters_weight_and_records_together(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    content = csv_bytes([drug(), drug(**{"ID OCOR DESPC ENVL DROG": "DRG-SYN-002",
+                                          "Data apreensão": "05/03/2026",
+                                          "Tipo de droga": "Crack", "Quantidade apreendida": "100",
+                                          "Unidade de medida": "mg"})])
+    assert client.post("/imports/drogas", content=content,
+                       headers={"X-Filename": "drugs.csv"}).status_code == 200
+    filtered = client.get("/indicators/drugs/analysis?month=3&drug_type=Crack")
+    assert filtered.json()["total"] == 1
+    assert filtered.json()["total_weight_grams"] == 0.1
+    assert client.get("/records/drogas?month=3&drug_type=Crack").json()["total"] == 1
+    assert client.get("/indicators/drugs/analysis?month=0").status_code == 422
 
 
 def test_cvp_records_api_filter(tmp_path, monkeypatch):

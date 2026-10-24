@@ -19,7 +19,8 @@ export type OperationalAnalysis = TcoAnalysis
 export type DomesticAnalysis = TcoAnalysis & { reviews: { pending: number; excluded: number; outside: number } }
 export type ArmsAnalysis = { total: number; seized: number; restricted: number; records: number; available_types: string[]; available_situations: string[]; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; calibers: { name: string; total: number }[]; situations: { name: string; total: number }[] }
 export type ArmsFilters = { month?: number; startDate?: string; endDate?: string; armType?: string; situation?: string }
-export type DrugsAnalysis = { total: number; total_weight_grams: number; weighted_records: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; locations: { name: string; total: number }[]; weights_by_type: { name: string; grams: number }[] }
+export type DrugsAnalysis = { total: number; total_weight_grams: number; weighted_records: number; available_types: string[]; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; types: { name: string; total: number }[]; locations: { name: string; total: number }[]; weights_by_type: { name: string; grams: number }[] }
+export type DrugsFilters = { month?: number; startDate?: string; endDate?: string; drugType?: string }
 export type TeamsAnalysis = { roster_occurrences: number; weighted_points: number; teams: number; officers: number; extra_occurrences: number; unlisted_occurrences: number; ranking: { name: string; occurrences: number; points: number }[]; officer_ranking: { name: string; registration: string; occurrences: number; points: number }[]; natures: { name: string; total: number }[] }
 export type MviSource = 'mvi_cad' | 'mvi_neac'
 export type MviAnalysis = { source: MviSource; total: number; yearly: { year: number; total: number }[]; monthly: { period: string; total: number }[]; weekdays: { name: string; total: number }[]; municipalities: { name: string; total: number }[]; classifications: { name: string; total: number }[]; instruments: { name: string; total: number }[]; time_coverage: { valid: number; total: number }; time_bands: { name: string; total: number }[]; city_time_bands: { municipality: string; total: number; valid: number; top_band: string | null; top_band_total: number; top_category: string | null }[] }
@@ -80,10 +81,14 @@ export async function getArmsAnalysis(year?: number, municipality?: string, filt
   return json(await apiFetch(`${baseUrl}/indicators/arms/analysis?${params}`))
 }
 
-export async function getDrugsAnalysis(year?: number, municipality?: string): Promise<DrugsAnalysis> {
+export async function getDrugsAnalysis(year?: number, municipality?: string, filters: DrugsFilters = {}): Promise<DrugsAnalysis> {
   const params = new URLSearchParams()
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
+  if (filters.month) params.set('month', String(filters.month))
+  if (filters.startDate) params.set('start_date', filters.startDate)
+  if (filters.endDate) params.set('end_date', filters.endDate)
+  if (filters.drugType) params.set('drug_type', filters.drugType)
   return json(await apiFetch(`${baseUrl}/indicators/drugs/analysis?${params}`))
 }
 
@@ -138,7 +143,7 @@ export async function getBatchAudit(batchId: string, quarantinePage = 1, diverge
   return { divergences, quarantine }
 }
 
-export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string, month?: number, armType?: string, situation?: string): Promise<RecordPage> {
+export async function getRecords(source: Source, page: number, year?: number, municipality?: string, victim?: string, categoryPrefix?: string, indicator?: string, startDate?: string, endDate?: string, month?: number, armType?: string, situation?: string, drugType?: string): Promise<RecordPage> {
   const params = new URLSearchParams({ page: String(page), size: '20', eligible_only: 'true' })
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
@@ -150,6 +155,7 @@ export async function getRecords(source: Source, page: number, year?: number, mu
   if (month) params.set('month', String(month))
   if (armType) params.set('arm_type', armType)
   if (situation) params.set('situation', situation)
+  if (drugType) params.set('drug_type', drugType)
   return json(await apiFetch(`${baseUrl}/records/${source}?${params}`))
 }
 
