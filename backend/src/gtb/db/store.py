@@ -689,7 +689,15 @@ class Store:
                                                               key=lambda item: (-item[1], item[0]))]}
 
     def teams_analysis(self, year: int | None = None,
-                       municipality: str | None = None) -> dict:
+                       municipality: str | None = None,
+                       month: int | None = None,
+                       start_date: calendar_date | None = None,
+                       end_date: calendar_date | None = None,
+                       team_name: str | None = None) -> dict:
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("Data inicial posterior à data final")
+        if month is not None and not 1 <= month <= 12:
+            raise ValueError("Mês deve ficar entre 1 e 12")
         clauses = ["source = 'guarnicoes'", "is_current", "eligible"]
         params: list[object] = []
         if year:
@@ -698,15 +706,27 @@ class Store:
         if municipality:
             clauses.append("lower(municipality) = lower(?)")
             params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        if month is not None:
+            clauses.append("month(event_date) = ?")
+            params.append(month)
+        if start_date:
+            clauses.append("event_date >= ?")
+            params.append(start_date)
+        if end_date:
+            clauses.append("event_date <= ?")
+            params.append(end_date)
         with self.lock, self._connect() as db:
             rows = db.execute(f"""SELECT natural_key, raw_json, occurrence, nature, category
                 FROM record_versions WHERE {' AND '.join(clauses)}""", params).fetchall()
+        available_teams = sorted({row[4] for row in rows if row[4]})
         team_scores: dict[str, dict[str, int]] = {}
         officer_scores: dict[str, dict] = {}
         officer_occurrences: set[tuple[str, str]] = set()
         natures: dict[str, int] = {}
         roster = extra = unlisted = points = 0
         for natural_key, raw_json, occurrence, nature, team in rows:
+            if team_name and key(team_name) != key(team or "Não informado"):
+                continue
             row = json.loads(raw_json)
             score, _level = team_complexity(nature, pick(row, "solution"))
             group = team_group(team)
@@ -733,6 +753,7 @@ class Store:
                 item["occurrences"] += 1
                 item["points"] += score
         return {"roster_occurrences": roster, "weighted_points": points,
+                "available_teams": available_teams,
                 "teams": len(team_scores), "officers": len(officer_scores),
                 "extra_occurrences": extra, "unlisted_occurrences": unlisted,
                 "ranking": [{"name": name, **item} for name, item in
@@ -751,13 +772,16 @@ class Store:
                 end_date: calendar_date | None = None,
                 month: int | None = None, arm_type: str | None = None,
                 situation: str | None = None,
-                drug_type: str | None = None) -> dict:
+                drug_type: str | None = None,
+                team_name: str | None = None) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
         if (arm_type or situation) and source != "armas":
             raise ValueError("Filtros de arma exigem a fonte armas")
         if drug_type and source != "drogas":
             raise ValueError("Filtro de droga exige a fonte drogas")
+        if team_name and source != "guarnicoes":
+            raise ValueError("Filtro de equipe exige a fonte guarnicoes")
         if start_date and end_date and start_date > end_date:
             raise ValueError("Data inicial posterior à data final")
         if month is not None and not 1 <= month <= 12:
@@ -796,7 +820,7 @@ class Store:
             selection = f"""SELECT natural_key, event_date, municipality, occurrence, victim, nature,
                 category, eligible, reason, version, indicators, raw_json FROM record_versions
                 WHERE {where} ORDER BY event_date DESC, occurrence, victim, natural_key"""
-            if arm_type or situation or drug_type:
+            if arm_type or situation or drug_type or team_name:
                 rows = []
                 total = 0
                 cursor = db.execute(selection, params)
@@ -809,6 +833,8 @@ class Store:
                                                                "Não informado"):
                             continue
                         if drug_type and key(drug_type) != key(row[6] or "Não informado"):
+                            continue
+                        if team_name and key(team_name) != key(row[6] or "Não informado"):
                             continue
                         if (page - 1) * size <= total < page * size:
                             rows.append(row)
@@ -847,6 +873,8 @@ class Store:
                     "team_role": team_field(json.loads(row[-1]), "role")
                     if source == "guarnicoes" else None,
                     "team_group": team_group(row[6]) if source == "guarnicoes" else None,
+                    "team_officers": team_officers(team_field(json.loads(row[-1]), "officers"))
+                    if source == "guarnicoes" else None,
                 } for row in rows]}
 
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:

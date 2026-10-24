@@ -1,5 +1,6 @@
 """Guarnições fictícias mantêm escala, força-tarefa e outros recursos separados."""
 
+from datetime import date
 from pathlib import Path
 
 from test_imports import csv_bytes
@@ -25,6 +26,14 @@ def test_team_ranking_uses_roster_and_complexity(tmp_path):
     assert store.teams_analysis(2026, "Igaci")["roster_occurrences"] == 2
     assert store.teams_analysis(2025)["roster_occurrences"] == 0
     assert store.records("guarnicoes")["total"] == 5
+    january = store.teams_analysis(month=1)
+    assert january["roster_occurrences"] == 2
+    assert "RP 01" in january["available_teams"]
+    assert store.teams_analysis(team_name="RP 01")["weighted_points"] == 7
+    assert store.teams_analysis(start_date=date(2026, 2, 1))["roster_occurrences"] == 1
+    assert store.records("guarnicoes", team_name="RP 01")["total"] == 2
+    assert store.records("guarnicoes", month=2)["total"] == 2
+    assert store.records("guarnicoes", team_name="RP 01")["items"][0]["team_officers"]
 
 
 def test_team_identity_date_and_scope_are_conservative(tmp_path):

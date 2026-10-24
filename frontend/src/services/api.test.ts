@@ -72,11 +72,13 @@ describe('contrato de importação e indicadores', () => {
     const url = new URL(request.mock.calls[0][0] as string)
     expect(url.pathname).toBe('/indicators/teams/analysis')
     expect(url.searchParams.get('municipality')).toBe('Igaci')
+    await getTeamsAnalysis(2026, 'Igaci', { month: 1, teamName: 'RP 01', startDate: '2026-01-01' })
+    expect(new URL(request.mock.calls[1][0] as string).searchParams.get('team_name')).toBe('RP 01')
     await getDrugsAnalysis(2026, 'Igaci', { month: 3, drugType: 'Crack', startDate: '2026-03-01' })
-    expect(new URL(request.mock.calls[1][0] as string).searchParams.get('drug_type')).toBe('Crack')
+    expect(new URL(request.mock.calls[2][0] as string).searchParams.get('drug_type')).toBe('Crack')
     await getRecords('drogas', 1, 2026, 'Igaci', undefined, undefined, undefined,
       '2026-03-01', undefined, 3, undefined, undefined, 'Crack')
-    expect(new URL(request.mock.calls[2][0] as string).searchParams.get('month')).toBe('3')
+    expect(new URL(request.mock.calls[3][0] as string).searchParams.get('month')).toBe('3')
   })
 
   it('solicita apenas CVP tentado no recorte selecionado', async () => {

@@ -149,6 +149,59 @@ function drugsAnalysis(items: RecordItem[]): DrugsAnalysis {
       .map(([name, grams]) => ({ name, grams: Number(grams.toFixed(3)) })) }
 }
 
+function filteredTeams(data: Snapshot, params: URLSearchParams): RecordItem[] {
+  const year = Number(params.get('year'))
+  const city = params.get('municipality')
+  const month = Number(params.get('month'))
+  const start = params.get('start_date')
+  const end = params.get('end_date')
+  const team = params.get('team_name')
+  return data.records.guarnicoes.filter(item => item.eligible &&
+    (!year || Number(item.event_date.slice(0, 4)) === year) &&
+    (!city || fold(item.municipality) === fold(city)) &&
+    (!month || Number(item.event_date.slice(5, 7)) === month) &&
+    (!start || item.event_date >= start) && (!end || item.event_date <= end) &&
+    (!team || fold(item.category || 'Não informado') === fold(team)))
+}
+
+function teamsAnalysis(items: RecordItem[]): TeamsAnalysis {
+  const teams: Record<string, { occurrences: number; points: number }> = {}
+  const officers: Record<string, { name: string; registration: string; occurrences: number; points: number }> = {}
+  const officerOccurrences = new Set<string>()
+  const natures: Record<string, number> = {}
+  let roster = 0; let extra = 0; let unlisted = 0; let points = 0
+  for (const item of items) {
+    const score = item.team_score || 1
+    if (item.team_group === 'roster') {
+      roster += 1; points += score
+      const team = teams[item.category] ||= { occurrences: 0, points: 0 }
+      team.occurrences += 1; team.points += score
+      const nature = item.nature || 'Não informada'
+      natures[nature] = (natures[nature] || 0) + 1
+    } else if (item.team_group === 'extra') extra += 1
+    else unlisted += 1
+    for (const officer of item.team_officers || []) {
+      const marker = `${officer.registration}|${item.occurrence || item.natural_key}`
+      if (officerOccurrences.has(marker)) continue
+      officerOccurrences.add(marker)
+      const entry = officers[officer.registration] ||= { name: officer.name,
+        registration: officer.registration, occurrences: 0, points: 0 }
+      entry.occurrences += 1; entry.points += score
+    }
+  }
+  return { roster_occurrences: roster, weighted_points: points,
+    teams: Object.keys(teams).length, officers: Object.keys(officers).length,
+    extra_occurrences: extra, unlisted_occurrences: unlisted,
+    available_teams: [...new Set(items.map(item => item.category).filter(Boolean))].sort(),
+    ranking: Object.entries(teams).sort((a, b) => b[1].points - a[1].points ||
+      b[1].occurrences - a[1].occurrences || a[0].localeCompare(b[0]))
+      .map(([name, value]) => ({ name, ...value })),
+    officer_ranking: Object.values(officers).sort((a, b) => b.points - a.points ||
+      b.occurrences - a.occurrences || a.name.localeCompare(b.name)),
+    natures: Object.entries(natures).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 10).map(([name, total]) => ({ name, total })) }
+}
+
 export async function demoFetch(input: string, init?: RequestInit): Promise<Response> {
   if (init?.method && init.method !== 'GET') return response({ detail: 'Demonstração somente para consulta' }, 403)
   const data = await snapshot()
@@ -164,7 +217,9 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   if (path === '/indicators/drugs/analysis') return response(
     ['month', 'start_date', 'end_date', 'drug_type'].some(name => url.searchParams.has(name))
       ? drugsAnalysis(filteredDrugs(data, url.searchParams)) : view.drugs)
-  if (path === '/indicators/teams/analysis') return response(view.teams)
+  if (path === '/indicators/teams/analysis') return response(
+    ['month', 'start_date', 'end_date', 'team_name'].some(name => url.searchParams.has(name))
+      ? teamsAnalysis(filteredTeams(data, url.searchParams)) : view.teams)
   const operation = path.match(/^\/indicators\/operations\/(Mandados|Visitas|Sossego)\/analysis$/)
   if (operation) return response(view.operations[operation[1]])
   const mvi = path.match(/^\/indicators\/mvi\/(mvi_cad|mvi_neac)\/analysis$/)
@@ -197,6 +252,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     const armType = url.searchParams.get('arm_type')
     const situation = url.searchParams.get('situation')
     const drugType = url.searchParams.get('drug_type')
+    const teamName = url.searchParams.get('team_name')
     const onlyEligible = url.searchParams.get('eligible_only') === 'true'
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
     const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 20))
@@ -208,6 +264,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
       (!armType || fold(item.category || 'Não informado') === fold(armType)) &&
       (!situation || fold(item.arm_situation || 'Não informado') === fold(situation)) &&
       (!drugType || fold(item.category || 'Não informado') === fold(drugType)) &&
+      (!teamName || fold(item.category || 'Não informado') === fold(teamName)) &&
       (!city || fold(item.municipality) === fold(city)) &&
       (!victim || item.victim.toLowerCase().includes(victim.toLowerCase())) &&
       (!prefix || item.category.startsWith(prefix)) &&

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 from test_arms import arm
 from test_drugs import drug
@@ -249,3 +251,16 @@ def test_disturbance_api_exposes_classified_cases(tmp_path, monkeypatch):
     item = client.get("/records/ocorrencias?indicator=Sossego").json()["items"][0]
     assert item["indicators"] == ["TCO", "Sossego"]
     assert "tipificação" in item["action_evidence"]
+
+
+def test_teams_api_filters_match_record_relation(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app)
+    fixture = Path(__file__).resolve().parents[2] / "fixtures" / "synthetic" / "guarnicoes.csv"
+    assert client.post("/imports/guarnicoes", content=fixture.read_bytes(),
+                       headers={"X-Filename": "guarnicoes.csv"}).status_code == 200
+    params = "?year=2026&month=1&team_name=RP%2001"
+    assert client.get("/indicators/teams/analysis" + params).json()["weighted_points"] == 7
+    assert client.get("/records/guarnicoes" + params).json()["total"] == 2
+    assert client.get("/indicators/teams/analysis?start_date=2026-02-01&end_date=2026-01-01").status_code == 422
+    assert client.get("/records/drogas?team_name=RP%2001").status_code == 422
