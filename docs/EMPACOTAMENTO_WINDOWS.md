@@ -8,7 +8,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\build-windows.ps
 
 Depois da compilação, abra `GTB2-Local.exe`. Ele escuta somente em `127.0.0.1:8000`, espera a API responder antes de abrir a interface no navegador e permite criar a primeira conta administradora na própria tela. Se uma instância do GTB já estiver funcionando, um novo clique apenas reabre a interface. Falhas de inicialização aparecem em uma janela e são registradas em `%LOCALAPPDATA%\GTB2\logs\launcher.log`. Por padrão, o banco, as contas e os arquivos importados ficam em `%LOCALAPPDATA%\GTB2\data`, fora da pasta temporária do executável. `GTB_DATA_DIR` pode apontar para outra pasta local. Feche o console ou pressione Ctrl+C para encerrar.
 
-Para criar ou reparar o ícone da Área de Trabalho depois da compilação, execute:
+Para criar ou reparar o ícone da Área de Trabalho depois da compilação, execute o comando abaixo. O atalho chama `scripts\iniciar-gtb.ps1`, que inicia o executável em processo separado, aguarda a resposta local e então solicita ao Windows que abra o navegador. Se a inicialização falhar, ele mostra o motivo em uma janela.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\criar-atalho.ps1
