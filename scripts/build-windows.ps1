@@ -24,7 +24,7 @@ Push-Location $root
 try {
   & $python -m PyInstaller --noconfirm --clean --onefile --name GTB2-Local `
     --add-data 'frontend\dist-local;web' `
-    --collect-all duckdb --collect-all polars --collect-all openpyxl `
+    --collect-all duckdb --collect-all polars --collect-all openpyxl --collect-all xlrd `
     desktop\launcher.py
   if ($LASTEXITCODE -ne 0) { throw 'Empacotamento falhou' }
   Write-Output (Join-Path $root 'dist\GTB2-Local.exe')

@@ -4,11 +4,49 @@ import os
 import socket
 import sys
 import threading
+import time
 import webbrowser
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import urlopen
 
 import uvicorn
 from fastapi.staticfiles import StaticFiles
+
+
+def log_path() -> Path:
+    path = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "GTB2" / "logs" / "launcher.log"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def log(message: str) -> None:
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    with log_path().open("a", encoding="utf-8") as stream:
+        stream.write(f"{timestamp} {message}\n")
+
+
+def show_error(message: str) -> None:
+    log(f"ERRO: {message}")
+    try:
+        import ctypes
+
+        ctypes.windll.user32.MessageBoxW(0, message, "Análise Criminal GTB 2.0", 0x10)
+    except (AttributeError, OSError):
+        print(message, file=sys.stderr)
+
+
+def open_when_ready(address: str) -> None:
+    for _ in range(60):
+        try:
+            with urlopen(f"{address}/health", timeout=1) as response:
+                if response.status == 200:
+                    webbrowser.open(address)
+                    log(f"Interface aberta em {address}")
+                    return
+        except (OSError, URLError, ValueError):
+            time.sleep(0.5)
+    show_error(f"O servidor iniciou, mas a interface não respondeu em {address}.")
 
 
 def data_directory() -> Path:
@@ -29,8 +67,16 @@ def main() -> int:
     os.environ["GTB_DATA_DIR"] = str(data)
     with socket.socket() as probe:
         if probe.connect_ex(("127.0.0.1", 8000)) == 0:
-            print("A porta local 8000 já está em uso. Feche a outra instância antes de iniciar.",
-                  file=sys.stderr)
+            try:
+                with urlopen("http://127.0.0.1:8000/health", timeout=2) as response:
+                    if response.status == 200:
+                        webbrowser.open("http://127.0.0.1:8000")
+                        log("Instância existente localizada; interface reaberta")
+                        return 0
+            except (OSError, URLError, ValueError) as error:
+                log(f"A porta 8000 respondeu sem identificar o GTB: {error}")
+            show_error("A porta local 8000 está ocupada por outro programa. "
+                       "Feche esse programa e abra o GTB 2.0 novamente.")
             return 1
     if len(sys.argv) > 1:
         from gtb.ops.backup import create_backup, restore_backup
@@ -57,11 +103,18 @@ def main() -> int:
     print(f"Análise Criminal GTB 2.0: {address}")
     print(f"Dados locais: {os.environ['GTB_DATA_DIR']}")
     print("Pressione Ctrl+C para encerrar.")
+    log(f"Iniciando versão local em {address}; dados em {data}")
     if os.environ.get("GTB_NO_BROWSER") != "1":
-        threading.Timer(2, webbrowser.open, args=(address,)).start()
+        threading.Thread(target=open_when_ready, args=(address,), daemon=True).start()
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except Exception as error:
+        show_error(f"Não foi possível iniciar o sistema.\n\n{error}\n\nLog: {log_path()}")
+        raise SystemExit(1) from error
