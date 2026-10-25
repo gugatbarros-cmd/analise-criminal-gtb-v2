@@ -1,8 +1,8 @@
 # Andamento da implantação — 25/10/2026
 
-**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.41 prepara a comparação local das seis fontes anonimizadas com hashes e totais oficiais informados em manifesto. O backend novo permanece local; o sistema antigo segue em produção.
+**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.42 registra contagens de importação em fila local versionada e bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
 
-A prévia estática privada da versão 0.1.41 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
+A prévia estática privada da versão 0.1.42 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |

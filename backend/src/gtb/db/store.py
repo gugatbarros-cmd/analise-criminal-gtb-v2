@@ -20,6 +20,7 @@ from gtb.indicators.rules import domestic_triage, key, operational_action, plain
 from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
+from gtb.sync.outbox import enqueue_import
 
 MAX_UPLOAD_BYTES = 30 * 1024 * 1024
 ADAPTER_VERSION = "0.1.17"
@@ -78,6 +79,11 @@ class Store:
         db.execute("""CREATE TABLE IF NOT EXISTS import_divergences (
             batch_id VARCHAR NOT NULL, source VARCHAR NOT NULL, natural_key VARCHAR NOT NULL,
             reason VARCHAR NOT NULL)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS sync_outbox (
+            id VARCHAR PRIMARY KEY, event_type VARCHAR NOT NULL,
+            schema_version INTEGER NOT NULL, payload_json VARCHAR NOT NULL,
+            status VARCHAR NOT NULL, created_at TIMESTAMP NOT NULL,
+            attempts INTEGER NOT NULL, next_attempt_at TIMESTAMP, last_error VARCHAR)""")
 
     def _upgrade_occurrences(self) -> None:
         """Reclassifica dados derivados antigos, mantendo originais e um backup anterior."""
@@ -258,6 +264,9 @@ class Store:
                                 len(rows),
                                 inserted, updated, unchanged, len(rejected), status,
                                 str(backup_path) if backup_path else None, str(raw_path)])
+                    enqueue_import(db, batch_id=batch_id, source=source,
+                                   row_count=len(rows), inserted=inserted, updated=updated,
+                                   quarantined=len(rejected), differences=differences)
                     db.execute("COMMIT")
             except Exception:
                 raw_path.unlink(missing_ok=True)
