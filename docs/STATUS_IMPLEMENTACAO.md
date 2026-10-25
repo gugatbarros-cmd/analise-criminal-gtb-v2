@@ -1,8 +1,8 @@
 # Andamento da implantação — 25/10/2026
 
-**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.42 registra contagens de importação em fila local versionada e bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
+**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.43 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
 
-A prévia estática privada da versão 0.1.42 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
+A prévia estática privada da versão 0.1.43 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |
@@ -16,6 +16,8 @@ A prévia estática privada da versão 0.1.42 está em `https://gtb-analise-crim
 O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredonda o resultado total ao inteiro mais próximo: **88%**. O restante é `100 − 88 = 12%`. Os pesos refletem uma estimativa de esforço, não uma previsão de prazo. Uma fase só aparece como concluída quando todas as suas entregas foram implementadas e verificadas. O arquivo usado pela tela é [`frontend/src/project-progress.json`](../frontend/src/project-progress.json).
 
 ## Critérios restantes
+
+Em 25/10/2026, quatro layouts fornecidos foram importados numa base local isolada: armas, drogas, envolvidos CAD e ocorrências. Os arquivos e seus dados não entraram no Git nem na prévia web. A leitura estrutural passou; a planilha de envolvidos manteve 13 linhas em quarentena para revisão conservadora. Faltam as duas fontes restantes e totais oficiais para comprovar paridade.
 
 - **Fase 0:** os filtros principais de 12 áreas estão registrados no inventário e o contrato de indicadores do legado foi identificado. Faltam fluxos completos, gráficos, exportações, dependências de todas as abas e desempenho de referência do legado.
 - **Fase 2:** ensaios sintéticos de 10 mil, 100 mil e um milhão de linhas passaram. A carga de um milhão em dez lotes levou 1.090,7001 segundos, com pico de memória amostrado de 420.069.376 bytes; as consultas finais ficaram abaixo de 0,09 segundo neste computador. O histórico permite localizar lotes antigos, e cada lote pode mostrar todas as páginas de linhas em quarentena e ausências de arquivo completo na interface, preservando registros originais. As ausências são calculadas por consulta no DuckDB. O comparador local importa as seis fontes em diretório temporário, confere SHA-256 e aponta diferenças de totais por filtro; passou em 13 verificações sintéticas. Falta executar esse comparador com layouts anonimizados e totais oficiais e comparar desempenho com o legado; não há paridade comprovada.

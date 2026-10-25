@@ -1,9 +1,10 @@
 import csv
 import io
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
+import xlwt
 from openpyxl import Workbook
 
 from gtb.db.store import Store
@@ -38,6 +39,30 @@ def neac(**overrides: str) -> dict[str, str]:
         "Natureza": "Homicídio doloso",
         "Nome Vítima": "Maria Aparecida Silva",
     } | overrides
+
+
+def test_legacy_xls_accepts_cad_headers_and_duplicate_columns(tmp_path):
+    output = io.BytesIO()
+    workbook = xlwt.Workbook()
+    sheet = workbook.add_sheet("Worksheet")
+    headers = ["Nº Ocorrência", "Nº Ocorrência", "Dia da Ocorrência", "Cidade",
+               "Tipificação Geral", "Solução da Ocorrência"]
+    for column, header in enumerate(headers):
+        sheet.write(0, column, header)
+    sheet.write(1, 0, "CAD-XLS-001")
+    sheet.write(1, 1, "")
+    sheet.write(1, 2, datetime(2026, 10, 25), xlwt.easyxf(num_format_str="DD/MM/YYYY"))
+    sheet.write(1, 3, "Igaci")
+    sheet.write(1, 4, "Roubo")
+    sheet.write(1, 5, "Elaborou TCO PM")
+    workbook.save(output)
+
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    result = store.import_file("ocorrencias", "cad.xls", output.getvalue())
+    assert result["inserted"] == 1
+    assert result["quarantined"] == 0
+    assert store.records("ocorrencias")["items"][0]["occurrence"] == "CAD-XLS-001"
+    assert store.summary()["tco"] == 1
 
 
 def test_sources_independent_and_idempotent(tmp_path):

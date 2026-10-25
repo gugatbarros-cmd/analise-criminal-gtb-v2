@@ -108,7 +108,7 @@ def main() -> None:
                 count = min(args.batch_size, args.rows - offset)
                 payload = synthetic_csv(count, offset)
                 if len(payload) > MAX_UPLOAD_BYTES:
-                    parser.error("lote sintético acima de 30 MB; reduza --batch-size")
+                    parser.error("lote sintético acima de 64 MB; reduza --batch-size")
                 csv_bytes += len(payload)
                 start = perf_counter()
                 imported = store.import_file("ocorrencias", f"synthetic-{offset}.csv", payload)

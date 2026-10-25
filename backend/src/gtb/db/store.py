@@ -22,7 +22,7 @@ from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrumen
 from gtb.ingestion.adapters.tabular import read_rows
 from gtb.sync.outbox import enqueue_import
 
-MAX_UPLOAD_BYTES = 30 * 1024 * 1024
+MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 ADAPTER_VERSION = "0.1.17"
 
 
@@ -123,7 +123,7 @@ class Store:
         if scope not in {"partial", "complete"}:
             raise ValueError("Escopo deve ser partial ou complete")
         if not content or len(content) > MAX_UPLOAD_BYTES:
-            raise ValueError("Arquivo vazio ou acima de 30 MB")
+            raise ValueError("Arquivo vazio ou acima de 64 MB")
         filename = Path(filename).name
         digest = hashlib.sha256(content).hexdigest()
         rows = read_rows(filename, content)

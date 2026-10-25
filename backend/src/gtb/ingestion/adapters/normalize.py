@@ -25,15 +25,17 @@ SOURCES = ("mvi_cad", "mvi_neac", "ocorrencias", "armas", "drogas", "guarnicoes"
 
 ALIASES = {
     "occurrence": ("numero da ocorrencia", "n da ocorrencia", "numero ocorrencia", "n ocorrencia",
+                   "nº ocorrencia", "no ocorrencia",
                    "ocorrencia atual", "ocorrencia",
                    "cad", "bo", "numero do boletim"),
     "date": ("data da ocorrencia", "data do fato", "data do evento",
              "dt hora registro ocorrencia", "data de servico", "dt hora incluiu o recurso",
+             "data hora da ocorrencia", "dia da ocorrencia",
              "data apreensao",
              "data inclusao arma",
              "data da inclusao", "data inclusao", "dt incluiu", "data registro", "data", "dia"),
     "city": ("cidade ocorrencia", "municipio", "cidade", "municipio do fato"),
-    "victim": ("nome da vitima", "nome vitima", "vitima"),
+    "victim": ("nome da vitima", "nome vitima", "vitima", "nome"),
     "nic": ("n nic", "numero nic", "nic", "identificador da vitima"),
     "role": ("envolvimento", "tipo de envolvimento", "papel"),
     "death": ("obito", "obito?", "obito da vitima"),
