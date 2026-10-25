@@ -7,9 +7,9 @@ export function LoginScreen({ setup, onLogin }: { setup: boolean; onLogin: (toke
   const [confirmation, setConfirmation] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  return <main className="shell auth-shell">
-    <header><div className="brand"><span className="brand-mark">GTB</span><span>Análise Criminal <strong>2.0</strong></span></div><span className="badge">Acesso local</span></header>
-    <section className="panel auth-panel"><p className="eyebrow">Dados neste computador</p><h1>{setup ? 'Criar a primeira conta' : 'Entrar no sistema'}</h1>
+  return <main className="shell auth-shell legacy-auth-shell">
+    <header className="legacy-auth-brand"><img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="10º BPM" /><div><span>Polícia Militar de Alagoas</span><strong>Sistema de Análise Criminal</strong><small>10º BPM · Palmeira dos Índios</small></div><span className="badge">Acesso local</span></header>
+    <section className="panel auth-panel"><p className="eyebrow">Ambiente protegido · dados neste computador</p><h1>{setup ? 'Criar a primeira conta' : 'Entrar no sistema'}</h1>
       {setup && <p>Crie uma conta administradora para este computador. A senha deve ter pelo menos 12 caracteres.</p>}
       <form onSubmit={async event => { event.preventDefault(); if (setup && password !== confirmation) { setError('As senhas não conferem.'); return } setBusy(true); setError(''); try { const session = setup ? await createFirstUser(username, password) : await login(username, password); onLogin(session.token) } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.') } finally { setBusy(false) } }}>
         <label>Usuário<input value={username} autoComplete="username" required onChange={event => setUsername(event.target.value)} /></label>

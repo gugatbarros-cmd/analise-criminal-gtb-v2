@@ -1,8 +1,10 @@
 # Andamento da implantação — 25/10/2026
 
-**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.46 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
+**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.47 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
 
-A prévia estática privada da versão 0.1.46 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
+A prévia estática privada da versão 0.1.47 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
+
+A interface 0.1.47 passa a usar a moldura institucional do legado 4.6.256: logomarca do 10º BPM, cabeçalho operacional, menu lateral recolhível, busca de funções e os mesmos grupos e nomes de menus. As áreas já implementadas navegam para seus painéis; itens do legado ainda sem equivalente funcional permanecem visíveis e marcados como `Em migração`, sem simular uma paridade que ainda não foi comprovada.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |
@@ -17,9 +19,9 @@ O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredond
 
 ## Critérios restantes
 
-O código da versão 0.1.46 possui publicação separada no GitHub. O GitHub Pages entrega apenas a demonstração estática com dados sintéticos e custo zero; bancos, planilhas, credenciais, logs e executáveis continuam excluídos do repositório.
+O código da versão 0.1.47 possui publicação separada no GitHub. O GitHub Pages entrega apenas a demonstração estática com dados sintéticos e custo zero; bancos, planilhas, credenciais, logs e executáveis continuam excluídos do repositório.
 
-O executável 0.1.46 usa um inicializador supervisionado no atalho da Área de Trabalho: inicia o processo separadamente, aguarda a API ficar pronta, solicita ao Windows a abertura do navegador, reabre uma instância existente e mostra erros numa janela com registro local. O atalho pode ser recriado pelo script versionado.
+O executável 0.1.47 usa um inicializador supervisionado no atalho da Área de Trabalho: inicia o processo separadamente, aguarda a API ficar pronta, solicita ao Windows a abertura do navegador, reabre uma instância existente e mostra erros numa janela com registro local. O atalho pode ser recriado pelo script versionado.
 
 Em 25/10/2026, quatro layouts fornecidos foram importados numa base local isolada: armas, drogas, envolvidos CAD e ocorrências. Os arquivos e seus dados não entraram no Git nem na prévia web. A leitura estrutural passou; a planilha de envolvidos manteve 13 linhas em quarentena para revisão conservadora. Faltam as duas fontes restantes e totais oficiais para comprovar paridade.
 
