@@ -1,0 +1,103 @@
+{
+  "sources": [
+    {
+      "source": "mvi_cad",
+      "path": "mvi-cad.csv",
+      "sha256": "d6343bd4f03713d7df082c2e2ea34b7cc56787661eaf7ad1606a64d4a848626a"
+    },
+    {
+      "source": "mvi_neac",
+      "path": "mvi-neac.csv",
+      "sha256": "40e1cfcbb1fa23edc0039e01bdd4b4323c218df2affdf565ea43c2f7ccd65f2d"
+    },
+    {
+      "source": "ocorrencias",
+      "path": "ocorrencias-demo.csv",
+      "sha256": "a85ea7db7e98948adb6435171f244746f3cf5b6a157cf45c4ba8b0f1067e6199"
+    },
+    {
+      "source": "armas",
+      "path": "armas.csv",
+      "sha256": "1e864074308a4897cb7f64968d4fde745e579fc14e705825926d2a7a056162ea"
+    },
+    {
+      "source": "drogas",
+      "path": "drogas.csv",
+      "sha256": "ea7f6ba791ce2a8374a16cbaa8c69b4e90f72f3aa61415d627d3c4622fd8cb4b"
+    },
+    {
+      "source": "guarnicoes",
+      "path": "guarnicoes.csv",
+      "sha256": "fd9474a13a2a5435fc91f7f712d0457b04e2ad72294c8b7dd454da6e4b8fb27a"
+    }
+  ],
+  "checks": [
+    {
+      "metric": "summary.mvi_cad",
+      "expected": 2
+    },
+    {
+      "metric": "summary.mvi_neac",
+      "expected": 1
+    },
+    {
+      "metric": "summary.cvp",
+      "expected": 2
+    },
+    {
+      "metric": "summary.quarantined_rows",
+      "expected": 1
+    },
+    {
+      "metric": "arms.total",
+      "expected": 4
+    },
+    {
+      "metric": "arms.seized",
+      "expected": 3
+    },
+    {
+      "metric": "drugs.total",
+      "expected": 4
+    },
+    {
+      "metric": "drugs.total_weight_grams",
+      "expected": 1000.1
+    },
+    {
+      "metric": "teams.roster_occurrences",
+      "expected": 3
+    },
+    {
+      "metric": "teams.weighted_points",
+      "expected": 11
+    },
+    {
+      "metric": "arms.total",
+      "filters": {
+        "year": 2026,
+        "month": 1,
+        "arm_type": "Pistola",
+        "situation": "Apreendida"
+      },
+      "expected": 2
+    },
+    {
+      "metric": "drugs.total",
+      "filters": {
+        "year": 2026,
+        "month": 3,
+        "drug_type": "Crack"
+      },
+      "expected": 1
+    },
+    {
+      "metric": "teams.weighted_points",
+      "filters": {
+        "year": 2026,
+        "team_name": "RP 01"
+      },
+      "expected": 7
+    }
+  ]
+}

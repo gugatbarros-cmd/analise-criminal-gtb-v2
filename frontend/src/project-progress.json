@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-10-24",
+  "updatedAt": "2026-10-25",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     { "id": 0, "name": "Inventário do legado", "weight": 5, "completed": 2, "total": 4, "done": "Fontes, arquitetura e módulos principais mapeados", "remaining": "Detalhar todos os filtros, cálculos e desempenho de referência" },
     { "id": 1, "name": "Base local", "weight": 10, "completed": 4, "total": 4, "done": "Repositório separado, API, interface, scripts e testes", "remaining": "Concluída" },
-    { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, histórico de lotes e auditoria paginados, restauração e ensaio de um milhão de linhas em dez lotes com pico de memória medido", "remaining": "Validar os seis layouts anonimizados e comparar desempenho com o legado" },
+    { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLSX sintético, versões, histórico e auditoria paginados, restauração, ensaio de um milhão de linhas e comparador local de seis fontes com hashes e totais de referência", "remaining": "Validar os seis layouts anonimizados, comparar totais oficiais e desempenho com o legado" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 9, "total": 10, "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC", "remaining": "Paridade oficial e demais campos derivados" },
     { "id": 4, "name": "Demais módulos", "weight": 30, "completed": 19, "total": 20, "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições com filtros locais; armas, drogas e guarnições permitem ano e município próprios e têm relatórios focados imprimíveis; relatório geral por módulo", "remaining": "Completar detalhes do legado e comprovar paridade com dados oficiais de referência" },
     { "id": 5, "name": "Preparação para troca", "weight": 10, "completed": 4, "total": 5, "done": "Contas locais, perfis, backup integral verificável, validação estrutural antes da restauração, invalidação de sessões restauradas e executável Windows com interface e importação testadas", "remaining": "Backup dos dados operacionais do legado, operação paralela e aprovação do plano de troca" }
