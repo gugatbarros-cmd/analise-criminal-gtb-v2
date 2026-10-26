@@ -1,6 +1,12 @@
 $ErrorActionPreference = 'Stop'
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$executable = Join-Path $root 'dist\GTB2-Local.exe'
+$installedExecutable = Join-Path $PSScriptRoot 'GTB2-Local.exe'
+if (Test-Path -LiteralPath $installedExecutable -PathType Leaf) {
+  $root = $PSScriptRoot
+  $executable = $installedExecutable
+} else {
+  $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+  $executable = Join-Path $root 'dist\GTB2-Local.exe'
+}
 $address = 'http://127.0.0.1:8000'
 $log = Join-Path $env:LOCALAPPDATA 'GTB2\logs\launcher.log'
 
