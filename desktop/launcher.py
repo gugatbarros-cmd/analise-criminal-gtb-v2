@@ -2,6 +2,7 @@
 
 import os
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -42,8 +43,13 @@ def open_when_ready(address: str) -> None:
             with urlopen(f"{address}/health", timeout=1) as response:
                 if response.status == 200:
                     try:
-                        os.startfile(address)  # type: ignore[attr-defined]
-                        log(f"Interface solicitada ao Windows em {address}")
+                        edge = Path(os.environ.get("ProgramFiles(x86)", "")) / "Microsoft" / "Edge" / "Application" / "msedge.exe"
+                        if edge.is_file():
+                            subprocess.Popen([str(edge), f"--app={address}", "--no-first-run"])
+                            log(f"Interface aberta em janela própria do Edge em {address}")
+                        else:
+                            os.startfile(address)  # type: ignore[attr-defined]
+                            log(f"Interface solicitada ao Windows em {address}")
                     except OSError:
                         if not webbrowser.open(address):
                             raise OSError("nenhum navegador aceitou o endereço local")

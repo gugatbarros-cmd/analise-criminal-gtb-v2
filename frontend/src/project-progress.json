@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-10-26",
-  "implementationStatus": "Versão funcional finalizada, com inicialização Windows verificada; novas bases podem ser adicionadas posteriormente pelo fluxo de importação.",
+  "implementationStatus": "Versão funcional finalizada, com inicialização Windows em janela própria verificada; novas bases podem ser adicionadas posteriormente pelo fluxo de importação.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     { "id": 0, "name": "Inventário do legado", "weight": 5, "completed": 4, "total": 4, "done": "Fontes, arquitetura, identidade visual, grupos, menus, filtros e contratos principais mapeados e reproduzidos", "remaining": "Concluída para a versão funcional; referências adicionais poderão entrar com novas bases" },

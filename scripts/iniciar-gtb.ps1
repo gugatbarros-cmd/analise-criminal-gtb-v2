@@ -30,6 +30,12 @@ function Show-GtbError([string]$Message) {
 }
 
 function Open-GtbInterface {
+  $edge = Join-Path ([Environment]::GetFolderPath('ProgramFilesX86')) 'Microsoft\Edge\Application\msedge.exe'
+  if (Test-Path -LiteralPath $edge -PathType Leaf) {
+    Start-Process -FilePath $edge -ArgumentList "--app=$address", '--no-first-run'
+    Add-Content -LiteralPath $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Interface aberta em janela própria do Edge em $address"
+    return
+  }
   try {
     Start-Process -FilePath 'explorer.exe' -ArgumentList $address
     Add-Content -LiteralPath $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Interface solicitada ao Windows em $address"
