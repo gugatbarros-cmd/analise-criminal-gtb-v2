@@ -11,6 +11,7 @@ export type BatchAudit = {
   quarantine: AuditPage<{ row_number: number; reason: string; fields: Record<string, string> }>
 }
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
+export type ImportValidation = { filename: string; source: Source; sha256: string; row_count: number; accepted: number; eligible: number; ineligible: number; quarantined: number; reasons: { reason: string; count: number }[] }
 export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[]; arm_quantity?: number; arm_situation?: string; arm_caliber?: string; arm_seized?: boolean; arm_restricted?: boolean; drug_quantity?: number; drug_unit?: string; drug_weight_grams?: number; drug_location?: string; team_score?: number; team_role?: string; team_group?: 'roster' | 'extra' | 'unlisted'; team_officers?: { name: string; registration: string; role: string }[] }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
@@ -171,6 +172,12 @@ export async function getRecords(source: Source, page: number, year?: number, mu
 
 export async function upload(source: Source, file: File, scope: 'partial' | 'complete'): Promise<ImportResult> {
   return json(await apiFetch(`${baseUrl}/imports/${source}?scope=${scope}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) }, body: file,
+  }))
+}
+
+export async function validateUpload(source: Source, file: File): Promise<ImportValidation> {
+  return json(await apiFetch(`${baseUrl}/imports/${source}/validate`, {
     method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) }, body: file,
   }))
 }

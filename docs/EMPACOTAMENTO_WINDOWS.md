@@ -22,3 +22,9 @@ Com o sistema fechado, os comandos abaixo criam e restauram um backup integral d
 ```
 
 O executável está em `dist/`, fora do Git e da prévia privada no Sites. Esta etapa verifica a execução e o backup do sistema novo em Windows; não substitui o backup de dados do legado nem a validação paralela com planilhas anonimizadas e totais oficiais.
+
+## Instalação no perfil do usuário
+
+Após gerar o executável, dê dois cliques em `Instalar-GTB2.cmd` ou execute `scripts\instalar-windows.ps1`. A instalação não exige administrador: copia o programa para `%LOCALAPPDATA%\Programs\GTB2`, cria atalhos na Área de Trabalho e no Menu Iniciar e abre o sistema. Atualizações substituem apenas o programa; banco, contas, planilhas brutas, backups e logs continuam em `%LOCALAPPDATA%\GTB2`.
+
+O desinstalador remove os atalhos, mas preserva as bases por segurança. Ele nunca apaga automaticamente `%LOCALAPPDATA%\GTB2\data`.

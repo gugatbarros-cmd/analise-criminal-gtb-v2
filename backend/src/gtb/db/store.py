@@ -278,6 +278,53 @@ class Store:
                     "updated": updated, "unchanged": unchanged, "quarantined": len(rejected),
                     "status": status, "repeated": False, "differences": differences}
 
+    def validate_file(self, source: str, filename: str, content: bytes) -> dict:
+        """Valida uma planilha sem persistir arquivo bruto, lote ou registros."""
+        if source not in SOURCES:
+            raise ValueError("Fonte desconhecida")
+        if not content or len(content) > MAX_UPLOAD_BYTES:
+            raise ValueError("Arquivo vazio ou acima de 64 MB")
+        safe_filename = Path(filename).name
+        rows = read_rows(safe_filename, content)
+        if not rows:
+            raise ValueError("Planilha sem registros")
+        accepted = eligible = ineligible = 0
+        reasons: dict[str, int] = {}
+        seen: dict[str, str] = {}
+        for row in rows:
+            try:
+                record = normalize(source, row)
+                raw = json.dumps(row, ensure_ascii=False, sort_keys=True)
+                row_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+                previous = seen.get(record.natural_key)
+                if previous is not None:
+                    if previous != row_hash:
+                        reasons["Colisão de chave no arquivo"] = reasons.get(
+                            "Colisão de chave no arquivo", 0) + 1
+                    continue
+                seen[record.natural_key] = row_hash
+                accepted += 1
+                if record.eligible:
+                    eligible += 1
+                else:
+                    ineligible += 1
+            except ValueError as error:
+                reason = str(error)
+                reasons[reason] = reasons.get(reason, 0) + 1
+        quarantined = sum(reasons.values())
+        return {
+            "filename": safe_filename,
+            "source": source,
+            "sha256": hashlib.sha256(content).hexdigest(),
+            "row_count": len(rows),
+            "accepted": accepted,
+            "eligible": eligible,
+            "ineligible": ineligible,
+            "quarantined": quarantined,
+            "reasons": [{"reason": reason, "count": count}
+                        for reason, count in sorted(reasons.items(), key=lambda item: (-item[1], item[0]))],
+        }
+
     def batches(self, limit: int = 20, offset: int = 0) -> list[dict]:
         with self.lock, self._connect() as db:
             rows = db.execute("""SELECT id, source, filename, imported_at, row_count, inserted,

@@ -15,7 +15,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.47"
+APP_VERSION = "0.1.48"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -164,6 +164,22 @@ async def import_source(source: str, request: Request, scope: str = "partial") -
     filename = unquote(request.headers.get("x-filename", ""))
     try:
         return store.import_file(source, filename, content, scope)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/imports/{source}/validate")
+async def validate_import(source: str, request: Request) -> dict:
+    if demo_mode():
+        raise HTTPException(403, "Demonstração somente para consulta")
+    if source not in SOURCES:
+        raise HTTPException(404, "Fonte desconhecida")
+    if int(request.headers.get("content-length", "0")) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Arquivo acima de 64 MB")
+    content = await request.body()
+    filename = unquote(request.headers.get("x-filename", ""))
+    try:
+        return store.validate_file(source, filename, content)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 

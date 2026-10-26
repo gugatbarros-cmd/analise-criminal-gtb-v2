@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getBatchAudit, getBatches, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload } from './api'
+import { getArmsAnalysis, getBatchAudit, getBatches, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload, validateUpload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -31,6 +31,16 @@ describe('contrato de importação e indicadores', () => {
     expect(request).toHaveBeenCalledWith(expect.stringContaining('/imports/mvi_cad?scope=partial'), expect.objectContaining({
       method: 'POST', body: file, headers: expect.objectContaining({ 'X-Filename': 'MVI%20S%C3%A3o%20Jos%C3%A9.csv' }),
     }))
+  })
+
+  it('pré-valida o arquivo sem chamar a rota de gravação', async () => {
+    const result = { source: 'ocorrencias', sha256: 'abc', row_count: 2, accepted: 1, quarantined: 1 }
+    const request = vi.fn().mockResolvedValue({ ok: true, json: async () => result })
+    vi.stubGlobal('fetch', request)
+    const file = new File(['conteúdo'], 'base real.xls')
+    await expect(validateUpload('ocorrencias', file)).resolves.toMatchObject(result)
+    expect(request).toHaveBeenCalledWith(expect.stringContaining('/imports/ocorrencias/validate'), expect.objectContaining({ method: 'POST', body: file }))
+    expect(String(request.mock.calls[0][0])).not.toContain('scope=')
   })
 
   it('consulta filtros sem combinar CAD e NEAC', async () => {

@@ -90,6 +90,26 @@ def test_sources_independent_and_idempotent(tmp_path):
     assert not list((tmp_path / "data" / "raw").glob("stage-*"))
 
 
+def test_validation_reports_quarantine_without_persisting_real_import(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    content = csv_bytes([
+        cad(),
+        cad(**{"Número da ocorrência": "", "Nº NIC": "", "Nome da vítima": ""}),
+    ])
+
+    result = store.validate_file("mvi_cad", "base-real.csv", content)
+
+    assert result["row_count"] == 2
+    assert result["accepted"] == 1
+    assert result["eligible"] == 1
+    assert result["quarantined"] == 1
+    assert result["reasons"] == [{"reason": "Vítima sem identidade confiável", "count": 1}]
+    assert len(result["sha256"]) == 64
+    assert store.batch_count() == 0
+    assert store.summary()["mvi_cad"] == 0
+    assert not (tmp_path / "data" / "raw").exists()
+
+
 def test_mvi_record_date_range_keeps_source_separate(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     store.import_file("mvi_cad", "cad.csv", csv_bytes([
