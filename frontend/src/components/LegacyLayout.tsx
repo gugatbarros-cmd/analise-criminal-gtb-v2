@@ -40,7 +40,7 @@ const menuGroups: MenuGroup[] = [
   { label: 'Administração', items: [
     { label: 'Meu perfil', target: 'perfil', short: 'MP' },
     { label: 'Controle de acesso', target: 'usuarios', short: 'CA' },
-    { label: 'Uso do Firebase', target: 'andamento', short: 'FB', planned: true },
+    { label: 'Uso do Firebase', target: 'armazenamento', short: 'FB' },
   ] },
 ]
 

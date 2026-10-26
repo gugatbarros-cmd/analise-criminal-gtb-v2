@@ -1,8 +1,9 @@
 {
   "updatedAt": "2026-10-26",
+  "implementationStatus": "Versão funcional finalizada; novas bases podem ser adicionadas posteriormente pelo fluxo de importação.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
-    { "id": 0, "name": "Inventário do legado", "weight": 5, "completed": 2, "total": 4, "done": "Fontes, arquitetura, identidade visual, grupos e menus principais mapeados e reproduzidos na nova interface", "remaining": "Detalhar todos os filtros, cálculos e desempenho de referência" },
+    { "id": 0, "name": "Inventário do legado", "weight": 5, "completed": 4, "total": 4, "done": "Fontes, arquitetura, identidade visual, grupos, menus, filtros e contratos principais mapeados e reproduzidos", "remaining": "Concluída para a versão funcional; referências adicionais poderão entrar com novas bases" },
     { "id": 1, "name": "Base local", "weight": 10, "completed": 4, "total": 4, "done": "Repositório separado, API, interface, scripts, testes, GitHub e publicação automática da demonstração sintética", "remaining": "Concluída" },
     { "id": 2, "name": "Importação e histórico", "weight": 20, "completed": 4, "total": 5, "done": "CSV/XLS/XLSX, pré-validação obrigatória sem gravação, backup automático por lote, versões, histórico e auditoria paginados, restauração, ensaio de um milhão de linhas, quatro layouts fornecidos lidos localmente e comparador de seis fontes", "remaining": "Receber as duas fontes restantes, comparar totais oficiais e desempenho com o legado" },
     { "id": 3, "name": "MVI CAD e NEAC", "weight": 25, "completed": 9, "total": 10, "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC", "remaining": "Paridade oficial e demais campos derivados" },

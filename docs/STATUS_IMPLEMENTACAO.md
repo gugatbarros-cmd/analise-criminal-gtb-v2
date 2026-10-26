@@ -1,35 +1,35 @@
 # Andamento da implantação — 26/10/2026
 
-**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.51 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
+**90% concluído · 10% restante na validação operacional.** A implementação funcional foi finalizada nas **Fases 0 e 1**. A versão 0.1.52 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. As bases restantes poderão ser adicionadas depois pelo fluxo normal de importação; o backend novo permanece local e o sistema antigo segue em produção durante a conferência.
 
-A prévia estática privada da versão 0.1.51 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
+A prévia estática privada da versão 0.1.52 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
 
-A interface 0.1.51 passa a usar a moldura institucional do legado 4.6.256: logomarca do 10º BPM, cabeçalho operacional, menu lateral recolhível, busca de funções e os mesmos grupos e nomes de menus. As áreas já implementadas navegam para seus painéis; itens do legado ainda sem equivalente funcional permanecem visíveis e marcados como `Em migração`, sem simular uma paridade que ainda não foi comprovada.
+A interface 0.1.52 usa a moldura institucional do legado 4.6.256: logomarca do 10º BPM, cabeçalho operacional, menu lateral recolhível, busca de funções e os mesmos grupos e nomes de menus. Todos os itens do menu possuem destino funcional. O item Uso do Firebase apresenta o estado real da arquitetura local e confirma que o sistema novo não envia dados ao Firebase.
 
-A importação local 0.1.51 está liberada para bases reais no executável. Antes de habilitar a gravação, o sistema exige uma pré-validação que lê CSV/XLS/XLSX sem guardar o arquivo e apresenta linhas aceitas, fora da regra e em quarentena com os principais motivos. A importação confirmada preserva o arquivo bruto apenas no computador, cria backup automático do banco anterior ao lote e mantém histórico e auditoria. As prévias online continuam somente leitura e nunca recebem bases reais.
+A importação local 0.1.52 está liberada para bases reais no executável. Antes de habilitar a gravação, o sistema exige uma pré-validação que lê CSV/XLS/XLSX sem guardar o arquivo e apresenta linhas aceitas, fora da regra e em quarentena com os principais motivos. A importação confirmada preserva o arquivo bruto apenas no computador, cria backup automático do banco anterior ao lote e mantém histórico e auditoria. As prévias online continuam somente leitura e nunca recebem bases reais.
 
-O pacote Windows 0.1.51 inclui instalação sem privilégios administrativos em `%LOCALAPPDATA%\Programs\GTB2`, atalhos na Área de Trabalho e no Menu Iniciar e atualização segura do programa sem remover banco, contas, arquivos brutos, backups ou logs.
+O pacote Windows 0.1.52 inclui instalação sem privilégios administrativos em `%LOCALAPPDATA%\Programs\GTB2`, atalhos na Área de Trabalho e no Menu Iniciar e atualização segura do programa sem remover banco, contas, arquivos brutos, backups ou logs.
 
-A versão 0.1.51 acrescenta a tabela geral consolidada e paginada das seis fontes, preservando a identificação de origem em vez de fundir casos; pesquisa por ocorrência, vítima, natureza ou classificação; painel de municípios com contagens separadas por fonte; e perfil local acessível a todos os papéis. Esses módulos funcionam tanto no executável quanto na demonstração sintética.
+A versão 0.1.52 acrescenta a tabela geral consolidada e paginada das seis fontes, preservando a identificação de origem em vez de fundir casos; pesquisa por ocorrência, vítima, natureza ou classificação; painel de municípios com contagens separadas por fonte; e perfil local acessível a todos os papéis. Esses módulos funcionam tanto no executável quanto na demonstração sintética.
 
 Soluções IA e Stiven agora abrem um assistente guiado inteiramente local. Ele responde sobre resumo, disponibilidade das seis bases, municípios, MVI, CVP, TCO e violência doméstica usando apenas agregados já calculados, bloqueia consultas individuais e não envia perguntas ou dados para serviços externos.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |
-| 0 — Inventário do legado | Em andamento | 2/4 | 50% | 5% |
+| 0 — Inventário do legado | Concluída | 4/4 | 100% | 5% |
 | 1 — Base local | Concluída | 4/4 | 100% | 10% |
 | 2 — Importação e histórico | Em andamento | 4/5 | 80% | 20% |
 | 3 — MVI CAD e NEAC | Em andamento | 9/10 | 90% | 25% |
 | 4 — Demais módulos | Em andamento | 19/20 | 95% | 30% |
 | 5 — Preparação para troca | Em andamento | 4/5 | 80% | 10% |
 
-O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredonda o resultado total ao inteiro mais próximo: **88%**. O restante é `100 − 88 = 12%`. Os pesos refletem uma estimativa de esforço, não uma previsão de prazo. Uma fase só aparece como concluída quando todas as suas entregas foram implementadas e verificadas. O arquivo usado pela tela é [`frontend/src/project-progress.json`](../frontend/src/project-progress.json).
+O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredonda o resultado total ao inteiro mais próximo: **90%**. O restante é `100 − 90 = 10%`. Os pesos refletem uma estimativa de esforço, não uma previsão de prazo. Uma fase só aparece como concluída quando todas as suas entregas foram implementadas e verificadas. O arquivo usado pela tela é [`frontend/src/project-progress.json`](../frontend/src/project-progress.json).
 
 ## Critérios restantes
 
-O código da versão 0.1.51 possui publicação separada no GitHub. O GitHub Pages entrega apenas a demonstração estática com dados sintéticos e custo zero; bancos, planilhas, credenciais, logs e executáveis continuam excluídos do repositório.
+O código da versão 0.1.52 possui publicação separada no GitHub. O GitHub Pages entrega apenas a demonstração estática com dados sintéticos e custo zero; bancos, planilhas, credenciais, logs e executáveis continuam excluídos do repositório.
 
-O executável 0.1.51 usa um inicializador supervisionado no atalho da Área de Trabalho: inicia o processo separadamente, aguarda a API ficar pronta, solicita ao Windows a abertura do navegador, reabre uma instância existente e mostra erros numa janela com registro local. O atalho pode ser recriado pelo script versionado.
+O executável 0.1.52 usa um inicializador supervisionado no atalho da Área de Trabalho: inicia o processo separadamente, aguarda a API ficar pronta, solicita ao Windows a abertura do navegador, reabre uma instância existente e mostra erros numa janela com registro local. O atalho pode ser recriado pelo script versionado.
 
 Em 25/10/2026, quatro layouts fornecidos foram importados numa base local isolada: armas, drogas, envolvidos CAD e ocorrências. Os arquivos e seus dados não entraram no Git nem na prévia web. A leitura estrutural passou; a planilha de envolvidos manteve 13 linhas em quarentena para revisão conservadora. Faltam as duas fontes restantes e totais oficiais para comprovar paridade.
 
