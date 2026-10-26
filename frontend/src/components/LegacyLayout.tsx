@@ -29,8 +29,8 @@ const menuGroups: MenuGroup[] = [
   { label: 'Inteligência', items: [
     { label: 'Análise avançada', target: 'tabela-geral', short: 'AA' },
     { label: 'Inteligência estatística', target: 'indicadores', short: 'IE' },
-    { label: 'Soluções IA', target: 'andamento', short: 'IA', planned: true },
-    { label: 'Stiven', target: 'andamento', short: 'ST', planned: true },
+    { label: 'Soluções IA', target: 'assistente-local', short: 'IA' },
+    { label: 'Stiven', target: 'assistente-local', short: 'ST' },
   ] },
   { label: 'Relatórios e dados', items: [
     { label: 'Relatórios e apresentações', target: 'indicadores', short: 'RP' },
