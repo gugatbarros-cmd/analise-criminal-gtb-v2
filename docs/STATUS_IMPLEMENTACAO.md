@@ -1,14 +1,16 @@
 # Andamento da implantação — 26/10/2026
 
-**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.49 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
+**88% concluído · 12% restante.** Apenas a **Fase 1** está concluída. A versão 0.1.50 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. O backend novo permanece local; o sistema antigo segue em produção.
 
-A prévia estática privada da versão 0.1.49 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
+A prévia estática privada da versão 0.1.50 está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela permite testar a interface, os perfis MVI e os relatórios com 31 registros sintéticos. A publicação não inclui o backend, banco DuckDB ou dados operacionais.
 
-A interface 0.1.49 passa a usar a moldura institucional do legado 4.6.256: logomarca do 10º BPM, cabeçalho operacional, menu lateral recolhível, busca de funções e os mesmos grupos e nomes de menus. As áreas já implementadas navegam para seus painéis; itens do legado ainda sem equivalente funcional permanecem visíveis e marcados como `Em migração`, sem simular uma paridade que ainda não foi comprovada.
+A interface 0.1.50 passa a usar a moldura institucional do legado 4.6.256: logomarca do 10º BPM, cabeçalho operacional, menu lateral recolhível, busca de funções e os mesmos grupos e nomes de menus. As áreas já implementadas navegam para seus painéis; itens do legado ainda sem equivalente funcional permanecem visíveis e marcados como `Em migração`, sem simular uma paridade que ainda não foi comprovada.
 
-A importação local 0.1.49 está liberada para bases reais no executável. Antes de habilitar a gravação, o sistema exige uma pré-validação que lê CSV/XLS/XLSX sem guardar o arquivo e apresenta linhas aceitas, fora da regra e em quarentena com os principais motivos. A importação confirmada preserva o arquivo bruto apenas no computador, cria backup automático do banco anterior ao lote e mantém histórico e auditoria. As prévias online continuam somente leitura e nunca recebem bases reais.
+A importação local 0.1.50 está liberada para bases reais no executável. Antes de habilitar a gravação, o sistema exige uma pré-validação que lê CSV/XLS/XLSX sem guardar o arquivo e apresenta linhas aceitas, fora da regra e em quarentena com os principais motivos. A importação confirmada preserva o arquivo bruto apenas no computador, cria backup automático do banco anterior ao lote e mantém histórico e auditoria. As prévias online continuam somente leitura e nunca recebem bases reais.
 
-O pacote Windows 0.1.49 inclui instalação sem privilégios administrativos em `%LOCALAPPDATA%\Programs\GTB2`, atalhos na Área de Trabalho e no Menu Iniciar e atualização segura do programa sem remover banco, contas, arquivos brutos, backups ou logs.
+O pacote Windows 0.1.50 inclui instalação sem privilégios administrativos em `%LOCALAPPDATA%\Programs\GTB2`, atalhos na Área de Trabalho e no Menu Iniciar e atualização segura do programa sem remover banco, contas, arquivos brutos, backups ou logs.
+
+A versão 0.1.50 acrescenta a tabela geral consolidada e paginada das seis fontes, preservando a identificação de origem em vez de fundir casos; pesquisa por ocorrência, vítima, natureza ou classificação; painel de municípios com contagens separadas por fonte; e perfil local acessível a todos os papéis. Esses módulos funcionam tanto no executável quanto na demonstração sintética.
 
 | Fase | Situação | Entregas | Progresso da fase | Peso no projeto |
 | --- | --- | ---: | ---: | ---: |
@@ -23,9 +25,9 @@ O cálculo soma `peso × entregas concluídas ÷ entregas planejadas` e arredond
 
 ## Critérios restantes
 
-O código da versão 0.1.49 possui publicação separada no GitHub. O GitHub Pages entrega apenas a demonstração estática com dados sintéticos e custo zero; bancos, planilhas, credenciais, logs e executáveis continuam excluídos do repositório.
+O código da versão 0.1.50 possui publicação separada no GitHub. O GitHub Pages entrega apenas a demonstração estática com dados sintéticos e custo zero; bancos, planilhas, credenciais, logs e executáveis continuam excluídos do repositório.
 
-O executável 0.1.49 usa um inicializador supervisionado no atalho da Área de Trabalho: inicia o processo separadamente, aguarda a API ficar pronta, solicita ao Windows a abertura do navegador, reabre uma instância existente e mostra erros numa janela com registro local. O atalho pode ser recriado pelo script versionado.
+O executável 0.1.50 usa um inicializador supervisionado no atalho da Área de Trabalho: inicia o processo separadamente, aguarda a API ficar pronta, solicita ao Windows a abertura do navegador, reabre uma instância existente e mostra erros numa janela com registro local. O atalho pode ser recriado pelo script versionado.
 
 Em 25/10/2026, quatro layouts fornecidos foram importados numa base local isolada: armas, drogas, envolvidos CAD e ocorrências. Os arquivos e seus dados não entraram no Git nem na prévia web. A leitura estrutural passou; a planilha de envolvidos manteve 13 linhas em quarentena para revisão conservadora. Faltam as duas fontes restantes e totais oficiais para comprovar paridade.
 

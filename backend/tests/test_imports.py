@@ -110,6 +110,22 @@ def test_validation_reports_quarantine_without_persisting_real_import(tmp_path):
     assert not (tmp_path / "data" / "raw").exists()
 
 
+def test_consolidated_table_and_municipality_overview_keep_sources_visible(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([cad()]))
+    store.import_file("mvi_neac", "neac.csv", csv_bytes([neac()]))
+
+    consolidated = store.consolidated_records(year=2026, municipality="Palmeira dos Índios")
+    assert consolidated["total"] == 2
+    assert {item["source"] for item in consolidated["items"]} == {"mvi_cad", "mvi_neac"}
+    assert store.consolidated_records(source="mvi_cad", search="Maria")["total"] == 1
+
+    cities = store.municipality_overview(2026)
+    assert cities == [{"municipality": "Palmeira dos Índios", "total": 2,
+                       "ocorrencias": 0, "mvi_cad": 1, "mvi_neac": 1,
+                       "armas": 0, "drogas": 0, "guarnicoes": 0}]
+
+
 def test_mvi_record_date_range_keeps_source_separate(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     store.import_file("mvi_cad", "cad.csv", csv_bytes([

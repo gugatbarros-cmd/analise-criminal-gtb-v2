@@ -15,7 +15,7 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.49"
+APP_VERSION = "0.1.50"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -301,6 +301,23 @@ def records(source: str, page: int = 1, size: int = 20, year: int | None = None,
                              officer_registration, nature_filter)
     except ValueError as error:
         raise HTTPException(404 if source not in SOURCES else 422, str(error)) from error
+
+
+@app.get("/consolidated-records")
+def consolidated_records(page: int = Query(1, ge=1, le=1_000_000),
+                         size: int = Query(50, ge=1, le=100),
+                         source: str | None = None, year: int | None = None,
+                         municipality: str | None = None,
+                         search: str | None = None) -> dict:
+    try:
+        return store.consolidated_records(page, size, source, year, municipality, search)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.get("/municipalities/overview")
+def municipalities_overview(year: int | None = None) -> dict:
+    return {"items": store.municipality_overview(year)}
 
 
 @app.get("/mvi/{source}/records/{natural_key}/versions")

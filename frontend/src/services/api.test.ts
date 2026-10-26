@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getArmsAnalysis, getBatchAudit, getBatches, getDomesticAnalysis, getDrugsAnalysis, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload, validateUpload } from './api'
+import { getArmsAnalysis, getBatchAudit, getBatches, getConsolidatedRecords, getDomesticAnalysis, getDrugsAnalysis, getMunicipalityOverview, getMviAnalysis, getMviComparison, getMviRecordDetail, getMviRecordVersions, getOperationalAnalysis, getRecords, getSummary, getTcoAnalysis, getTeamsAnalysis, upload, validateUpload } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -48,6 +48,20 @@ describe('contrato de importação e indicadores', () => {
     vi.stubGlobal('fetch', request)
     await expect(getSummary(2026, 'Igaci')).resolves.toMatchObject({ mvi_cad: 2, mvi_neac: 1 })
     expect(request.mock.calls[0][0]).toContain('year=2026&municipality=Igaci')
+  })
+
+  it('consulta tabela geral e municípios mantendo a fonte explícita', async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ total: 1, page: 2, size: 50, items: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: [{ municipality: 'Igaci', total: 1 }] }) })
+    vi.stubGlobal('fetch', request)
+    await getConsolidatedRecords(2, 'armas', 2026, 'Igaci', 'pistola')
+    await expect(getMunicipalityOverview(2026)).resolves.toHaveLength(1)
+    const consolidated = new URL(request.mock.calls[0][0] as string)
+    expect(consolidated.pathname).toBe('/consolidated-records')
+    expect(consolidated.searchParams.get('source')).toBe('armas')
+    expect(consolidated.searchParams.get('search')).toBe('pistola')
+    expect(new URL(request.mock.calls[1][0] as string).pathname).toBe('/municipalities/overview')
   })
 
   it('consulta armas por fonte própria com filtros', async () => {

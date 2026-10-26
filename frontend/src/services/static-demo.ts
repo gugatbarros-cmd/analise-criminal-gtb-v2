@@ -246,6 +246,33 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     const size = Math.min(1000, Math.max(1, Number(url.searchParams.get('size')) || 100))
     return response({ items: items.slice((page - 1) * size, page * size), total: items.length, page, size })
   }
+  if (path === '/consolidated-records') {
+    const source = url.searchParams.get('source') as Source | null
+    const year = Number(url.searchParams.get('year'))
+    const city = url.searchParams.get('municipality')
+    const search = url.searchParams.get('search')?.toLowerCase()
+    const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
+    const size = Math.min(100, Math.max(1, Number(url.searchParams.get('size')) || 50))
+    const items = (Object.entries(data.records) as [Source, RecordItem[]][]).flatMap(([itemSource, records]) =>
+      records.map(item => ({ ...item, source: itemSource }))).filter(item =>
+        (!source || item.source === source) &&
+        (!year || Number(item.event_date.slice(0, 4)) === year) &&
+        (!city || fold(item.municipality) === fold(city)) &&
+        (!search || `${item.occurrence} ${item.victim} ${item.nature} ${item.category}`.toLowerCase().includes(search)))
+      .sort((a, b) => b.event_date.localeCompare(a.event_date) || a.source.localeCompare(b.source))
+    return response({ total: items.length, page, size, items: items.slice((page - 1) * size, page * size) })
+  }
+  if (path === '/municipalities/overview') {
+    const year = Number(url.searchParams.get('year'))
+    const rows: Record<string, { municipality: string; total: number; ocorrencias: number; mvi_cad: number; mvi_neac: number; armas: number; drogas: number; guarnicoes: number }> = {}
+    for (const [source, records] of Object.entries(data.records) as [Source, RecordItem[]][]) for (const item of records) {
+      if ((year && Number(item.event_date.slice(0, 4)) !== year) || !item.municipality) continue
+      const row = rows[item.municipality] ||= { municipality: item.municipality, total: 0, ocorrencias: 0, mvi_cad: 0, mvi_neac: 0, armas: 0, drogas: 0, guarnicoes: 0 }
+      row.total += 1
+      if (!source.startsWith('mvi_') || item.eligible) row[source] += 1
+    }
+    return response({ items: Object.values(rows).sort((a, b) => b.total - a.total || a.municipality.localeCompare(b.municipality)) })
+  }
   const records = path.match(/^\/records\/(mvi_cad|mvi_neac|ocorrencias|armas|drogas|guarnicoes)$/)
   if (records) {
     const source = records[1] as Source

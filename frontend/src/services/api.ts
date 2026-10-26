@@ -14,6 +14,9 @@ export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'update
 export type ImportValidation = { filename: string; source: Source; sha256: string; row_count: number; accepted: number; eligible: number; ineligible: number; quarantined: number; reasons: { reason: string; count: number }[] }
 export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[]; arm_quantity?: number; arm_situation?: string; arm_caliber?: string; arm_seized?: boolean; arm_restricted?: boolean; drug_quantity?: number; drug_unit?: string; drug_weight_grams?: number; drug_location?: string; team_score?: number; team_role?: string; team_group?: 'roster' | 'extra' | 'unlisted'; team_officers?: { name: string; registration: string; role: string }[] }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
+export type ConsolidatedRecord = Pick<RecordItem, 'natural_key' | 'event_date' | 'municipality' | 'occurrence' | 'victim' | 'nature' | 'category' | 'eligible' | 'reason' | 'version'> & { source: Source }
+export type ConsolidatedPage = { total: number; page: number; size: number; items: ConsolidatedRecord[] }
+export type MunicipalityOverview = { municipality: string; total: number; ocorrencias: number; mvi_cad: number; mvi_neac: number; armas: number; drogas: number; guarnicoes: number }
 export type TcoAnalysis = { total: number; monthly: { period: string; total: number }[]; municipalities: { name: string; total: number }[]; natures: { name: string; total: number }[] }
 export type OperationalKind = 'Mandados' | 'Visitas' | 'Sossego'
 export type OperationalAnalysis = TcoAnalysis
@@ -168,6 +171,21 @@ export async function getRecords(source: Source, page: number, year?: number, mu
   if (officerRegistration) params.set('officer_registration', officerRegistration)
   if (natureFilter) params.set('nature_filter', natureFilter)
   return json(await apiFetch(`${baseUrl}/records/${source}?${params}`))
+}
+
+export async function getConsolidatedRecords(page = 1, source?: Source, year?: number, municipality?: string, search?: string): Promise<ConsolidatedPage> {
+  const params = new URLSearchParams({ page: String(page), size: '50' })
+  if (source) params.set('source', source)
+  if (year) params.set('year', String(year))
+  if (municipality) params.set('municipality', municipality)
+  if (search) params.set('search', search)
+  return json(await apiFetch(`${baseUrl}/consolidated-records?${params}`))
+}
+
+export async function getMunicipalityOverview(year?: number): Promise<MunicipalityOverview[]> {
+  const params = new URLSearchParams()
+  if (year) params.set('year', String(year))
+  return (await json<{ items: MunicipalityOverview[] }>(await apiFetch(`${baseUrl}/municipalities/overview?${params}`))).items
 }
 
 export async function upload(source: Source, file: File, scope: 'partial' | 'complete'): Promise<ImportResult> {

@@ -958,6 +958,61 @@ class Store:
                     if source == "guarnicoes" else None,
                 } for row in rows]}
 
+    def consolidated_records(self, page: int = 1, size: int = 50,
+                             source: str | None = None, year: int | None = None,
+                             municipality: str | None = None,
+                             search: str | None = None) -> dict:
+        """Relação auditável comum às seis fontes, sem fundir registros."""
+        if source and source not in SOURCES:
+            raise ValueError("Fonte desconhecida")
+        page, size = max(page, 1), min(max(size, 1), 100)
+        clauses = ["is_current"]
+        params: list[object] = []
+        if source:
+            clauses.append("source = ?")
+            params.append(source)
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        if municipality:
+            clauses.append("lower(municipality) = lower(?)")
+            params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        if search:
+            clauses.append("position(lower(?) in lower(concat_ws(' ', occurrence, victim, nature, category))) > 0")
+            params.append(search)
+        where = " AND ".join(clauses)
+        with self.lock, self._connect() as db:
+            total = db.execute(f"SELECT count(*) FROM record_versions WHERE {where}", params).fetchone()[0]
+            rows = db.execute(f"""SELECT source, natural_key, event_date, municipality,
+                occurrence, victim, nature, category, eligible, reason, version
+                FROM record_versions WHERE {where}
+                ORDER BY event_date DESC, source, occurrence, victim, natural_key
+                LIMIT ? OFFSET ?""", [*params, size, (page - 1) * size]).fetchall()
+        columns = ("source", "natural_key", "event_date", "municipality", "occurrence",
+                   "victim", "nature", "category", "eligible", "reason", "version")
+        return {"total": total, "page": page, "size": size,
+                "items": [dict(zip(columns, row)) for row in rows]}
+
+    def municipality_overview(self, year: int | None = None) -> list[dict]:
+        clauses = ["is_current", "municipality <> ''"]
+        params: list[object] = []
+        if year:
+            clauses.append("year = ?")
+            params.append(year)
+        with self.lock, self._connect() as db:
+            rows = db.execute(f"""SELECT municipality, count(*) AS total,
+                count(*) FILTER (WHERE source = 'ocorrencias') AS ocorrencias,
+                count(*) FILTER (WHERE source = 'mvi_cad' AND eligible) AS mvi_cad,
+                count(*) FILTER (WHERE source = 'mvi_neac' AND eligible) AS mvi_neac,
+                count(*) FILTER (WHERE source = 'armas') AS armas,
+                count(*) FILTER (WHERE source = 'drogas') AS drogas,
+                count(*) FILTER (WHERE source = 'guarnicoes') AS guarnicoes
+                FROM record_versions WHERE {' AND '.join(clauses)}
+                GROUP BY municipality ORDER BY total DESC, municipality""", params).fetchall()
+        columns = ("municipality", "total", "ocorrencias", "mvi_cad", "mvi_neac",
+                   "armas", "drogas", "guarnicoes")
+        return [dict(zip(columns, row)) for row in rows]
+
     def mvi_record_versions(self, source: str, natural_key: str) -> list[dict]:
         if source not in {"mvi_cad", "mvi_neac"}:
             raise ValueError("Fonte MVI desconhecida")
