@@ -41,8 +41,13 @@ def open_when_ready(address: str) -> None:
         try:
             with urlopen(f"{address}/health", timeout=1) as response:
                 if response.status == 200:
-                    webbrowser.open(address)
-                    log(f"Interface aberta em {address}")
+                    try:
+                        os.startfile(address)  # type: ignore[attr-defined]
+                        log(f"Interface solicitada ao Windows em {address}")
+                    except OSError:
+                        if not webbrowser.open(address):
+                            raise OSError("nenhum navegador aceitou o endereço local")
+                        log(f"Interface aberta pelo navegador padrão em {address}")
                     return
         except (OSError, URLError, ValueError):
             time.sleep(0.5)
@@ -70,7 +75,10 @@ def main() -> int:
             try:
                 with urlopen("http://127.0.0.1:8000/health", timeout=2) as response:
                     if response.status == 200:
-                        webbrowser.open("http://127.0.0.1:8000")
+                        try:
+                            os.startfile("http://127.0.0.1:8000")  # type: ignore[attr-defined]
+                        except OSError:
+                            webbrowser.open("http://127.0.0.1:8000")
                         log("Instância existente localizada; interface reaberta")
                         return 0
             except (OSError, URLError, ValueError) as error:

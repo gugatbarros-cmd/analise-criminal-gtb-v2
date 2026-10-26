@@ -29,6 +29,20 @@ function Show-GtbError([string]$Message) {
   ) | Out-Null
 }
 
+function Open-GtbInterface {
+  try {
+    Start-Process -FilePath 'explorer.exe' -ArgumentList $address
+    Add-Content -LiteralPath $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Interface solicitada ao Windows em $address"
+  } catch {
+    try {
+      Start-Process -FilePath $address
+      Add-Content -LiteralPath $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Interface aberta pelo navegador padrão em $address"
+    } catch {
+      throw "O sistema iniciou em $address, mas o navegador não abriu. Abra esse endereço manualmente."
+    }
+  }
+}
+
 try {
   if (-not (Test-Path -LiteralPath $executable)) {
     throw "Executável não encontrado: $executable"
@@ -56,7 +70,7 @@ try {
     }
   }
 
-  Start-Process $address
+  Open-GtbInterface
 } catch {
   Show-GtbError $_.Exception.Message
   exit 1
