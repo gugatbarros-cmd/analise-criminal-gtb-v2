@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completedPhases, completionPercent, phases, phasePercent, remainingPercent } from './progress'
+import { completedPhases, completionPercent, functionalCompletionPercent, implementationStatus, phases, phasePercent, remainingPercent } from './progress'
 
 describe('andamento da implantação', () => {
   it('soma 100% de peso e mostra apenas fases aceitas como concluídas', () => {
@@ -7,6 +7,8 @@ describe('andamento da implantação', () => {
     expect(completedPhases.map(phase => phase.id)).toEqual([0, 1])
     expect(completionPercent).toBe(90)
     expect(remainingPercent).toBe(10)
+    expect(functionalCompletionPercent).toBe(100)
+    expect(implementationStatus).toContain('funcional finalizada')
   })
 
   it('calcula cada fase a partir das entregas concluídas', () => {
