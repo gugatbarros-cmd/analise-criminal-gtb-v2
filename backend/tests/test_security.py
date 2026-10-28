@@ -77,3 +77,44 @@ def test_api_rejects_unknown_browser_origin_and_host(tmp_path, monkeypatch):
     client = TestClient(main.app)
     assert client.get("/health", headers={"Origin": "https://malicious.invalid"}).status_code == 403
     assert client.get("/health", headers={"Host": "malicious.invalid"}).status_code == 400
+
+
+@pytest.mark.parametrize("origin", ["http://127.0.0.1:8000", "http://localhost:8000"])
+def test_packaged_browser_can_setup_login_import_and_logout(tmp_path, monkeypatch, origin):
+    monkeypatch.setattr(main, "auth_manager", AuthManager(tmp_path / "auth.sqlite3"))
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    client = TestClient(main.app, base_url="http://127.0.0.1:8000")
+    headers = {"Origin": origin}
+    account = {"username": "synthetic-admin", "password": "synthetic-password-123"}
+    # A rota estática é montada apenas pelo executável; a API isolada devolve
+    # 404, sem exigir autenticação para a imagem da própria tela de login.
+    assert client.get("/logo-10bpm-3d-ui.png", headers=headers).status_code == 404
+    for asset in ("/assets/index.js", "/assets/index.css"):
+        response = client.get(asset, headers=headers)
+        assert response.status_code == 404
+        assert response.headers["access-control-allow-origin"] == origin
+    setup = client.post("/auth/setup", json=account, headers=headers)
+    assert setup.status_code == 200, setup.text
+    login = client.post("/auth/login", json=account, headers=headers)
+    assert login.status_code == 200, login.text
+    session = headers | {"Authorization": f"Bearer {login.json()['token']}"}
+    assert client.get("/auth/me", headers=session).status_code == 200
+    content = csv_bytes([{"Número da ocorrência": "TEST-PACKAGED-1", "Data": "05/01/2026",
+                          "Cidade": "Igaci", "Natureza": "Roubo consumado"}])
+    imported = client.post("/imports/ocorrencias", content=content,
+                           headers=session | {"X-Filename": "synthetic.csv"})
+    assert imported.status_code == 200, imported.text
+    assert client.get("/indicators/summary", headers=session).json()["cvp"] == 1
+    assert client.post("/auth/logout", headers=session).status_code == 200
+    assert client.get("/auth/me", headers=session).status_code == 401
+
+
+@pytest.mark.parametrize("origin", ["https://malicious.invalid", "null",
+                                  "http://127.0.0.1:8001", "http://localhost.evil.invalid:8000"])
+def test_packaged_browser_still_blocks_untrusted_origins(tmp_path, monkeypatch, origin):
+    manager = AuthManager(tmp_path / "auth.sqlite3")
+    monkeypatch.setattr(main, "auth_manager", manager)
+    result = TestClient(main.app).post("/auth/setup", headers={"Origin": origin},
+                                     json={"username": "admin", "password": "long-password-123"})
+    assert result.status_code == 403
+    assert not manager.has_users()

@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-10-28",
-  "implementationStatus": "Versão funcional finalizada; inicialização sem console, logs locais e comandos de backup protegidos. Validação operacional: 90% concluída e 10% restante, dependente de fontes e totais oficiais.",
+  "implementationStatus": "Versão funcional finalizada; login, cadastro e importação pela janela do executável corrigidos na 0.1.57. Implementação funcional: 100%; validação operacional: 90% concluída e 10% restante. As bases restantes podem ser adicionadas depois.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

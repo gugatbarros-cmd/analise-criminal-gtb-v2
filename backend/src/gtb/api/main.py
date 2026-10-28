@@ -15,12 +15,15 @@ from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 
-APP_VERSION = "0.1.56"
+APP_VERSION = "0.1.57"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
 auth_manager = AuthManager(DATA_DIR / "auth.sqlite3")
-LOCAL_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173"}
+# A interface de desenvolvimento usa 5173; a interface embutida no executável
+# usa a mesma porta 8000 da API, inclusive para login e importação.
+LOCAL_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173",
+                 "http://127.0.0.1:8000", "http://localhost:8000"}
 
 
 def demo_mode() -> bool:
@@ -62,7 +65,8 @@ async def authorize(request: Request, call_next):
         return await call_next(request)
     path = request.url.path
     if path == "/health" or (request.method == "GET" and
-                             (path in {"/", "/index.html"} or path.startswith("/assets/"))):
+                             (path in {"/", "/index.html", "/logo-10bpm-3d-ui.png"}
+                              or path.startswith("/assets/"))):
         response = await call_next(request)
     elif demo_mode():
         if request.method != "GET" or path.startswith("/auth/"):

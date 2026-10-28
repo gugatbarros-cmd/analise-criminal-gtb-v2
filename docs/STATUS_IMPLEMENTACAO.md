@@ -1,5 +1,13 @@
 # Andamento da implantação — 28/10/2026
 
+## Correção do executável 0.1.57
+
+A API rejeitava a origem da própria interface embutida, `http://127.0.0.1:8000`, inclusive nos pedidos dos arquivos JavaScript e CSS. O navegador recebia HTTP 403 antes de renderizar a tela, deixando a janela vazia. Cadastro, login e importação também eram rejeitados. O teste de disponibilidade da versão anterior não exercitava esse fluxo. A versão 0.1.57 aceita somente as origens locais previstas, nas portas 8000 e 5173, e mantém bloqueadas as origens externas. A logomarca da tela de login também pode ser carregada antes da autenticação. Novos testes exercitam os recursos estáticos, cadastro, login, importação sintética, indicador e encerramento da sessão com a origem real do executável.
+
+Validação: 83 testes do backend, 31 testes da interface, Ruff e TypeScript/Vite aprovados. O teste `node scripts/test-desktop-browser.mjs` abre o executável compilado e o Chrome com perfil e banco isolados; passou por cadastro, saída, novo login, logomarca, pré-validação, importação e CVP. A repetição desse teste com o executável 0.1.56 instalado reproduziu os HTTP 403 do JavaScript e CSS e a tela vazia. O backup das bases locais do usuário foi criado antes da atualização.
+
+A implementação funcional permanece em 100%. O progresso operacional permanece em 90% concluído e 10% restante; as bases restantes serão adicionadas posteriormente, sem impedir esta correção nem marcar conferências oficiais como concluídas.
+
 **90% concluído · 10% restante na validação operacional.** A implementação funcional foi finalizada nas **Fases 0 e 1**. A versão 0.1.56 lê as exportações XLS antigas do CAD e mantém a fila local bloqueada até autorização de sincronização. As bases restantes poderão ser adicionadas depois pelo fluxo normal de importação; o backend novo permanece local e o sistema antigo segue em produção durante a conferência.
 
 A prévia estática privada anterior, versão 0.1.55, está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. A distribuição atual usa Releases e GitHub Pages. As demonstrações contêm apenas registros sintéticos, sem backend, banco DuckDB ou dados operacionais.
