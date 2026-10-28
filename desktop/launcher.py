@@ -1,5 +1,6 @@
 """Inicia API e interface local em um único processo no Windows."""
 
+import logging
 import os
 import socket
 import subprocess
@@ -27,6 +28,15 @@ def log(message: str) -> None:
         stream.write(f"{timestamp} {message}\n")
 
 
+def emit(message: str, *, error: bool = False) -> None:
+    """Escreve no console quando houver um; no executável gráfico, usa o log."""
+    stream = sys.stderr if error else sys.stdout
+    if stream is not None:
+        print(message, file=stream)
+    else:
+        log(message)
+
+
 def show_error(message: str) -> None:
     log(f"ERRO: {message}")
     try:
@@ -34,7 +44,7 @@ def show_error(message: str) -> None:
 
         ctypes.windll.user32.MessageBoxW(0, message, "Análise Criminal GTB 2.0", 0x10)
     except (AttributeError, OSError):
-        print(message, file=sys.stderr)
+        emit(message, error=True)
 
 
 def open_when_ready(address: str) -> None:
@@ -76,8 +86,15 @@ def web_directory() -> Path:
 def main() -> int:
     data = data_directory()
     os.environ["GTB_DATA_DIR"] = str(data)
+    # O executável --windowed não possui stdout/stderr. Uvicorn não pode
+    # configurar seus formatadores de console nesse ambiente.
+    logging.basicConfig(filename=log_path(), encoding="utf-8", level=logging.WARNING,
+                        format="%(asctime)s %(levelname)s %(name)s: %(message)s", force=True)
     with socket.socket() as probe:
         if probe.connect_ex(("127.0.0.1", 8000)) == 0:
+            if len(sys.argv) > 1:
+                emit("Feche o GTB 2.0 antes de executar backup ou restauração.", error=True)
+                return 1
             try:
                 with urlopen("http://127.0.0.1:8000/health", timeout=2) as response:
                     if response.status == 200:
@@ -96,31 +113,30 @@ def main() -> int:
         from gtb.ops.backup import create_backup, restore_backup
 
         if sys.argv[1:] == ["backup"]:
-            print(f"Backup criado: {create_backup(data)}")
+            emit(f"Backup criado: {create_backup(data)}")
             return 0
         if len(sys.argv) == 3 and sys.argv[1] == "restore":
             previous = restore_backup(data, Path(sys.argv[2]))
-            print("Dados restaurados.")
+            emit("Dados restaurados.")
             if previous:
-                print(f"Cópia do estado anterior: {previous}")
+                emit(f"Cópia do estado anterior: {previous}")
             return 0
-        print("Uso: GTB2-Local.exe [backup | restore CAMINHO_DO_ZIP]", file=sys.stderr)
+        emit("Uso: GTB2-Local.exe [backup | restore CAMINHO_DO_ZIP]", error=True)
         return 2
     web = web_directory()
     if not (web / "index.html").is_file():
-        print(f"Interface local não encontrada: {web}", file=sys.stderr)
+        show_error(f"Interface local não encontrada: {web}")
         return 1
     from gtb.api.main import app  # define GTB_DATA_DIR antes da importação
 
     app.mount("/", StaticFiles(directory=web, html=True), name="local-ui")
     address = "http://127.0.0.1:8000"
-    print(f"Análise Criminal GTB 2.0: {address}")
-    print(f"Dados locais: {os.environ['GTB_DATA_DIR']}")
-    print("Pressione Ctrl+C para encerrar.")
+    emit(f"Análise Criminal GTB 2.0: {address}")
+    emit(f"Dados locais: {os.environ['GTB_DATA_DIR']}")
     log(f"Iniciando versão local em {address}; dados em {data}")
     if os.environ.get("GTB_NO_BROWSER") != "1":
         threading.Thread(target=open_when_ready, args=(address,), daemon=True).start()
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning", log_config=None)
     return 0
 
 

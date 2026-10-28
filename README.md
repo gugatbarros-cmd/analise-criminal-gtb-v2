@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo e independente do sistema legado em produção. A versão 0.1.55 reproduz a moldura institucional, a identidade visual e os grupos de menu do sistema antigo, com destinos funcionais para todos os menus. O executável local permite pré-validar e importar bases reais CSV/XLS/XLSX, com quarentena, backup automático anterior ao lote e armazenamento exclusivamente local. Também aceita exportações Excel antigas (`.xls`) do CAD, inclusive cabeçalhos repetidos e arquivos OLE tolerados pelo Excel. Oferece comparação local de seis fontes, importação CSV/XLS/XLSX com gravação por lote, histórico no DuckDB, lista de lotes e auditoria visual paginadas de quarentena e divergências e benchmark sintético de um milhão de linhas em lotes com medição de memória. As relações MVI CAD e NEAC aceitam intervalo de datas independente por fonte. Inclui indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições, relatórios imprimíveis, relações paginadas, evolução e rankings, perfis MVI separados com faixas de horário, comparação conservadora CAD × NEAC e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
+Projeto novo e independente do sistema legado em produção. A versão 0.1.56 reproduz a moldura institucional, a identidade visual e os grupos de menu do sistema antigo, com destinos funcionais para todos os menus. O executável local permite pré-validar e importar bases reais CSV/XLS/XLSX, com quarentena, backup automático anterior ao lote e armazenamento exclusivamente local. Também aceita exportações Excel antigas (`.xls`) do CAD, inclusive cabeçalhos repetidos e arquivos OLE tolerados pelo Excel. Oferece comparação local de seis fontes, importação CSV/XLS/XLSX com gravação por lote, histórico no DuckDB, lista de lotes e auditoria visual paginadas de quarentena e divergências e benchmark sintético de um milhão de linhas em lotes com medição de memória. As relações MVI CAD e NEAC aceitam intervalo de datas independente por fonte. Inclui indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições, relatórios imprimíveis, relações paginadas, evolução e rankings, perfis MVI separados com faixas de horário, comparação conservadora CAD × NEAC e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
 
 ## Requisitos
 
@@ -13,7 +13,7 @@ Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar
 
 Para criar um executável independente do ambiente de desenvolvimento, siga [o empacotamento Windows](docs/EMPACOTAMENTO_WINDOWS.md). O `GTB2-Local.exe` abre a interface e a API na mesma porta local e oferece comandos de backup e restauração dos dados do projeto novo.
 
-O pacote pronto para outras máquinas fica na página **Releases** do GitHub. Baixe `GTB2-0.1.55.zip`, extraia a pasta e execute `Instalar-GTB2.cmd`. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
+O pacote pronto para outras máquinas fica na página **Releases** do GitHub. Baixe `GTB2-0.1.56.zip`, extraia a pasta e execute `Instalar-GTB2.cmd`. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
 
 ### Ver a demonstração
 
@@ -21,7 +21,7 @@ Na pasta deste projeto, execute `powershell -NoProfile -ExecutionPolicy Bypass -
 
 Para gerar a prévia estática com as mesmas planilhas fictícias, execute `.venv\Scripts\python.exe scripts\export-demo-snapshot.py` e, na pasta `frontend`, defina `VITE_STATIC_DEMO=1` antes de `npm.cmd run build`. O resultado em `frontend/dist/` funciona sem API e bloqueia importações. `frontend/public/demo-data.json` contém somente dados sintéticos e é recriado pelo exportador. A prévia estática permite testar a interface; o backend completo permanece local.
 
-A prévia privada da versão 0.1.55 foi publicada em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos; não recebe dados nem substitui o sistema antigo.
+A prévia privada anterior, versão 0.1.55, está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos. Para a distribuição atual, utilize o pacote da página Releases e a demonstração do GitHub Pages.
 
 O código do projeto novo está em `https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2`. A demonstração pública gratuita é publicada automaticamente pelo GitHub Pages em `https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/`. O workflow compila somente a interface estática e usa exclusivamente `frontend/public/demo-data.json`, que contém dados sintéticos.
 

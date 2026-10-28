@@ -22,7 +22,7 @@ if (-not $SkipInstall) {
 
 Push-Location $root
 try {
-  & $python -m PyInstaller --noconfirm --clean --onefile --name GTB2-Local `
+  & $python -m PyInstaller --noconfirm --clean --onefile --windowed --name GTB2-Local `
     --add-data 'frontend\dist-local;web' `
     --collect-all duckdb --collect-all polars --collect-all openpyxl --collect-all xlrd `
     desktop\launcher.py
