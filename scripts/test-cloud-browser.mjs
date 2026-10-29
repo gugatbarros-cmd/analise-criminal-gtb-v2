@@ -95,6 +95,9 @@ try {
   await evaluate(`document.querySelector('form').requestSubmit()`)
   await until(async () => await total() === expected, 'indicadores autenticados')
   assert.ok(await evaluate(`document.body.textContent.includes('Ambiente online')`))
+  await until(() => evaluate(`!!document.querySelector('#cvp [data-chart-target="cvp"]')`), 'gráfico CVP online')
+  await evaluate(`document.querySelector('#cvp [data-chart-target="cvp"]').click()`)
+  await until(() => evaluate(`location.hash==='#cvp' && document.activeElement?.id==='cvp'`), 'navegação do gráfico online')
   snapshot.views['2026|*'].summary.cvp += 7
   snapshot.syncedAt = '2026-10-29T13:00:00Z'
   revision = 'b'.repeat(32); content = pack()

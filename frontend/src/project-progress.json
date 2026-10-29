@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-10-29",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.60 com instalador Windows completo e sincronização autenticada configurável após importações e mudança de versão. Validação operacional: 90% concluída e 10% restante; conexão real depende do acesso Firebase autorizado.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.61 com gráficos navegáveis e responsivos, preservando filtros e fontes CAD/NEAC. Validação operacional: 90% concluída e 10% restante; conexão real depende do acesso Firebase autorizado.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

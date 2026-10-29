@@ -1,5 +1,13 @@
 # Andamento da implantação — 29/10/2026
 
+## Gráficos navegáveis e responsivos — 0.1.61
+
+Gráficos de barras, linhas e anéis abrem a análise do indicador, mantendo filtros, foco e menu ativo. No gráfico mensal comparativo, barras e legendas de CAD/NEAC selecionam explicitamente a fonte; botões equivalentes oferecem acesso pelo teclado. Tabelas de conferência ficam fora dos botões dos gráficos. Relatórios sem destino de navegação continuam somente para consulta/impressão.
+
+As grades se ajustam à largura disponível, as linhas medem o contêiner e distribuem rótulos para evitar sobreposição em telas pequenas; anéis, legendas e barras respeitam o contêiner. O gráfico ECharts acompanha o redimensionamento e contém seu tooltip. Implementação funcional permanece em 100%; validação operacional em 90% concluída e 10% restante, sem declarar novas fases concluídas.
+
+Validação: 39 testes de interface, quatro testes de saúde/versão da API e 102 verificações do legado aprovados. No executável, o navegador real importou seis fontes sintéticas e confirmou os 13 destinos dos gráficos, clique físico na barra CAD, teclado, filtros e ajuste dos contêineres/escala em 320, 390, 768 e 1440 px. A imagem do gráfico CVP no celular foi conferida. O site compilado aprovou o clique de gráfico com autenticação Firebase simulada, atualização e logout sem erros de redimensionamento.
+
 ## Instalador completo e consulta online autenticada — 0.1.60
 
 Instalador EXE com assistente em português, instalação no perfil do Windows, atalhos, registro em Aplicativos e desinstalação que preserva dados. A interface online passa a exigir conta autorizada no Firebase existente; a demonstração fictícia continua em `?demo=1`.

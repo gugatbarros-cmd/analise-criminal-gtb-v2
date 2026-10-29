@@ -1,6 +1,11 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
 export const IndicatorNavigationContext = createContext<(target: string) => void>(() => {})
+export const IndicatorChartTargetContext = createContext('')
+
+export function IndicatorSection({ id, children }: { id: string; children: ReactNode }) {
+  return <IndicatorChartTargetContext.Provider value={id}><div id={id}>{children}</div></IndicatorChartTargetContext.Provider>
+}
 
 export function IndicatorCard({ target, label, children }: {
   target: string; label: string; children: ReactNode

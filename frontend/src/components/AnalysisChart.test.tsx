@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { AnalysisChart } from './AnalysisChart'
 import { Ranking } from './Ranking'
+import { IndicatorSection } from './IndicatorNavigation'
 
 describe('gráficos equivalentes às distribuições', () => {
   const items = [{ name: '01/2026', total: 2 }, { name: '02/2026', total: 5 }]
@@ -19,5 +20,11 @@ describe('gráficos equivalentes às distribuições', () => {
   })
   it('trata série vazia sem inventar números', () => {
     expect(renderToStaticMarkup(<AnalysisChart title="Vazio" items={[]} />)).toContain('Sem dados')
+  })
+  it('associa o gráfico ao indicador e mantém a tabela fora do botão', () => {
+    const html = renderToStaticMarkup(<IndicatorSection id="cvp"><Ranking title="Municípios CVP" items={items} /></IndicatorSection>)
+    expect(html).toContain('data-chart-target="cvp"')
+    expect(html).toContain('aria-label="Ver indicador: Municípios CVP"')
+    expect(html.indexOf('</button>')).toBeLessThan(html.indexOf('<details>'))
   })
 })
