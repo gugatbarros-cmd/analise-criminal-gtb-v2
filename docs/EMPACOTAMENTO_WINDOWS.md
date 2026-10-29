@@ -1,5 +1,13 @@
 # Executável local para Windows
 
+## Instalador Windows completo — 0.1.60
+
+Distribua `dist/GTB2-Instalador-0.1.60.exe`. O assistente NSIS instala o executável independente, inicializador e comando de encerramento no perfil do usuário, cria atalhos e registra versão, ícone e desinstalador em Aplicativos do Windows. Não requer Python, Node.js nem privilégios de administrador. O desinstalador remove o programa e seus atalhos e preserva `%LOCALAPPDATA%/GTB2/data`, incluindo contas e importações. Feche as importações antes de atualizar.
+
+Para compilar, execute `scripts/build-installer.ps1 -BuildApplication -Compiler CAMINHO/MAKENSIS.EXE`. O compilador NSIS é gratuito e não faz parte da instalação do usuário final. A opção antiga `Instalar-GTB2.cmd` continua como alternativa para desenvolvedores; o instalador EXE é a distribuição principal.
+
+Depois da instalação, abra **Administração → Sincronização online**, conecte a conta autorizada do sistema antigo e acompanhe o status do primeiro envio. A conta local e a conta online são independentes; a senha local não é enviada ao Firebase.
+
 O script `scripts\build-windows.ps1` compila a interface local e cria `dist\GTB2-Local.exe` com PyInstaller. O código é aberto e o empacotamento não usa serviço cobrado. A compilação requer Python 3.12+, Node.js, as dependências do projeto e, na primeira execução, internet para instalar o empacotador.
 
 ```powershell

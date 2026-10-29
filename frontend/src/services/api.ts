@@ -1,5 +1,6 @@
 import type { LegacySummaryFields } from './legacy-summary'
 import { demoFetch } from './static-demo'
+import { cloudFetch, isCloud } from './cloud'
 import { getSessionToken } from './auth'
 
 export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas' | 'guarnicoes'
@@ -35,6 +36,7 @@ export type MviRecordDetail = { source: MviSource; natural_key: string; occurren
 export type MviRecordVersion = { version: number; is_current: boolean; valid_from: string; valid_to: string | null; batch_id: string; eligible: boolean; category: string }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const apiFetch: typeof fetch = (input, init) => {
+  if (isCloud) return cloudFetch(String(input), init)
   if (import.meta.env.VITE_STATIC_DEMO === '1') return demoFetch(String(input), init)
   const token = getSessionToken()
   if (!token) return fetch(input, init)

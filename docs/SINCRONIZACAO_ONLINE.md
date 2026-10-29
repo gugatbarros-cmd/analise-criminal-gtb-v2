@@ -1,0 +1,15 @@
+# Sincronização online — 0.1.60
+
+O usuário autorizou a consulta online das importações em 29/10/2026. A origem é o computador configurado em **Administração → Sincronização online**, com conta administradora ou analista ativa do Firebase do sistema antigo. A senha é usada uma vez no login HTTPS e descartada. Somente o refresh token é persistido, protegido pelo Windows DPAPI e vinculado ao usuário do Windows. Ao restaurar dados em outro usuário/computador, reconecte a conta.
+
+O DuckDB permanece como banco principal. Após uma importação e na inicialização de uma nova versão, uma assinatura de versão e lotes identifica mudanças. O exportador bloqueia importações durante a leitura para produzir uma cópia consistente: totais e tabelas usam o mesmo lote. Não há mesclagem entre computadores: configure um único computador como origem. Um computador sem importações não substitui a base online.
+
+A cópia contém tabelas normalizadas das seis fontes, recortes por ano/município, análises e histórico MVI. Arquivos originais, credenciais locais, quarentena e divergências não são publicados. O limite atual é 50.000 registros por fonte, 50.000 lotes, 400 recortes e 8 MB de conteúdo comprimido/base64; o limite excedido suspende a sincronização com mensagem explícita, preservando os dados locais, sem truncar totais e sem contratar capacidade.
+
+O Firestore usa apenas `sharedBases/gtb2-online` e sua subcoleção `chunks`, sob as regras existentes: leitura para administrador/usuários ativos; gravação para administrador/analistas ativos. As bases do legado não são modificadas. Um commit atômico grava os blocos, troca o manifesto e remove a geração anterior. A precondição `updateTime` rejeita escritas concorrentes. Falhas preservam a última cópia íntegra e tentam novamente em até cinco minutos. O marcador local só avança após confirmação do commit.
+
+A interface pública contém somente código e dados fictícios. Para ler os dados reais, o navegador exige login Firebase, consulta documentos com ID token, valida geração e SHA-256 de cada bloco e descomprime em memória. A sessão fica em sessionStorage e é limpa ao sair. Não há fallback silencioso para dados fictícios. O botão Atualizar consulta força a verificação; enquanto visível, a página verifica a cada minuto e só baixa os blocos quando a geração muda. Com o computador desligado, a última cópia permanece consultável.
+
+Firebase continua Spark. Não são usados Cloud Run, Cloud SQL, Cloud Functions, Storage pago nem faturamento. Erros de cota impedem o envio; o programa não muda de plano. Novas versões de código são publicadas pelo workflow GitHub Pages no push de `main`; `app-version.json` permite verificar a versão publicada. Instalar um EXE sem acesso à internet não publica código nem transmite dados até a conexão voltar.
+
+A antiga `sync_outbox` continua como contrato de eventos agregados independente. O sincronizador desta versão trabalha com cópias consistentes e marcador próprio em `online-state.json`; não marca eventos agregados como entregues.

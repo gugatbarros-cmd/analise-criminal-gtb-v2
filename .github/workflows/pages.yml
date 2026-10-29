@@ -34,6 +34,7 @@ jobs:
         working-directory: frontend
         env:
           VITE_STATIC_DEMO: '1'
+          VITE_CLOUD_ONLINE: '1'
         run: npm run build -- --mode github
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

@@ -1,6 +1,14 @@
 # Análise Criminal GTB 2.0
 
-Projeto novo e independente do sistema legado em produção. A versão 0.1.59 reproduz a moldura institucional, a identidade visual e os grupos de menu do sistema antigo, com destinos funcionais para todos os menus. O executável local permite pré-validar e importar bases reais CSV/XLS/XLSX, com quarentena, backup automático anterior ao lote e armazenamento exclusivamente local. Também aceita exportações Excel antigas (`.xls`) do CAD, inclusive cabeçalhos repetidos e arquivos OLE tolerados pelo Excel. Oferece comparação local de seis fontes, importação CSV/XLS/XLSX com gravação por lote, histórico no DuckDB, lista de lotes e auditoria visual paginadas de quarentena e divergências e benchmark sintético de um milhão de linhas em lotes com medição de memória. As relações MVI CAD e NEAC aceitam intervalo de datas independente por fonte. Inclui indicadores provisórios de MVI CAD, MVI NEAC, CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições, relatórios imprimíveis, relações paginadas, evolução e rankings, perfis MVI separados com faixas de horário, comparação conservadora CAD × NEAC e ficha original com navegação por versões. Inclui contas locais e prévia estática somente leitura com dados sintéticos. Não acessa CAD/Firebase nem publica dados operacionais.
+Versão 0.1.60. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+
+Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte o e-mail e a senha de administrador ou analista ativo do sistema antigo. O Firebase permanece no Spark, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases do legado. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
+
+- Instalação: baixe `GTB2-Instalador-0.1.60.exe` em [Releases](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v0.1.60).
+- Sistema online: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/ — usa as contas já autorizadas no sistema antigo.
+- Demonstração fictícia: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/?demo=1 — sem importações reais.
+
+Arquivos originais, backups, contas locais, quarentena e divergências permanecem locais. Tabelas processadas, análises e histórico MVI são consultáveis online depois do primeiro envio. Nenhum dado real entra no Git ou nos arquivos públicos do GitHub Pages. Veja [sincronização](docs/SYNC_LOCAL.md) e [instalador](docs/EMPACOTAMENTO_WINDOWS.md).
 
 ## Requisitos
 
@@ -13,7 +21,7 @@ Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar
 
 Para criar um executável independente do ambiente de desenvolvimento, siga [o empacotamento Windows](docs/EMPACOTAMENTO_WINDOWS.md). O `GTB2-Local.exe` abre a interface e a API na mesma porta local e oferece comandos de backup e restauração dos dados do projeto novo.
 
-O pacote pronto para outras máquinas fica na página **Releases** do GitHub. Baixe `GTB2-0.1.59.zip`, extraia a pasta e execute `Instalar-GTB2.cmd`. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
+O instalador pronto fica em **Releases**. Baixe e execute `GTB2-Instalador-0.1.60.exe`; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
 
 ### Ver a demonstração
 
@@ -23,7 +31,7 @@ Para gerar a prévia estática com as mesmas planilhas fictícias, execute `.ven
 
 A prévia privada anterior, versão 0.1.55, está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos. Para a distribuição atual, utilize o pacote da página Releases e a demonstração do GitHub Pages.
 
-O código do projeto novo está em `https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2`. A demonstração pública gratuita é publicada automaticamente pelo GitHub Pages em `https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/`. O workflow compila somente a interface estática e usa exclusivamente `frontend/public/demo-data.json`, que contém dados sintéticos.
+O código está em `https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2`. O GitHub Actions publica automaticamente a interface no GitHub Pages ao atualizar `main`. O endereço principal exige autenticação para consultar as bases sincronizadas no Firestore; `?demo=1` abre exclusivamente `frontend/public/demo-data.json`, com exemplos fictícios. Os arquivos públicos nunca contêm dados reais.
 
 Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para comparar seis amostras anonimizadas com totais oficiais sem publicá-las, siga [a comparação local](docs/COMPARACAO_REFERENCIA.md). Para copiar e restaurar **todos os dados do sistema novo**, siga [o procedimento local](docs/BACKUP_LOCAL.md). O backup antigo de um único banco DuckDB continua disponível em `scripts\restore-local.py`.
 
@@ -31,7 +39,7 @@ Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estive
 
 A implementação funcional está 100% concluída. A validação operacional está em 90% porque ainda depende das duas bases restantes, dos totais oficiais e da operação paralela com o legado. Esses itens podem ser adicionados depois pelo fluxo de importação e não impedem o uso desta versão. Fases 2, 3, 4 e 5 permanecem em validação: CSV/XLS/XLSX com versões, quarentena, backup antes do lote, filtros e indicadores provisórios. O arquivo bruto e o banco ficam em `data/`, ignorados pelo Git. A API oferece `/sources`, `/imports`, `/imports/{id}/divergences`, `/indicators/summary`, `/indicators/operations/{kind}/analysis` e `/records/{source}`. O upload usa `POST /imports/{source}` com corpo binário, cabeçalho `X-Filename` e `scope=partial|complete`. O limite é 64 MB. Arquivos completos sinalizam ausentes sem apagar registros. Quatro layouts fornecidos foram conferidos apenas no ambiente local; faltam duas fontes e os totais oficiais.
 
-As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. As seis fontes têm adaptadores e análises iniciais; armas, drogas e guarnições ainda exigem validação de layout e paridade oficial. A autenticação local usa senhas derivadas, sessões de oito horas e perfis; o backup integral valida os bancos antes da troca e invalida sessões restauradas. Ainda faltam validação do ambiente operacional, sincronização autorizada e detalhes completos do legado. Use apenas dados sintéticos até a análise das amostras anonimizadas. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
+As regras foram extraídas do legado, mas não há paridade comprovada com bases reais. As seis fontes têm adaptadores e análises iniciais; armas, drogas e guarnições ainda exigem validação de layout e paridade oficial. A autenticação local usa senhas derivadas, sessões de oito horas e perfis; o backup integral valida os bancos antes da troca e invalida sessões restauradas. Ainda faltam validação do ambiente operacional, conexão operacional ao Firebase e detalhes completos do legado. Use apenas dados sintéticos até a análise das amostras anonimizadas. As decisões pendentes estão em `docs/DECISOES_PENDENTES.md`.
 
 O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A implementação funcional está **100% concluída** e a validação operacional está **90% concluída, com 10% dependente das bases e conferências futuras**; as Fases 0 e 1 estão concluídas. O [benchmark local](docs/BENCHMARKS.md) registra os ensaios sintéticos de 10 mil, 100 mil e um milhão de ocorrências.
 

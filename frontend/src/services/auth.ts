@@ -1,3 +1,4 @@
+import { cloudLogin, cloudLogout, cloudUser, isCloud } from './cloud'
 export type LocalUser = { username: string; role: 'admin' | 'analyst' | 'viewer'; expires_at: string }
 export type LocalSession = LocalUser & { token: string }
 
@@ -13,6 +14,7 @@ export function saveSession(token: string): void {
 }
 
 export function clearSession(): void {
+  if (isCloud) cloudLogout()
   sessionStorage.removeItem(STORAGE_KEY)
 }
 
@@ -25,6 +27,7 @@ async function read<T>(response: Response): Promise<T> {
 }
 
 export function login(username: string, password: string): Promise<LocalSession> {
+  if (isCloud) return cloudLogin(username, password)
   return fetch(`${baseUrl}/auth/login`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
@@ -39,12 +42,14 @@ export function createFirstUser(username: string, password: string): Promise<Loc
 }
 
 export function getMe(token: string): Promise<LocalUser> {
+  if (isCloud) return cloudUser()
   return fetch(`${baseUrl}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   }).then(response => read<LocalUser>(response))
 }
 
 export async function logout(token: string): Promise<void> {
+  if (isCloud) { cloudLogout(); return }
   await fetch(`${baseUrl}/auth/logout`, {
     method: 'POST', headers: { Authorization: `Bearer ${token}` },
   })

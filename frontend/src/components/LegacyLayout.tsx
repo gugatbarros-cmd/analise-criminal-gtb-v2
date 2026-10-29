@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { IndicatorNavigationContext } from './IndicatorNavigation'
+import { isCloud } from '../services/cloud'
 
 type MenuItem = { label: string; target: string; short: string; planned?: boolean }
 type MenuGroup = { label: string; items: MenuItem[] }
@@ -41,6 +42,7 @@ const menuGroups: MenuGroup[] = [
   { label: 'Administração', items: [
     { label: 'Meu perfil', target: 'perfil', short: 'MP' },
     { label: 'Controle de acesso', target: 'usuarios', short: 'CA' },
+    { label: 'Sincronização online', target: 'online-sync', short: 'SO' },
     { label: 'Uso do Firebase', target: 'armazenamento', short: 'FB' },
   ] },
 ]
@@ -116,7 +118,7 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
         <button className="legacy-mobile-menu" type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">☰</button>
         <img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="" />
         <div className="legacy-title"><span>Polícia Militar de Alagoas · 10º Batalhão</span><h1>{current?.label || 'Visão Executiva'}</h1><p>{current?.planned ? 'Módulo identificado no legado e programado para migração.' : 'Indicadores operacionais e criminais com rastreabilidade local.'}</p></div>
-        <div className="legacy-header-state"><span>{demo ? 'Demonstração pública' : 'Ambiente local'}</span><strong>v{version}</strong></div>
+        <div className="legacy-header-state"><span>{isCloud ? 'Ambiente online' : demo ? 'Demonstração pública' : 'Ambiente local'}</span><strong>v{version}</strong></div>
         {username && <div className="legacy-user"><span className="legacy-avatar">10</span><div><small>Olá</small><strong>{username}</strong></div><button type="button" onClick={onLogout}>Sair</button></div>}
       </header>
       {children}

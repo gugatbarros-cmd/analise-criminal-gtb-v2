@@ -127,7 +127,8 @@ def main() -> int:
     if not (web / "index.html").is_file():
         show_error(f"Interface local não encontrada: {web}")
         return 1
-    from gtb.api.main import app  # define GTB_DATA_DIR antes da importação
+    from gtb.api.main import app, cloud_sync  # define GTB_DATA_DIR antes da importação
+    cloud_sync.start()
 
     app.mount("/", StaticFiles(directory=web, html=True), name="local-ui")
     address = "http://127.0.0.1:8000"

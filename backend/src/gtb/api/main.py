@@ -14,12 +14,14 @@ from pydantic import BaseModel
 from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
+from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.59"
+APP_VERSION = "0.1.60"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
 auth_manager = AuthManager(DATA_DIR / "auth.sqlite3")
+cloud_sync = CloudSync(store, DATA_DIR, APP_VERSION)
 # A interface de desenvolvimento usa 5173; a interface embutida no executável
 # usa a mesma porta 8000 da API, inclusive para login e importação.
 LOCAL_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173",
@@ -43,6 +45,11 @@ class LoginRequest(BaseModel):
 
 class CreateUserRequest(LoginRequest):
     role: str
+
+
+class OnlineCredentials(BaseModel):
+    email: str
+    password: str
 
 
 app = FastAPI(title="Análise Criminal GTB 2.0", version=APP_VERSION)
@@ -83,7 +90,7 @@ async def authorize(request: Request, call_next):
         user = auth_manager.user_for_token(token)
         if not user:
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
-        if path.startswith("/auth/users") and user["role"] != "admin":
+        if (path.startswith("/auth/users") or path.startswith("/online/")) and user["role"] != "admin":
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
         if request.method == "POST" and path.startswith("/imports/") and user["role"] == "viewer":
             return JSONResponse({"detail": "Perfil somente para consulta"}, status_code=403)
@@ -93,6 +100,36 @@ async def authorize(request: Request, call_next):
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@app.get('/online/status')
+def online_status() -> dict:
+    cloud_sync.start()
+    return cloud_sync.status()
+
+
+@app.post('/online/connect')
+def online_connect(credentials: OnlineCredentials) -> dict:
+    try:
+        cloud_sync.connect(credentials.email, credentials.password)
+        return cloud_sync.status()
+    except (ValueError, OSError):
+        raise HTTPException(400, 'Não foi possível conectar. Confira o e-mail, a senha e a permissão de administrador ou analista no sistema antigo.') from None
+
+
+@app.post('/online/sync')
+def online_sync_now() -> dict:
+    if not cloud_sync.credential.exists():
+        raise HTTPException(409, 'Conecte a conta online primeiro.')
+    cloud_sync.start()
+    cloud_sync.wake.set()
+    return cloud_sync.status()
+
+
+@app.post('/online/disconnect')
+def online_disconnect() -> dict:
+    cloud_sync.disconnect()
+    return cloud_sync.status()
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -167,7 +204,10 @@ async def import_source(source: str, request: Request, scope: str = "partial") -
     content = await request.body()
     filename = unquote(request.headers.get("x-filename", ""))
     try:
-        return store.import_file(source, filename, content, scope)
+        result = store.import_file(source, filename, content, scope)
+        cloud_sync.start()
+        cloud_sync.wake.set()
+        return result
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 

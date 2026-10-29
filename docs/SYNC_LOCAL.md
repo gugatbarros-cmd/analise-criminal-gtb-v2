@@ -1,5 +1,7 @@
 # Contrato de sincronização local
 
+Desde a 0.1.60 existe um sincronizador de cópias autenticadas, autorizado pelo usuário e independente desta fila de eventos. Veja [sincronização online](SINCRONIZACAO_ONLINE.md). Os parágrafos abaixo descrevem somente a fila `sync_outbox`; seu contrato não é usado para publicar as cópias.
+
 Cada importação nova grava, na mesma transação DuckDB do lote, um evento `import_aggregate` de versão 1 na tabela `sync_outbox`. O payload contém somente fonte, ID do lote e contagens de linhas, inserções, atualizações, quarentena e divergências. Reimportar um arquivo idêntico não cria outro evento.
 
 O estado inicial é `awaiting_authorization`. O módulo `gtb.sync.outbox` define `SyncProvider`, `DeliveryResult` e transições locais de tentativa, conflito ou entrega para uso futuro. Eventos nesse estado inicial não podem ser marcados como enviados pela rotina local. **Não existe despachante, credencial, endpoint remoto ou sincronização automática nesta versão.** O banco DuckDB não deve ser compartilhado por escritores de rede.

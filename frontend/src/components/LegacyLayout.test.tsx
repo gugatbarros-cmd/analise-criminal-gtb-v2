@@ -4,7 +4,7 @@ import { LegacyLayout } from './LegacyLayout'
 
 describe('interface herdada do sistema anterior', () => {
   it('mantém a identidade institucional e todos os grupos de menu', () => {
-    const html = renderToStaticMarkup(<LegacyLayout version="0.1.59" demo username="operador"><div>Conteúdo</div></LegacyLayout>)
+    const html = renderToStaticMarkup(<LegacyLayout version="0.1.60" demo username="operador"><div>Conteúdo</div></LegacyLayout>)
 
     expect(html).toContain('Sistema de Análise Criminal')
     expect(html).toContain('logo-10bpm-3d-ui.png')
@@ -17,6 +17,6 @@ describe('interface herdada do sistema anterior', () => {
     expect(html).toContain('Produtividade das guarnições')
     expect(html).toContain('Controle de acesso')
     expect(html).not.toContain('Em migração')
-    expect(html).toContain('v0.1.59')
+    expect(html).toContain('v0.1.60')
   })
 })

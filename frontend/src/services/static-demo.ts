@@ -11,15 +11,17 @@ type View = {
   mvi: Record<string, MviAnalysis>
   mvi_comparison: MviComparison
 }
-type Snapshot = {
+export type Snapshot = {
   version: string
   years: number[]
   cities: string[]
   views: Record<string, View>
   records: Record<Source, RecordItem[]>
   evidence: Record<string, string>
-  details: Record<string, Record<string, { current: MviRecordDetail; versions: MviRecordVersion[] }>>
+  details: Record<string, Record<string, { current: MviRecordDetail; versions: MviRecordVersion[]; history?: Record<string, MviRecordDetail> }>>
   batches: Batch[]
+  syncedAt?: string
+  auditLocalOnly?: boolean
   audit: Record<string, { divergences: { source: Source; natural_key: string; reason: string }[]; quarantine: { row_number: number; reason: string; fields: Record<string, string> }[] }>
 }
 
@@ -209,9 +211,9 @@ function teamsAnalysis(items: RecordItem[]): TeamsAnalysis {
       .slice(0, 10).map(([name, total]) => ({ name, total })) }
 }
 
-export async function demoFetch(input: string, init?: RequestInit): Promise<Response> {
+export async function demoFetch(input: string, init?: RequestInit, provided?: Snapshot): Promise<Response> {
   if (init?.method && init.method !== 'GET') return response({ detail: 'Demonstração somente para consulta' }, 403)
-  const data = await snapshot()
+  const data = provided || await snapshot()
   const url = new URL(input)
   const path = url.pathname
   const view = viewFor(data, url.searchParams)
@@ -258,6 +260,7 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   }
   const audit = path.match(/^\/imports\/([^/]+)\/(divergences|quarantine)$/)
   if (audit) {
+    if (data.auditLocalOnly) return response({ detail: 'Quarentena e divergências ficam no sistema local. Consulte a auditoria no computador de origem.' }, 409)
     const items = data.audit[decodeURIComponent(audit[1])]?.[audit[2] as 'divergences' | 'quarantine'] || []
     const page = Math.max(1, Number(url.searchParams.get('page')) || 1)
     const size = Math.min(1000, Math.max(1, Number(url.searchParams.get('size')) || 100))
@@ -338,7 +341,8 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
     if (detail[3]) return response({ items: entry.versions })
     const version = url.searchParams.get('version')
     return !version || Number(version) === entry.current.version
-      ? response(entry.current) : response({ detail: 'Versão não encontrada' }, 404)
+      ? response(entry.current) : entry.history?.[version]
+        ? response(entry.history[version]) : response({ detail: 'Versão não encontrada' }, 404)
   }
   return response({ detail: 'Rota indisponível na demonstração' }, 404)
 }

@@ -1,5 +1,15 @@
 # Andamento da implantação — 29/10/2026
 
+## Instalador completo e consulta online autenticada — 0.1.60
+
+Instalador EXE com assistente em português, instalação no perfil do Windows, atalhos, registro em Aplicativos e desinstalação que preserva dados. A interface online passa a exigir conta autorizada no Firebase existente; a demonstração fictícia continua em `?demo=1`.
+
+Sincronização configurável pela administração local. Mudanças de versão e importações enviam uma cópia consistente e comprimida de tabelas processadas, análises e histórico MVI; originais, contas, quarentena e divergências ficam locais. Publicação atômica com verificação de concorrência, hashes, credencial protegida por DPAPI, retomada após falha e cotas gratuitas sem upgrade. A página visível consulta o manifesto a cada minuto. A interface continua publicada automaticamente pelo GitHub Actions ao atualizar `main`.
+
+Implementação funcional: 100% do escopo inicial. Validação operacional: 90% concluída e 10% restante. O primeiro envio real depende da conexão da conta Firebase pela interface local; não declarar a sincronização operacional concluída antes de validá-la.
+
+Validações da entrega: suíte backend aprovada e sete testes específicos de sincronização/DPAPI/atomicidade/transporte aprovados; 38 testes de interface aprovados. O executável passou pelo navegador real com cadastro, login, importação e navegação dos 13 quadros. O site compilado passou por login, autorização, troca de geração, recarga e logout com Firebase simulado. Instalação, desinstalação e reinstalação reais verificaram o registro em Aplicativos do Windows e hashes idênticos para banco e contas. Uma cópia local das bases atuais confirmou os totais dos recortes e o limite de tamanho, sem envio remoto. A validação do legado concluiu 102 verificações sem erro.
+
 ## Navegação pelos quadros indicadores — 0.1.59
 
 Os 13 quadros da Visão Executiva são botões acessíveis: clique, Enter ou Espaço levam à análise correspondente, com foco no destino, item do menu ativo e endereço identificando o indicador. Os quadros de MVI CAD e NEAC selecionam explicitamente sua própria fonte. Ocorrências abre os gráficos gerais; os dois quadros de drogas abrem a análise de drogas. Os filtros existentes são preservados e o botão Voltar do navegador restaura a análise anterior. A implementação funcional permanece em 100% do escopo inicial e a validação operacional em 90% concluída e 10% restante; nenhuma fase adicional foi declarada concluída.
