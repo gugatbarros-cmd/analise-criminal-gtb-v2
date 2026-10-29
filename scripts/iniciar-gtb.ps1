@@ -63,7 +63,9 @@ try {
       $env:GTB_NO_BROWSER = $previousNoBrowser
     }
 
-    $deadline = (Get-Date).AddSeconds(45)
+    # A primeira abertura de uma atualização pode revisar os dados derivados.
+    # O processo continua supervisionado enquanto preserva as bases originais.
+    $deadline = (Get-Date).AddSeconds(120)
     while (-not (Test-GtbHealth) -and (Get-Date) -lt $deadline) {
       if ($process.HasExited) {
         throw "O executável encerrou antes de iniciar. Consulte o registro: $log"
@@ -72,7 +74,7 @@ try {
       $process.Refresh()
     }
     if (-not (Test-GtbHealth)) {
-      throw "O sistema não respondeu em 45 segundos. Consulte o registro: $log"
+      throw "O sistema não respondeu em 120 segundos. Consulte o registro: $log"
     }
   }
 
