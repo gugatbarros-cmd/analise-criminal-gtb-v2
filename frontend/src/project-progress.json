@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-28",
-  "implementationStatus": "Versão funcional finalizada; login, cadastro e importação pela janela do executável corrigidos na 0.1.57. Implementação funcional: 100%; validação operacional: 90% concluída e 10% restante. As bases restantes podem ser adicionadas depois.",
+  "updatedAt": "2026-10-29",
+  "implementationStatus": "Versão funcional finalizada; gráficos e Visão Executiva aproximados do legado na 0.1.58, com recorte inicial de 2026, municípios do 10º BPM e unidades explícitas. Validação operacional: 90% concluída e 10% restante; igualdade numérica depende das mesmas bases e filtros.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

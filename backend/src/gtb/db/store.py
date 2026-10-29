@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import os
+import re
 import shutil
 import threading
 import uuid
@@ -23,7 +24,7 @@ from gtb.ingestion.adapters.tabular import read_rows
 from gtb.sync.outbox import enqueue_import
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
-ADAPTER_VERSION = "0.1.17"
+ADAPTER_VERSION = "0.1.18"
 
 
 def indicator_evidence(raw_json: str, source: str, indicator: str | None) -> str:
@@ -104,12 +105,24 @@ class Store:
                         VARCHAR[] DEFAULT []""")
                 rows = db.execute("""SELECT natural_key, version, raw_json FROM record_versions
                     WHERE source = 'ocorrencias'""").fetchall()
+                changes = []
                 for natural_key, version, raw_json in rows:
                     record = normalize("ocorrencias", json.loads(raw_json))
-                    db.execute("""UPDATE record_versions SET nature = ?, category = ?, indicators = ?
-                        WHERE source = 'ocorrencias' AND natural_key = ? AND version = ?""",
-                               [record.nature, record.category, list(record.indicators),
-                                natural_key, version])
+                    changes.append({"natural_key": natural_key, "version": version,
+                                    "nature": record.nature, "category": record.category,
+                                    "indicators": list(record.indicators)})
+                if changes:
+                    db.execute("""UPDATE record_versions AS target
+                        SET nature = changes.nature, category = changes.category,
+                            indicators = changes.indicators
+                        FROM (SELECT value->>'natural_key' AS natural_key,
+                            CAST(value->>'version' AS INTEGER) AS version,
+                            value->>'nature' AS nature, value->>'category' AS category,
+                            from_json(value->'indicators', '["VARCHAR"]') AS indicators
+                            FROM json_each(?)) AS changes
+                        WHERE target.source = 'ocorrencias'
+                          AND target.natural_key = changes.natural_key
+                          AND target.version = changes.version""", [json.dumps(changes)])
                 db.execute("UPDATE source_types SET adapter_version = ?", [ADAPTER_VERSION])
                 db.execute("COMMIT")
             except Exception:
@@ -388,7 +401,8 @@ class Store:
                 staging.unlink(missing_ok=True)
         return saved
 
-    def summary(self, year: int | None = None, municipality: str | None = None) -> dict:
+    def summary(self, year: int | None = None, municipality: str | None = None,
+                bpm_only: bool = False) -> dict:
         clauses = ["is_current", "eligible"]
         params: list[object] = []
         if year:
@@ -397,6 +411,18 @@ class Store:
         if municipality:
             clauses.append("lower(municipality) = lower(?)")
             params.append("Tanque d'Arca" if key(municipality) == "tanquedarca" else municipality)
+        if bpm_only:
+            cities = ("Palmeira dos Índios", "Belém", "Tanque d'Arca", "Maribondo", "Igaci",
+                      "Quebrangulo", "Paulo Jacinto", "Mar Vermelho", "Estrela de Alagoas",
+                      "Minador do Negrão", "Cacimbinhas")
+            clauses.append("regexp_replace(strip_accents(lower(municipality)), "
+                           "'[^a-z0-9]', '', 'g') IN (" + ",".join("?" for _ in cities) + ")")
+            params.extend(key(city) for city in cities)
+            # A fiscalização isolada permanece na auditoria, como no legado,
+            # mas não representa uma nova ocorrência operacional do painel.
+            clauses.append("NOT (source = 'ocorrencias' AND "
+                           "contains(strip_accents(lower(nature)), 'apoio ao judiciario') AND "
+                           "contains(strip_accents(lower(nature)), 'fiscalizacao de medida protetiva'))")
         where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
             rows = db.execute(f"""SELECT source, category, indicators, year,
@@ -406,6 +432,43 @@ class Store:
                 ORDER BY year, month, source, category""",
                               params).fetchall()
             quarantine_count = db.execute("SELECT count(*) FROM quarantine").fetchone()[0]
+            distributions = db.execute(f"""SELECT municipality, nature, year, month(event_date), count(*)
+                FROM record_versions WHERE {where} AND source = 'ocorrencias'
+                GROUP BY municipality, nature, year, month(event_date)""", params).fetchall()
+            independent = db.execute(f"""SELECT source, raw_json FROM record_versions
+                WHERE {where} AND source IN ('armas', 'drogas')""", params).fetchall()
+            coverage = dict(db.execute("SELECT source, count(*) FROM record_versions "
+                                       "WHERE is_current GROUP BY source").fetchall())
+            general_raw = db.execute(f"SELECT raw_json FROM record_versions WHERE {where} "
+                                     "AND source = 'ocorrencias'", params).fetchall()
+        general_arms, general_drugs = 0, 0
+        for (raw,) in general_raw:
+            text = plain(' '.join(str(value) for column, value in json.loads(raw).items()
+                                  if not column.startswith('__siopm')))
+            general_arms += bool(re.search(r"arma|armas|revolver|pistola|faca|facao|garrucha|espingarda", text))
+            general_drugs += bool(re.search(r"droga|entorpecente|maconha|cocaina|crack|ecstasy|lsd|pasta base", text))
+        seized_units, drug_grams, weighted_records = 0, 0.0, 0
+        for source, raw in independent:
+            record = json.loads(raw)
+            if source == "armas":
+                if arm_seized(record):
+                    seized_units += arm_quantity(record)
+            else:
+                grams = drug_weight_grams(record)
+                if grams is not None:
+                    drug_grams += grams
+                    weighted_records += 1
+        city_counts, nature_counts, month_counts = {}, {}, {}
+        for city, nature, row_year, month, total in distributions:
+            city_counts[city] = city_counts.get(city, 0) + total
+            label = nature or "Não informada"
+            nature_counts[label] = nature_counts.get(label, 0) + total
+            period = f"{row_year:04d}-{month:02d}"
+            month_counts[period] = month_counts.get(period, 0) + total
+        def ranking(counts: dict, temporal: bool = False) -> list[dict]:
+            ordered = sorted(counts.items(), key=(lambda item: item[0]) if temporal
+                             else (lambda item: (-item[1], item[0])))
+            return [{"name": name, "total": total} for name, total in ordered]
         by_source = {source: 0 for source in SOURCES}
         monthly: dict[str, dict[str, int]] = {}
         categories: dict[str, dict[str, int]] = {}
@@ -416,6 +479,12 @@ class Store:
             if category:
                 categories.setdefault(source, {})[category] = categories.setdefault(source, {}).get(category, 0) + total
         return {"by_source": by_source, "monthly": monthly, "categories": categories,
+                "occurrences": by_source["ocorrencias"], "seized_arms": seized_units,
+                "general_arm_occurrences": general_arms, "general_drug_occurrences": general_drugs,
+                "drug_weight_grams": drug_grams, "weighted_drug_records": weighted_records,
+                "source_coverage": {source: coverage.get(source, 0) for source in SOURCES},
+                "occurrence_charts": {"monthly": ranking(month_counts, True),
+                                      "cities": ranking(city_counts), "natures": ranking(nature_counts)},
                 "quarantined_rows": quarantine_count,
                 "mvi_cad": by_source["mvi_cad"], "mvi_neac": by_source["mvi_neac"],
                 "cvp": sum(total for source, _category, indicators, *_rest, total in rows
@@ -437,6 +506,12 @@ class Store:
     def tco_analysis(self, year: int | None = None,
                      municipality: str | None = None) -> dict:
         return self._occurrence_analysis("TCO", year, municipality)
+
+    def crime_analysis(self, kind: str, year: int | None = None,
+                       municipality: str | None = None) -> dict:
+        if kind not in {"CVP", "Tentativa de homicídio"}:
+            raise ValueError("Indicador criminal desconhecido")
+        return self._occurrence_analysis(kind, year, municipality)
 
     def operational_analysis(self, kind: str, year: int | None = None,
                              municipality: str | None = None) -> dict:

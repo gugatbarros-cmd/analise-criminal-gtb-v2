@@ -1,8 +1,9 @@
+import type { LegacySummaryFields } from './legacy-summary'
 import { demoFetch } from './static-demo'
 import { getSessionToken } from './auth'
 
 export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas' | 'guarnicoes'
-export type Summary = { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; domestica: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
+export type Summary = LegacySummaryFields & { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; domestica: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number }
 export type Batch = { id: string; source: Source; filename: string; imported_at: string; row_count: number; inserted: number; updated: number; unchanged: number; quarantined: number; differences: number; status: string }
 export type BatchPage = AuditPage<Batch>
 export type AuditPage<T> = { items: T[]; total: number; page: number; size: number }
@@ -57,7 +58,15 @@ export async function getSummary(year?: number, municipality?: string): Promise<
   const params = new URLSearchParams()
   if (year) params.set('year', String(year))
   if (municipality) params.set('municipality', municipality)
+  params.set('bpm_only', 'true')
   return json(await apiFetch(`${baseUrl}/indicators/summary?${params}`))
+}
+
+export async function getCrimeAnalysis(kind: 'CVP' | 'Tentativa de homicídio', year?: number, municipality?: string): Promise<OperationalAnalysis> {
+  const params = new URLSearchParams({ kind })
+  if (year) params.set('year', String(year))
+  if (municipality) params.set('municipality', municipality)
+  return json(await apiFetch(`${baseUrl}/indicators/crimes/analysis?${params}`))
 }
 
 export async function getTcoAnalysis(year?: number, municipality?: string): Promise<TcoAnalysis> {

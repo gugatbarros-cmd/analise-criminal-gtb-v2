@@ -9,7 +9,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.57"
+VERSION = "0.1.58"
 
 
 def export() -> dict:
@@ -34,7 +34,7 @@ def export() -> dict:
             for city in [None, *cities, "__sem_resultado__"]:
                 lookup = f"{year or '*'}|{(city or '*').lower()}"
                 views[lookup] = {
-                    "summary": store.summary(year, city),
+                    "summary": store.summary(year, city, bpm_only=True),
                     "tco": store.tco_analysis(year, city),
                     "domestic": store.domestic_analysis(year, city),
                     "arms": store.arms_analysis(year, city),

@@ -216,6 +216,23 @@ export async function demoFetch(input: string, init?: RequestInit): Promise<Resp
   const path = url.pathname
   const view = viewFor(data, url.searchParams)
   if (path === '/indicators/summary') return response(view.summary)
+  if (path === '/indicators/crimes/analysis') {
+    const kind = url.searchParams.get('kind') || ''
+    if (!['CVP', 'Tentativa de homicídio'].includes(kind)) return response({ detail: 'Indicador desconhecido' }, 422)
+    const year = Number(url.searchParams.get('year'))
+    const city = url.searchParams.get('municipality')
+    const rows = data.records.ocorrencias.filter(item => item.eligible && item.indicators.includes(kind) &&
+      (!year || Number(item.event_date.slice(0, 4)) === year) && (!city || fold(item.municipality) === fold(city)))
+    const distribution = (field: (item: RecordItem) => string) => {
+      const counts: Record<string, number> = {}
+      rows.forEach(item => { const key = field(item); counts[key] = (counts[key] || 0) + 1 })
+      return Object.entries(counts).map(([name, total]) => ({ name, total }))
+    }
+    return response({ total: rows.length,
+      monthly: distribution(item => item.event_date.slice(0, 7)).sort((a, b) => a.name.localeCompare(b.name)).map(item => ({ period: item.name, total: item.total })),
+      municipalities: distribution(item => item.municipality).sort((a, b) => b.total - a.total),
+      natures: distribution(item => item.nature || 'Não informada').sort((a, b) => b.total - a.total) })
+  }
   if (path === '/indicators/tco/analysis') return response(view.tco)
   if (path === '/indicators/domestic/analysis') return response(view.domestic)
   if (path === '/indicators/arms/analysis') return response(

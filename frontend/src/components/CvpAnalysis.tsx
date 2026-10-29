@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getRecords, type Summary } from '../services/api'
+import { CrimeCharts } from './CrimeCharts'
 
 export function CvpAnalysis({ summary, year, municipality }: {
   summary?: Summary; year?: number; municipality?: string
@@ -17,6 +18,7 @@ export function CvpAnalysis({ summary, year, municipality }: {
   return <section className="panel" aria-label="Análise CVP">
     <div className="section-head"><div><p className="eyebrow">Crimes violentos contra o patrimônio</p><h2>Análise CVP</h2></div><span>Uma ocorrência por CAD/BO</span></div>
     <p className="muted">Roubos consumados e tentados separados. Latrocínios ficam fora deste indicador. Confira a classificação no registro original.</p>
+    <CrimeCharts kind="CVP" year={year} municipality={municipality} />
     <div className="cvp-totals"><span>Consumados <strong>{totals['CVP Consumado'] ?? 0}</strong></span><span>Tentados <strong>{totals['CVP Tentado'] ?? 0}</strong></span></div>
     <div className="filters"><label>Situação<select value={status} onChange={event => { setStatus(event.target.value as typeof status); setPage(1) }}><option>Todos</option><option>Consumado</option><option>Tentado</option></select></label></div>
     {records.isPending && <p className="empty">Carregando ocorrências…</p>}

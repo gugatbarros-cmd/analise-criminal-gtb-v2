@@ -3,6 +3,9 @@
 import re
 import unicodedata
 from datetime import date, datetime, timedelta
+from functools import lru_cache
+
+from gtb.indicators.domestic_legacy import classify as classify_domestic_legacy
 
 
 def plain(value: object) -> str:
@@ -24,105 +27,7 @@ def meaningful(value: object) -> bool:
 
 
 def domestic_triage(row: dict[str, str]) -> dict[str, str]:
-    """Triagem documental conservadora baseada no classificador do legado."""
-    def affirmed(value: str, pattern: str) -> bool:
-        for clause in re.split(r"[.;\n]|\b(?:mas|porem|contudo|entretanto)\b", value):
-            if re.search(r"historico de|anteriormente|no passado|sem novo fato|"
-                         r"suspeita de|possivel|hipotese de|averiguar", clause):
-                continue
-            for match in re.finditer(pattern, clause):
-                before = clause[:match.start()]
-                after = clause[match.end():]
-                if re.search(r"(?:nao\s+(?:houve|foi|ha|ocorreu|sofreu|constatou|"
-                             r"confirmou)|sem|nega|negou|descartad[oa])(?:\s+\w+){0,5}\s*$", before):
-                    continue
-                if re.match(r"\s+(?:nao\s+(?:constatad[oa]|confirmad[oa])|"
-                            r"descartad[oa]|inexistente)\b", after):
-                    continue
-                return True
-        return False
-
-    fields = [(column, plain(value)) for column, value in row.items() if value]
-    nature = [(column, value) for column, value in fields if re.search(
-        r"natureza|tipificacao|tipicidade|classificacao", plain(column))]
-    final = [(column, value) for column, value in nature if re.search(
-        r"final|no atendimento|constatada|confirmada|tipificacao|tipicidade", plain(column))
-        and not re.search(r"inicial|solicitad|comunicad|despacho", plain(column))]
-    solution = [(column, value) for column, value in fields if re.search(
-        r"solucao|desfecho|resultado do atendimento|conclusao", plain(column))]
-    narrative = [(column, value) for column, value in fields if re.search(
-        r"relato|historico|narrativa|texto do complemento|descricao|observac", plain(column))
-        and not re.search(r"nome|autor do registro", plain(column))]
-    relationship = [(column, value) for column, value in fields if re.search(
-        r"parentesco|vinculo|relacao", plain(column))]
-    text = " . ".join(value for _, value in [*nature, *solution, *narrative])
-    scope = (r"violencia\s+(?:domestica|familiar|contra\s+(?:a\s+)?mulher)|"
-             r"maria\s+da\s+penha|lei\s*11[.\s]*340|feminicidio")
-    family = (r"\b(?:ex[ -]*)?(?:companheir[oa]|conjuge|espos[oa]|namorad[oa])\b|"
-              r"relacao intima|ambito familiar|vinculo familiar|"
-              r"\b(?:mae|pai|filha|filho|irma|irmao|padrasto|madrasta)\b")
-    woman_words = (r"violencia\s+contra\s+(?:a\s+)?mulher|maria\s+da\s+penha|"
-                   r"lei\s*11[.\s]*340|feminicidio|\bvitima\s+(?:e\s+)?"
-                   r"(?:mulher|feminina|do sexo feminino)|\b(?:a mulher|a esposa|"
-                   r"a companheira|a ex[ -]companheira|a namorada|a filha|a mae)\b|"
-                   r"\b(?:agredida|ameacada|estuprada|ofendida)\b")
-    conduct = (r"tentativa\s+de\s+feminicidio|\bfeminicidio\b|tentativa\s+de\s+homicidio|"
-               r"descumprimento\s+(?:de\s+)?medida\s+protetiva|estupro|violencia sexual|"
-               r"lesao corporal|agressao|agrediu|vias de fato|ameac(?:a|ou|ada)|"
-               r"perseguicao|violencia psicologica|humilhacao|chantagem|injuria|"
-               r"difamacao|calunia|violencia moral|violencia patrimonial|violencia fisica")
-    sex = [value for column, value in fields if re.fullmatch(
-        r"(?:sexo|genero)(?: da| de)? vitima", plain(column))]
-    female = any(value in {"f", "feminino", "feminina", "mulher"} for value in sex)
-    male = any(value in {"m", "masculino", "masculina", "homem"} for value in sex)
-    woman = female or bool(re.search(woman_words, text))
-    context = bool(re.search(scope, text) or re.search(r"medida protetiva", text)
-                   or any(re.search(family, value) for _, value in [*relationship, *narrative]))
-    candidate = bool(re.search(scope, text) or re.search(r"medida protetiva", text)
-                     or re.search(conduct, text) and (context or woman))
-
-    def decision(status: str, reason: str, evidence: str = "") -> dict[str, str]:
-        return {"status": status, "reason": reason, "evidence": evidence}
-
-    if not candidate:
-        return decision("unrelated", "Sem indicação do tema nos campos do fato")
-    denial = (r"(?:fato|ocorrencia|denuncia)\s+(?:nao\s+(?:constatad[oa]|"
-              r"confirmad[oa])|improcedente)|nada\s+constatado|sem\s+ilicitude|"
-              r"\btrote\b|denuncia\s+falsa|nao\s+(?:se\s+)?trata\s+de\s+"
-              r"violencia|nao\s+(?:houve|ha|ocorreu|se\s+configura|configura)\s+"
-              r"(?:a\s+)?violencia|violencia\s+(?:domestica|familiar)\s+"
-              r"(?:nao\s+(?:constatada|confirmada)|descartada|inexistente)")
-    negative = next(((column, value) for column, value in [*solution, *final]
-                     if re.search(denial, value) or re.fullmatch(
-                         r"nao constatad[oa]|nao configurad[oa]|improcedente", value)), None)
-    affirmative_final = [(column, value) for column, value in final
-                         if not re.search(denial, value) and not re.search(
-                             r"visita|fiscalizacao|orientacao|acompanhamento", value)]
-    affirmative_narrative = [(column, value) for column, value in narrative if re.search(
-        r"\bvitima\b.{0,45}\b(?:relatou|informou|afirmou|declarou)|"
-        r"\b(?:foi|era)\s+(?:agredida|ameacada|estuprada)|"
-        r"\bagrediu\s+(?:a\s+)?(?:esposa|companheira|namorada)|"
-        r"\b(?:equipe|guarnicao)\b.{0,60}\b(?:constatou|presenciou|confirmou)", value)]
-    positive = next(((column, value) for column, value in [
-        *affirmative_final, *affirmative_narrative] if affirmed(value, conduct) or
-        (column, value) in affirmative_final and affirmed(value, scope)), None)
-    if negative:
-        evidence = f"{negative[0]}: {row[negative[0]]}"
-        if positive:
-            return decision("pending", "Tipificação e conclusão do atendimento conflitantes", evidence)
-        return decision("excluded", "Atendimento registrou não configuração ou fato não constatado", evidence)
-    if male and woman:
-        return decision("pending", "Perfil da vítima conflitante; conferir o registro original")
-    if male:
-        return decision("outside", "Campo específico identifica vítima masculina")
-    if not woman:
-        return decision("pending", "Sem identificação suficiente de vítima mulher")
-    if not context:
-        return decision("pending", "Sem contexto doméstico, familiar ou íntimo confirmado")
-    if not positive:
-        return decision("pending", "Menção, natureza inicial ou medida sem novo fato afirmativo")
-    return decision("recognized", "Fato descrito ou tipificado; sujeito à revisão humana",
-                    f"{positive[0]}: {row[positive[0]]}")
+    return classify_domestic_legacy(row)
 
 
 def mvi_instrument(value: str) -> str:
@@ -145,6 +50,22 @@ def mvi_instrument(value: str) -> str:
     return "Não identificado"
 
 
+@lru_cache(maxsize=512)
+def _event_column(column: str) -> bool:
+    terms = ("natureza", "tipificacao", "tipicidade", "classificacao", "solucao", "relato",
+             "historico", "narrativa", "descricao", "complemento", "providencia", "desfecho",
+             "modalidade", "acao", "texto", "boletim", "atendimentoinicial", "informadic",
+             "tipodeocorrencia", "tipododespacho")
+    name = key(column)
+    return any(term in name for term in terms)
+
+
+def event_text(row: dict) -> str:
+    """Inclui os campos narrativos CAD sem usar nomes e contatos como evidência."""
+    return " ".join(str(value) for column, value in row.items() if value and
+                    not column.startswith('__siopm') and _event_column(column))
+
+
 def operational_action(row: dict[str, str], kind: str) -> tuple[bool, str]:
     """Reconhece ações e perturbação do sossego na base geral."""
     if kind not in {"Mandados", "Visitas", "Sossego"}:
@@ -164,11 +85,7 @@ def operational_action(row: dict[str, str], kind: str) -> tuple[bool, str]:
                      r"sem ilicitude|fato inexistente|improcedente|engano", solution):
             return False, "Ocorrência descartada pela solução"
         return True, "Natureza ou tipificação de perturbação do sossego ou trabalho"
-    relevant = ("natureza", "tipificacao", "tipicidade", "classificacao", "solucao",
-                "relato", "historico", "narrativa", "descricao", "complemento",
-                "providencia", "desfecho", "modalidade", "acao")
-    text = plain(" ".join(str(value) for column, value in row.items()
-                          if value and any(term in key(column) for term in relevant)))
+    text = plain(event_text(row))
     excluded = (r"nao\s+(?:cumprid[oa]|realizad[oa]|localizad[oa]|encontrad[oa])|"
                 r"sem\s+exito|cancelad[oa]|improcedente|trote|nada\s+constatado|"
                 r"fato\s+nao\s+constatado")
@@ -195,11 +112,11 @@ def operational_action(row: dict[str, str], kind: str) -> tuple[bool, str]:
         )
     else:
         rules = (
-            (r"\bvisita\s+orientativa\b", "Visita orientativa registrada"),
-            (r"\bvisita\s+preventiva\b", "Visita preventiva registrada"),
-            (r"\bvisita\s+comunitaria\b", "Visita comunitária registrada"),
-            (r"\bvisita\s+tranquilizadora\b", "Visita tranquilizadora registrada"),
-            (r"\bvisita\s+(?:de\s+)?acompanhamento\b",
+            (r"\bvisita\s+orientativa", "Visita orientativa registrada"),
+            (r"\bvisita\s+preventiva", "Visita preventiva registrada"),
+            (r"\bvisita\s+comunitaria", "Visita comunitária registrada"),
+            (r"\bvisita\s+tranquilizadora", "Visita tranquilizadora registrada"),
+            (r"\bvisita\s+(?:de\s+)?acompanhamento",
              "Visita de acompanhamento registrada"),
         )
     for pattern, reason in rules:

@@ -1,6 +1,7 @@
 """Mapeia colunas do legado sem misturar fontes."""
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 from gtb.indicators.arms import arm_field, arm_identity
 from gtb.indicators.drugs import drug_identity, drug_type
@@ -11,6 +12,7 @@ from gtb.indicators.rules import (
     domestic_triage,
     elaborated_tco,
     event_date,
+    event_text,
     homicide_attempt,
     key,
     meaningful,
@@ -58,10 +60,22 @@ ALIASES = {
 }
 
 
+@lru_cache(maxsize=512)
+def _column_key(column: str) -> str:
+    return key(column)
+
+
+class _PreparedRow(dict):
+    def __init__(self, row: dict):
+        super().__init__(row)
+        self.columns = {_column_key(column): value for column, value in row.items() if column.strip()}
+
+
 def pick(row: dict[str, str], field: str) -> str:
-    normalized = {key(column): value for column, value in row.items() if column.strip()}
+    normalized = row.columns if isinstance(row, _PreparedRow) else {
+        _column_key(column): value for column, value in row.items() if column.strip()}
     for alias in ALIASES[field]:
-        value = normalized.get(key(alias))
+        value = normalized.get(_column_key(alias))
         if value is not None and str(value).strip():
             return str(value).strip()
     return ""
@@ -97,6 +111,7 @@ class Record:
 def normalize(source: str, row: dict[str, str]) -> Record:
     if source not in SOURCES:
         raise ValueError("Fonte desconhecida")
+    row = _PreparedRow(row)
     when = event_date(pick(row, "date"))
     occurrence = pick(row, "occurrence")
     city = pick(row, "city")
@@ -156,18 +171,14 @@ def normalize(source: str, row: dict[str, str]) -> Record:
         labels: list[str] = []
         if source == "ocorrencias":
             classification = " ".join(str(value) for column, value in row.items()
-                                      if value and any(term in key(column) for term in
+                                      if value and any(term in _column_key(column) for term in
                                       ("tipificacao", "tipicidade", "natureza", "indicadorcriminal",
                                        "tipodeocorrencia", "classificacao")))
             cvp = cvp_class(classification or nature)
             category = "CVP " + cvp if cvp else ""
             if cvp:
                 labels.append("CVP")
-            attempt_text = " ".join(str(value) for column, value in row.items()
-                                    if value and any(term in key(column) for term in
-                                    ("tipificacao", "tipicidade", "natureza", "classificacao",
-                                     "relato", "historico", "narrativa", "descricao",
-                                     "complemento", "solucao", "desfecho", "providencia")))
+            attempt_text = event_text(row)
             if homicide_attempt(attempt_text or nature, pick(row, "solution")):
                 labels.append("Tentativa de homicídio")
                 category = category or "Tentativa de homicídio"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getRecords } from '../services/api'
+import { CrimeCharts } from './CrimeCharts'
 
 export function AttemptAnalysis({ year, municipality }: { year?: number; municipality?: string }) {
   const [page, setPage] = useState(1)
@@ -10,6 +11,7 @@ export function AttemptAnalysis({ year, municipality }: { year?: number; municip
     queryFn: () => getRecords('ocorrencias', page, year, municipality, undefined, undefined, 'Tentativa de homicídio'),
   })
   return <section className="panel" aria-label="Análise de tentativas de homicídio">
+    <CrimeCharts kind="Tentativa de homicídio" year={year} municipality={municipality} />
     <div className="section-head"><div><p className="eyebrow">Base geral de ocorrências</p><h2>Tentativas de homicídio</h2></div><span>Uma ocorrência por CAD/BO</span></div>
     <p className="muted">Tipificação ou relato com tentativa explícita; soluções improcedentes e hipóteses descartadas ficam fora. Solução vazia não elimina o caso. Revise cada classificação no registro original.</p>
     {records.isPending && <p className="empty">Carregando tentativas…</p>}

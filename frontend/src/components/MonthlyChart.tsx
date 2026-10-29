@@ -14,7 +14,7 @@ export function MonthlyChart({ monthly }: { monthly: Summary['monthly'] }) {
     const chart: ECharts = init(element.current, undefined, { renderer: 'canvas' })
       const months = Object.keys(monthly).sort()
       chart.setOption({
-        backgroundColor: 'transparent', color: ['#74cfc0', '#d9a968'],
+        backgroundColor: 'transparent', color: ['#123c7c', '#c1121f'],
         tooltip: { trigger: 'axis' },
         legend: { data: ['MVI CAD', 'MVI NEAC'], textStyle: { color: '#b9cbd5' } },
         grid: { left: 45, right: 20, top: 45, bottom: 42 },
@@ -25,7 +25,11 @@ export function MonthlyChart({ monthly }: { monthly: Summary['monthly'] }) {
           { name: 'MVI NEAC', type: 'bar', data: months.map(month => monthly[month].mvi_neac || 0) },
         ],
       })
-    return () => chart.dispose()
+    const resize = () => chart.resize()
+    const observer = new ResizeObserver(resize)
+    observer.observe(element.current)
+    window.addEventListener('resize', resize)
+    return () => { observer.disconnect(); window.removeEventListener('resize', resize); chart.dispose() }
   }, [monthly])
   if (!Object.keys(monthly).length) return <p className="empty">Importe uma base sintética para ver a série mensal.</p>
   return <div ref={element} className="chart" role="img" aria-label="Série mensal separada de MVI CAD e MVI NEAC" />

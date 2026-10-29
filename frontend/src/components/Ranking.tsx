@@ -1,6 +1,8 @@
+import { AnalysisChart } from './AnalysisChart'
 export type RankingItem = { name: string; total: number }
 
 export function Ranking({ title, items }: { title: string; items: RankingItem[] }) {
-  const maximum = Math.max(1, ...items.map(item => item.total))
-  return <div className="analysis-ranking"><h3>{title}</h3>{items.length === 0 ? <p className="empty">Sem dados neste recorte.</p> : <ol>{items.map(item => <li key={item.name}><div><span>{item.name}</span><strong>{item.total}</strong></div><span className="analysis-bar" aria-hidden="true"><span style={{ width: `${item.total / maximum * 100}%` }} /></span></li>)}</ol>}</div>
+  const temporal = /mensal|por m[eê]s|histórico anual/i.test(title)
+  const categorical = /classifica|tipos|meio empregado|calibres|situações/i.test(title)
+  return <div className="analysis-ranking"><h3>{title}</h3><AnalysisChart title={title} items={items} kind={temporal ? 'line' : categorical && items.length <= 8 ? 'doughnut' : 'bar'} />{items.length > 0 && <details><summary>Conferir números do gráfico</summary><table className="source-table"><thead><tr><th>Categoria</th><th>Quantidade</th></tr></thead><tbody>{items.map(item => <tr key={item.name}><td>{item.name}</td><td>{item.total.toLocaleString('pt-BR')}</td></tr>)}</tbody></table></details>}</div>
 }

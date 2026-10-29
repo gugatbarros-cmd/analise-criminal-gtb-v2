@@ -92,6 +92,16 @@ try {
   await evaluate(`document.querySelector('input[type=file]').form.requestSubmit()`);
   await until(() => evaluate(`document.querySelector('.two-col p.success')?.textContent.includes('Lote concluído')`), 'importação');
   await until(() => evaluate(`Array.from(document.querySelectorAll('#indicadores article')).some(el=>el.querySelector('span')?.textContent==='CVP'&&el.querySelector('strong')?.textContent==='1')`), 'CVP atualizado');
+  await until(() => evaluate(`document.querySelector('[aria-label="Análise CVP"] .analysis-total strong')?.textContent === '1'`), 'gráfico CVP atualizado após importação');
+  assert.equal(await evaluate(`Array.from(document.querySelectorAll('#indicadores article')).find(el=>el.querySelector('span')?.textContent==='Ocorrências')?.querySelector('strong')?.textContent`), '1');
+  assert.ok(await evaluate(`document.querySelectorAll('.legacy-series-chart polyline').length > 0`));
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1050, deviceScaleFactor: 1, mobile: false });
+  fs.writeFileSync(path.join(directory, 'dashboard-desktop.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, screenWidth: 390, screenHeight: 844, deviceScaleFactor: 1, mobile: true });
+  await send('Page.reload');
+  await until(() => evaluate(`!!document.querySelector('.legacy-user')`), 'sessão preservada ao reabrir no celular');
+  await new Promise(resolve => setTimeout(resolve, 350));
+  assert.ok(await evaluate(`document.documentElement.scrollWidth <= innerWidth + 1`), 'Layout não pode exigir rolagem horizontal no celular');
   assert.deepEqual(errors, []);
   console.log(`Executável ${health.version}: cadastro, login, logomarca, pré-validação, importação e CVP aprovados no navegador real.`);
 } finally {

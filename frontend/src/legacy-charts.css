@@ -1,0 +1,33 @@
+.legacy-series-chart{display:block;width:100%;min-height:190px;color:var(--text,#243650)}
+.legacy-series-chart text{fill:currentColor;font:12px system-ui,sans-serif}
+.legacy-doughnut{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.legacy-doughnut svg{width:220px;max-width:100%;flex-shrink:0}
+.legacy-chart-total{font:bold 25px system-ui,sans-serif;fill:currentColor}
+.legacy-doughnut ul{list-style:none;padding:0;flex:1;min-width:140px}
+.legacy-doughnut li{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px}
+.legacy-doughnut li strong{margin-left:auto}
+.legacy-doughnut li i{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.legacy-bar-chart{max-height:440px;overflow:auto;padding:10px 4px}
+.legacy-bar-row{display:grid;grid-template-columns:minmax(90px,35%) 1fr;gap:12px;align-items:center;margin-bottom:12px;font-size:12px}
+.legacy-bar-row>span{overflow-wrap:anywhere}
+.legacy-bar-row>div{display:flex;align-items:center;gap:8px}
+.legacy-bar-row i{display:block;min-width:1px;height:22px;border-radius:3px}
+.legacy-bar-row strong{font-size:12px;white-space:nowrap}
+.analysis-ranking details{margin-top:12px}
+.analysis-ranking summary{cursor:pointer;font-size:12px}
+.source-table-wrap,.analysis-ranking details{max-width:100%;overflow-x:auto}
+.legacy-title{min-width:0;overflow:hidden}
+.legacy-title h1,.legacy-title span{overflow-wrap:anywhere}
+.legacy-workspace>.shell{min-width:0}
+.two-col>*{min-width:0}
+.legacy-workspace td{color:#17324d;border-color:#d8e2ec}
+.legacy-workspace th{color:#315a83;border-color:#d8e2ec}
+.legacy-workspace .analysis-total{color:#315a83}
+.legacy-workspace .analysis-total strong,.legacy-workspace .cvp-totals strong{color:#082f5d}
+.legacy-workspace .analysis-ranking{border-color:#d8e2ec}
+.legacy-workspace .cvp-totals span{border-color:#d8e2ec;color:#315a83}
+.release-details{margin:12px 0;color:#526a82}
+.release-details>summary{cursor:pointer;font-size:13px;padding:10px 0}
+.source-coverage{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.source-coverage span{border:1px solid #d7dfe9;border-radius:8px;padding:7px 10px;font-size:12px}
+@media(max-width:600px){.legacy-doughnut{justify-content:center}.legacy-series-chart{min-height:160px}.legacy-bar-row{grid-template-columns:40% 1fr}}

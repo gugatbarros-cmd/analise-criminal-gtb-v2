@@ -1,4 +1,16 @@
-# Andamento da implantação — 28/10/2026
+# Andamento da implantação — 29/10/2026
+
+## Aproximação visual e numérica do legado — 0.1.58
+
+O painel inicia em 2026, usa os 11 municípios do 10º BPM e apresenta ocorrências, armas apreendidas em unidades, quantidade de registros de drogas e peso convertido separadamente. A fiscalização isolada de medida protetiva permanece registrada e auditável, mas fica fora dos totais operacionais da Visão Executiva. A cobertura informa quantos registros estão importados em cada fonte, para distinguir base ausente de ausência de casos no período.
+
+Foram acrescentados gráficos gerais por mês, município e natureza; gráficos CVP e tentativas; linhas temporais, distribuições territoriais e anéis de classificação nas análises MVI, TCO, mandados, visitas, sossego, doméstica, armas, drogas e guarnições que utilizavam apenas rankings. Os gráficos preservam os valores de origem e oferecem tabela para conferência. CAD e NEAC continuam independentes. A demonstração usa somente dados sintéticos.
+
+Os testes verificam igualdade entre soma dos gráficos e cartões no mesmo recorte, municípios, ano, observação excluída, unidades de armas, pesos sem unidade conhecida e independência entre fontes MVI. Esta entrega não declara identidade total com o legado: filtros detalhados, mapas, relatórios completos e conferência dos totais sobre as mesmas bases ainda exigem validação. A implementação funcional permanece em 100% do escopo inicial; a validação operacional continua em 90% concluída e 10% restante, sem novas fases aceitas como concluídas.
+
+As colunas narrativas próprias do CAD, como Texto do Despachante, Texto para Divulgação, Boletim Resumido e Tipo do Despacho no Geral, participam das regras de tentativas e ações. A triagem doméstica foi alinhada à regra 4 do classificador do legado, inclusive negativas no relato, conflitos de perfil e identificação do sexo vinculada ao papel de vítima. A revisão dos dados derivados é transacional, em lote e precedida de backup; os registros originais e suas versões permanecem intactos.
+
+Sem base específica de armas ou drogas, o painel reproduz a pesquisa textual na base geral, identificada como **ocorrências com menção**. Esse número não é apresentado como unidades apreendidas ou peso conhecido. Nomes e contatos isolados não confirmam uma visita; por isso uma correspondência antiga apenas no solicitante pode divergir. A auditoria de comparação operacional fica somente no computador, fora do Git e da demonstração.
 
 ## Correção do executável 0.1.57
 
