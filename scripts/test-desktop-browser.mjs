@@ -95,6 +95,27 @@ try {
   await until(() => evaluate(`document.querySelector('[aria-label="Análise CVP"] .analysis-total strong')?.textContent === '1'`), 'gráfico CVP atualizado após importação');
   assert.equal(await evaluate(`Array.from(document.querySelectorAll('#indicadores article')).find(el=>el.querySelector('span')?.textContent==='Ocorrências')?.querySelector('strong')?.textContent`), '1');
   assert.ok(await evaluate(`document.querySelectorAll('.legacy-series-chart polyline').length > 0`));
+  const cards = await evaluate(`Array.from(document.querySelectorAll('[data-indicator-target]')).map(el=>({target:el.dataset.indicatorTarget,label:el.getAttribute('aria-label')}))`);
+  assert.equal(cards.length, 13);
+  for (const { target, label } of cards) {
+    await evaluate(`Array.from(document.querySelectorAll('[data-indicator-target]')).find(el=>el.getAttribute('aria-label')===${JSON.stringify(label)}).click()`);
+    await until(() => evaluate(`location.hash===${JSON.stringify('#' + target)} && document.activeElement?.id===${JSON.stringify(target)}`), `destino ${target}`);
+    assert.equal(await evaluate(`document.querySelector('[aria-label="Filtros de indicadores"] input[type=number]').value`), '2026');
+    if (target === 'mvi-cad' || target === 'mvi-neac') {
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Fonte MVI"] [aria-selected=true]').textContent`), target === 'mvi-cad' ? 'MVI CAD' : 'MVI NEAC');
+      assert.equal(await evaluate(`document.querySelector('.legacy-header h1').textContent`), target === 'mvi-cad' ? 'MVI CAD' : 'MVI NEAC');
+    }
+  }
+  await evaluate(`document.querySelector('[data-indicator-target="tco"]').focus()`);
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', unmodifiedText: '\r', windowsVirtualKeyCode: 13 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+  await until(() => evaluate(`location.hash==='#tco' && document.activeElement?.id==='tco'`), 'navegação por Enter');
+  await evaluate(`document.querySelector('[data-indicator-target="sossego"]').focus()`);
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', text: ' ', unmodifiedText: ' ', windowsVirtualKeyCode: 32 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 });
+  await until(() => evaluate(`location.hash==='#sossego'`), 'navegação por Espaço');
+  await evaluate(`history.back()`);
+  await until(() => evaluate(`location.hash==='#tco' && document.querySelector('.legacy-header h1').textContent==='Avaliação TCO'`), 'voltar à análise anterior');
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1050, deviceScaleFactor: 1, mobile: false });
   fs.writeFileSync(path.join(directory, 'dashboard-desktop.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, screenWidth: 390, screenHeight: 844, deviceScaleFactor: 1, mobile: true });
@@ -103,7 +124,7 @@ try {
   await new Promise(resolve => setTimeout(resolve, 350));
   assert.ok(await evaluate(`document.documentElement.scrollWidth <= innerWidth + 1`), 'Layout não pode exigir rolagem horizontal no celular');
   assert.deepEqual(errors, []);
-  console.log(`Executável ${health.version}: cadastro, login, logomarca, pré-validação, importação e CVP aprovados no navegador real.`);
+  console.log(`Executável ${health.version}: cadastro, login, importação, CVP, 13 quadros, fontes CAD/NEAC, filtros, Enter, Espaço, Voltar e celular aprovados no navegador real.`);
 } finally {
   socket?.close();
   for (const child of [browser, executable]) if (child?.pid && child.exitCode === null) {

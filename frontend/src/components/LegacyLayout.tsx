@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { IndicatorNavigationContext } from './IndicatorNavigation'
 
 type MenuItem = { label: string; target: string; short: string; planned?: boolean }
 type MenuGroup = { label: string; items: MenuItem[] }
@@ -6,11 +7,11 @@ type MenuGroup = { label: string; items: MenuItem[] }
 const menuGroups: MenuGroup[] = [
   { label: 'Visão geral', items: [
     { label: 'Visão Executiva', target: 'indicadores', short: 'VE' },
-    { label: 'MVI CAD', target: 'mvi', short: 'MC' },
-    { label: 'MVI NEAC', target: 'mvi', short: 'MN' },
+    { label: 'MVI CAD', target: 'mvi-cad', short: 'MC' },
+    { label: 'MVI NEAC', target: 'mvi-neac', short: 'MN' },
   ] },
   { label: 'Análises criminais', items: [
-    { label: 'Ocorrências', target: 'indicadores', short: 'OC' },
+    { label: 'Ocorrências', target: 'ocorrencias', short: 'OC' },
     { label: 'Análise CVP', target: 'cvp', short: 'CV' },
     { label: 'Tentativas de homicídio', target: 'tentativas', short: 'TH' },
     { label: 'Violência doméstica', target: 'domestica', short: 'VD' },
@@ -44,12 +45,13 @@ const menuGroups: MenuGroup[] = [
   ] },
 ]
 
-export function LegacyLayout({ children, version, demo, username, onLogout }: {
+export function LegacyLayout({ children, version, demo, username, onLogout, onNavigate }: {
   children: ReactNode
   version: string
   demo: boolean
   username?: string
   onLogout?: () => void
+  onNavigate?: (target: string) => void
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -60,14 +62,33 @@ export function LegacyLayout({ children, version, demo, username, onLogout }: {
     items: group.items.filter(item => item.label.toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR'))),
   })).filter(group => group.items.length), [search])
 
-  const navigate = (item: MenuItem) => {
-    setActive(item.label)
+  const navigateTarget = useCallback((target: string, label?: string, updateHistory = true) => {
+    const item = menuGroups.flatMap(group => group.items).find(item => item.target === target)
+    if (!item) return
+    setActive(label || item.label)
     setMobileOpen(false)
-    document.getElementById(item.target)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+    onNavigate?.(target)
+    if (updateHistory && window.location.hash !== `#${target}`) window.history.pushState(null, '', `#${target}`)
+    // Aguarda a troca da fonte CAD/NEAC antes de localizar o destino.
+    window.requestAnimationFrame(() => {
+      const destination = document.getElementById(target)
+      if (!destination) return
+      destination.setAttribute('tabindex', '-1')
+      destination.focus({ preventScroll: true })
+      destination.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [onNavigate])
+  useEffect(() => {
+    const restore = () => navigateTarget(window.location.hash.slice(1), undefined, false)
+    restore()
+    window.addEventListener('popstate', restore)
+    window.addEventListener('hashchange', restore)
+    return () => { window.removeEventListener('popstate', restore); window.removeEventListener('hashchange', restore) }
+  }, [navigateTarget])
+  const navigate = (item: MenuItem) => navigateTarget(item.target, item.label)
   const current = menuGroups.flatMap(group => group.items).find(item => item.label === active)
 
-  return <div className={`legacy-app${collapsed ? ' menu-collapsed' : ''}${mobileOpen ? ' menu-open' : ''}`}>
+  return <IndicatorNavigationContext.Provider value={navigateTarget}><div className={`legacy-app${collapsed ? ' menu-collapsed' : ''}${mobileOpen ? ' menu-open' : ''}`}>
     <aside className="legacy-sidebar" aria-label="Menu principal">
       <div className="legacy-sidebar-brand">
         <img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="10º BPM" />
@@ -100,5 +121,5 @@ export function LegacyLayout({ children, version, demo, username, onLogout }: {
       </header>
       {children}
     </div>
-  </div>
+  </div></IndicatorNavigationContext.Provider>
 }

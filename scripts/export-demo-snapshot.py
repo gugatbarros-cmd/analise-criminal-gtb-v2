@@ -9,7 +9,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.58"
+VERSION = "0.1.59"
 
 
 def export() -> dict:

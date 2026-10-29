@@ -1,0 +1,6 @@
+.metrics article.indicator-card{padding:0}
+.legacy-workspace .indicator-card-button{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px;width:100%;height:100%;padding:22px;text-align:left;border:0;border-radius:inherit;background:transparent;color:inherit;cursor:pointer}
+.legacy-workspace .indicator-card-button::after{content:'→';position:absolute;right:16px;top:14px;color:#315f9c;font-size:18px}
+.legacy-workspace .indicator-card-button:hover{background:#edf4fc}
+.legacy-workspace .indicator-card-button:focus-visible{outline:3px solid #dda928;outline-offset:-3px;background:#edf4fc}
+.indicator-card-button>span,.indicator-card-button>small{padding-right:16px}

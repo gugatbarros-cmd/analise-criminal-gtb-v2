@@ -1,5 +1,11 @@
 # Andamento da implantação — 29/10/2026
 
+## Navegação pelos quadros indicadores — 0.1.59
+
+Os 13 quadros da Visão Executiva são botões acessíveis: clique, Enter ou Espaço levam à análise correspondente, com foco no destino, item do menu ativo e endereço identificando o indicador. Os quadros de MVI CAD e NEAC selecionam explicitamente sua própria fonte. Ocorrências abre os gráficos gerais; os dois quadros de drogas abrem a análise de drogas. Os filtros existentes são preservados e o botão Voltar do navegador restaura a análise anterior. A implementação funcional permanece em 100% do escopo inicial e a validação operacional em 90% concluída e 10% restante; nenhuma fase adicional foi declarada concluída.
+
+Validação: 35 testes de interface e 4 testes do serviço de saúde aprovados. Ensaio do executável com navegador real e dados sintéticos aprovou os 13 destinos, seleção CAD/NEAC, preservação do ano, Enter, Espaço, Voltar e apresentação no celular. A instalação preservou os hashes do banco local e das contas de acesso.
+
 ## Aproximação visual e numérica do legado — 0.1.58
 
 O painel inicia em 2026, usa os 11 municípios do 10º BPM e apresenta ocorrências, armas apreendidas em unidades, quantidade de registros de drogas e peso convertido separadamente. A fiscalização isolada de medida protetiva permanece registrada e auditável, mas fica fora dos totais operacionais da Visão Executiva. A cobertura informa quantos registros estão importados em cada fonte, para distinguir base ausente de ausência de casos no período.
