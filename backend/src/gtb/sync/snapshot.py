@@ -74,11 +74,11 @@ def build_snapshot(store: Store, version: str) -> dict:
         for row in rows:
             source, key, ver, current, start, end, batch, eligible, category, occurrence, victim, day, city, reason, raw = row
             entry = details[source].setdefault(key, {'current': None, 'versions': [], 'history': {}})
-            entry['versions'].append(dict(version=ver, is_current=current, valid_from=start,
-                valid_to=end, batch_id=batch, eligible=eligible, category=category))
-            detail = dict(source=source, natural_key=key, version=ver, is_current=current,
-                batch_id=batch, eligible=eligible, category=category, occurrence=occurrence,
-                victim=victim, event_date=day, municipality=city, reason=reason, fields=json.loads(raw))
+            entry['versions'].append({'version': ver, 'is_current': current, 'valid_from': start,
+                'valid_to': end, 'batch_id': batch, 'eligible': eligible, 'category': category})
+            detail = {'source': source, 'natural_key': key, 'version': ver, 'is_current': current,
+                'batch_id': batch, 'eligible': eligible, 'category': category, 'occurrence': occurrence,
+                'victim': victim, 'event_date': day, 'municipality': city, 'reason': reason, 'fields': json.loads(raw)}
             entry['history'][str(ver)] = detail
             if current:
                 entry['current'] = detail
@@ -89,6 +89,6 @@ def build_snapshot(store: Store, version: str) -> dict:
                    for batch in store.batches(limit=100, offset=offset)]
         # Originais e quarentena ficam locais; a cópia online inclui somente as
         # tabelas processadas, análises, histórico MVI e contagens de importação.
-        return dict(version=version, syncedAt=datetime.now(UTC).isoformat(),
-            years=years, cities=cities, views=views, records=records, details=details,
-            evidence=evidence, batches=batches, audit={}, auditLocalOnly=True)
+        return {'version': version, 'syncedAt': datetime.now(UTC).isoformat(),
+            'years': years, 'cities': cities, 'views': views, 'records': records, 'details': details,
+            'evidence': evidence, 'batches': batches, 'audit': {}, 'auditLocalOnly': True}

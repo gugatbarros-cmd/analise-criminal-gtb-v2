@@ -14,11 +14,13 @@ from pathlib import Path
 
 import duckdb
 
+from gtb.db.neac_upgrade import upgrade_neac
 from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
 from gtb.indicators.drugs import drug_field, drug_quantity, drug_weight_grams
 from gtb.indicators.mvi_time import mvi_hour, time_band
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain
 from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
+from gtb.ingestion.adapters.neac_model import NEAC_ADAPTER_VERSION
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
 from gtb.sync.outbox import enqueue_import
@@ -48,6 +50,7 @@ class Store:
         with self._connect() as db:
             self._schema(db)
         self._upgrade_occurrences()
+        upgrade_neac(self)
 
     def _connect(self) -> duckdb.DuckDBPyConnection:
         return duckdb.connect(str(self.path))
@@ -165,8 +168,8 @@ class Store:
                 self._schema(db)
                 existing = db.execute("""SELECT id, row_count, inserted, updated, unchanged,
                     quarantined, status FROM import_batches WHERE source = ? AND sha256 = ?
-                    AND status IN ('completed', 'completed_with_quarantine')
-                    ORDER BY imported_at DESC LIMIT 1""", [source, digest]).fetchone()
+                    AND adapter_version = ? AND status IN ('completed', 'completed_with_quarantine')
+                    ORDER BY imported_at DESC LIMIT 1""", [source, digest, NEAC_ADAPTER_VERSION if source == 'mvi_neac' else ADAPTER_VERSION]).fetchone()
                 if existing:
                     differences = db.execute("SELECT count(*) FROM import_divergences WHERE batch_id = ?",
                                              [existing[0]]).fetchone()[0]
@@ -273,7 +276,7 @@ class Store:
                     status = "completed_with_quarantine" if rejected else "completed"
                     db.execute("""INSERT INTO import_batches VALUES
                         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                               [batch_id, source, filename, digest, stamp, scope, ADAPTER_VERSION,
+                               [batch_id, source, filename, digest, stamp, scope, NEAC_ADAPTER_VERSION if source == 'mvi_neac' else ADAPTER_VERSION,
                                 len(rows),
                                 inserted, updated, unchanged, len(rejected), status,
                                 str(backup_path) if backup_path else None, str(raw_path)])

@@ -1,5 +1,17 @@
 # Andamento da implantação — 03/11/2026
 
+## Modelo NEAC/MDX — 0.1.63
+
+Leitura de XLS, XLSX e CSV do modelo com Cidade, Bairro, colunas auxiliares, Dia/Mês/Ano, Data, Hora, Nome Vítima, Idade/Sexo, Instrumento e Subjetividade Complementar. A data pode estar na coluna auxiliar adjacente; quando não informada, só é composta com dia, mês e ano válidos. Dia isolado não é tratado como serial Excel. Divergência entre ano e data exige revisão. Colunas sem nome com conteúdo são preservadas por posição, incluindo o campo adjacente ao IML; IML não é usado como identificador da vítima.
+
+O adaptador NEAC 0.1.19 reconhece Subjetividade Complementar como classificação e o bairro auxiliar no contexto de identificação. Mantém CAD e NEAC separados e preserva as regras atuais de elegibilidade. Vítimas sem identidade confiável ficam em quarentena; naturezas fora da regra permanecem armazenadas sem compor o indicador.
+
+Uma atualização com backup e transação corrige datas, classificação e chaves derivadas dos registros desse modelo já importados. Todas as versões e valores brutos são preservados. Colisões de identidade canônica são unificadas como versões, sem duplicar a vítima corrente. Outros layouts e fontes são preservados. Arquivos processados por adaptador anterior podem ser reimportados, e a nova leitura continua idempotente.
+
+O modelo fornecido foi validado localmente, sem importá-lo em produção nem publicá-lo. Uma cópia privada do banco confirmou a recuperação dos anos corretos, com dados brutos e outras fontes idênticos. Arquivos e resultados reais permanecem locais; os testes versionados usam apenas exemplos sintéticos. Implementação funcional permanece em 100%; validação operacional em 90% concluída e 10% restante.
+
+Validação: 101 testes do backend, 39 testes da interface, Ruff e 102 verificações do legado aprovados. Os testes do modelo cobrem XLS, XLSX e CSV, anos coexistentes, quarentena, conflito de datas, reimportação e migração com preservação de histórico e fontes independentes. O executável compilado passou por importações sintéticas e navegação dos 13 destinos, com responsividade em 320, 390, 768 e 1440 px. O instalador foi executado e preservou os hashes do banco e das contas; a migração posterior confirmou backup e igualdade dos originais e das outras fontes na instalação local. A conta online já está conectada; esta atualização solicita automaticamente uma nova sincronização.
+
 ## Brasão do sistema na distribuição Windows — 0.1.62
 
 O brasão existente é convertido em ICO com sete resoluções (16 a 256 px), preservando sua imagem e transparência. O build incorpora esse ícone ao executável; o instalador e desinstalador recebem o mesmo brasão, e os atalhos usam o ICO instalado. O navegador também usa o brasão como favicon. A geração usa bibliotecas do próprio Windows, sem novo serviço ou dependência paga.

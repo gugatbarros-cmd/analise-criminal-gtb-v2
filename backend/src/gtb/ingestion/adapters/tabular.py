@@ -7,6 +7,9 @@ from pathlib import Path
 import xlrd
 from openpyxl import load_workbook
 
+from gtb.indicators.rules import key
+from gtb.ingestion.adapters.neac_model import add_adjacent_fields, is_neac_model
+
 
 def _xls_value(book: xlrd.book.Book, cell: xlrd.sheet.Cell) -> str:
     """Converte células BIFF sem transformar datas ou inteiros em valores ambíguos."""
@@ -25,9 +28,12 @@ def _xls_value(book: xlrd.book.Book, cell: xlrd.sheet.Cell) -> str:
 def _row(names: list[str], values: list[str]) -> dict[str, str]:
     """Combina cabeçalhos repetidos, preservando o último valor não vazio."""
     result: dict[str, str] = {}
-    for name, value in zip(names, values):
+    for index, (name, value) in enumerate(zip(names, values)):
+        if not name and value:
+            name = f'Coluna {index + 1}'
         if name and (value or name not in result):
             result[name] = value
+    add_adjacent_fields(names, values, result)
     return result
 
 
@@ -44,6 +50,10 @@ def read_rows(filename: str, content: bytes) -> list[dict[str, str]]:
         except csv.Error:
             delimiter = ";" if sample.count(";") > sample.count(",") else ","
         reader = csv.DictReader(io.StringIO(decoded), delimiter=delimiter)
+        if reader.fieldnames and is_neac_model({key(name): '' for name in reader.fieldnames}):
+            matrix = csv.reader(io.StringIO(decoded), delimiter=delimiter)
+            names = [name.strip() for name in next(matrix)]
+            return [_row(names, [value.strip() for value in values]) for values in matrix if any(values)]
         if not reader.fieldnames or any(field is None or not field.strip() for field in reader.fieldnames):
             raise ValueError("Cabeçalhos vazios ou ausentes no CSV")
         return [{str(k).strip(): str(v or "").strip() for k, v in row.items()} for row in reader]
@@ -61,7 +71,7 @@ def read_rows(filename: str, content: bytes) -> list[dict[str, str]]:
                 continue
             for values in iterator:
                 if any(value is not None and str(value).strip() for value in values):
-                    result.append(_row(names, [str(value or "").strip() for value in values]))
+                    result.append(_row(names, ['' if value is None else str(value).strip() for value in values]))
         workbook.close()
         return result
     if suffix == ".xls":

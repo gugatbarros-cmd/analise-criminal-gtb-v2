@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-03",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.62 com brasão nos executáveis, instalador, atalhos e navegador. Validação operacional: 90% concluída e 10% restante; envio de dados online depende da conexão Firebase autorizada na administração local.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.63 com leitura do modelo NEAC/MDX e correção transacional dos anos derivados, preservando originais e outras fontes. Validação operacional: 90% concluída e 10% restante; casos sem identidade confiável exigem revisão.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

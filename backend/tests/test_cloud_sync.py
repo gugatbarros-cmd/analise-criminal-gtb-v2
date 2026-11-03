@@ -1,12 +1,11 @@
 import gzip
 import json
-from pathlib import Path
 
 import pytest
 
 from gtb.db.store import Store
 from gtb.sync import cloud
-from gtb.sync.snapshot import build_snapshot, build_consistent_snapshot
+from gtb.sync.snapshot import build_consistent_snapshot, build_snapshot
 
 
 def test_snapshot_keeps_all_pages_and_exact_indicator_totals(tmp_path):
@@ -53,7 +52,7 @@ def configured(tmp_path, monkeypatch):
 def test_sync_is_atomic_authenticated_and_repeated_only_after_change(tmp_path, monkeypatch):
     sync, calls = configured(tmp_path, monkeypatch)
     sync.sync_once()
-    commit = [call for call in calls if call[0].endswith(':commit')][0]
+    commit = next(call for call in calls if call[0].endswith(':commit'))
     assert commit[2] == 'synthetic-id'
     writes = commit[1]['writes']
     assert len(writes) == 2
@@ -126,7 +125,7 @@ def test_replacement_uses_precondition_and_deletes_previous_chunks_atomically(tm
         return normal(url, *args, **kwargs)
     monkeypatch.setattr(cloud, 'request_json', existing)
     sync.sync_once()
-    writes = [call for call in calls if call[0].endswith(':commit')][0][1]['writes']
+    writes = next(call for call in calls if call[0].endswith(':commit'))[1]['writes']
     assert writes[1]['currentDocument'] == {'updateTime': '2026-10-29T12:00:00Z'}
     assert writes[2:] == [{'delete': cloud.DOCUMENT + '/chunks/gtb2-synthetic-old-0'},
                           {'delete': cloud.DOCUMENT + '/chunks/gtb2-synthetic-old-1'}]

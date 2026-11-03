@@ -22,6 +22,7 @@ from gtb.indicators.rules import (
     victim_role,
 )
 from gtb.indicators.teams import canonical_team, team_field, team_identity
+from gtb.ingestion.adapters.neac_model import is_neac_model, model_date
 
 SOURCES = ("mvi_cad", "mvi_neac", "ocorrencias", "armas", "drogas", "guarnicoes")
 
@@ -58,6 +59,7 @@ ALIASES = {
                    "tipo de agressao sofrida", "tipo de agressao", "agressao sofrida",
                    "causa da lesao", "causa da morte", "arma", "meio"),
 }
+ALIASES['neac_type'] = ('subjetividade complementar', *ALIASES['type'])
 
 
 @lru_cache(maxsize=512)
@@ -74,6 +76,11 @@ class _PreparedRow(dict):
 def pick(row: dict[str, str], field: str) -> str:
     normalized = row.columns if isinstance(row, _PreparedRow) else {
         _column_key(column): value for column, value in row.items() if column.strip()}
+    if is_neac_model(normalized):
+        if field == 'date':
+            return model_date(normalized)
+        if field == 'neighborhood':
+            return str(normalized.get('bairro') or normalized.get('neacbairroadjacente') or normalized.get('coluna1') or '').strip()
     for alias in ALIASES[field]:
         value = normalized.get(_column_key(alias))
         if value is not None and str(value).strip():
@@ -120,7 +127,7 @@ def normalize(source: str, row: dict[str, str]) -> Record:
     victim = pick(row, "victim")
     nic = pick(row, "nic")
     nature = pick(row, "dispatch") if source in {"mvi_cad", "guarnicoes"} else ""
-    nature = nature or pick(row, "type")
+    nature = nature or pick(row, 'neac_type' if source == 'mvi_neac' else 'type')
     if not when:
         raise ValueError("Data do fato inválida ou ausente")
     if not city:

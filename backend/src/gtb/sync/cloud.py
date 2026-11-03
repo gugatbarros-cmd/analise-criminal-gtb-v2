@@ -129,7 +129,7 @@ class CloudSync:
         while True:
             try:
                 self.sync_once()
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 -- worker must record failures and retry
                 # Nunca registrar URL de autenticação, senha ou token.
                 with self.lock:
                     if self.credential.exists():
