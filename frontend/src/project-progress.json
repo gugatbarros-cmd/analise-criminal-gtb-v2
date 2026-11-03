@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-03",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.65 com central de relatórios, documentos individuais e consolidados, editor temático PDF/PPTX e planejamento PDF/PNG trazidos do legado. Validação operacional: 90% concluída e 10% restante; conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.66 com comparativos anuais, períodos personalizados e meses de cada ano em todos os indicadores, variações absolutas e percentuais e CSV. Validação operacional: 90% concluída e 10% restante; conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

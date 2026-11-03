@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from test_imports import cad, csv_bytes, neac
 
 from gtb.api import main
+from gtb.comparisons import comparison_dataset
 from gtb.db.store import Store
 from gtb.reports import report_dataset
 from gtb.security.local_auth import AuthManager
@@ -35,7 +36,9 @@ def test_report_projection_preserves_sources_units_and_originals(tmp_path):
         assert len([row for row in dataset['rows'] if row['source'] == source and row['eligible']]) == 1
     with store._connect() as db:
         assert original == db.execute('SELECT * FROM record_versions ORDER BY source,natural_key,version').fetchall()
-    assert build_consistent_snapshot(store, 'test-reports')['reports'] == dataset
+    snapshot = build_consistent_snapshot(store, 'test-reports')
+    assert snapshot['reports'] == dataset
+    assert snapshot['comparisons'] == comparison_dataset(store)
 
 
 def test_report_dataset_restricts_access_to_admin(tmp_path, monkeypatch):

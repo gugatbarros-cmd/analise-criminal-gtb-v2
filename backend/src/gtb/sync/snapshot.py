@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from gtb.comparisons import comparison_dataset
 from gtb.db.store import Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.reports import report_dataset
@@ -93,4 +94,4 @@ def build_snapshot(store: Store, version: str) -> dict:
         return {'version': version, 'syncedAt': datetime.now(UTC).isoformat(),
             'years': years, 'cities': cities, 'views': views, 'records': records, 'details': details,
             'evidence': evidence, 'batches': batches, 'audit': {}, 'auditLocalOnly': True,
-            'reports': report_dataset(store)}
+            'reports': report_dataset(store), 'comparisons': comparison_dataset(store)}

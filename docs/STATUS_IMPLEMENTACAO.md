@@ -1,5 +1,17 @@
 # Andamento da implantação — 03/11/2026
 
+## Comparativos em todos os indicadores — 0.1.66
+
+Cada indicador oferece três modos: totais entre dois anos, dois intervalos personalizados e os doze meses de cada ano lado a lado. Seletores próprios permitem escolher os anos, a classificação e as medidas pertinentes. O município acompanha o filtro do painel; filtros das outras análises permanecem independentes e essa diferença aparece no quadro. Os comparativos incluem ocorrências, MVI CAD e NEAC separadamente, CVP, tentativas, TCO, mandados, visitas, sossego, violência doméstica, armas, drogas e guarnições.
+
+Tabelas mostram diferença absoluta e percentual de B em relação a A; referência zero não gera infinito. A visão mensal também calcula a diferença e o percentual de cada mês em relação ao mês anterior na série de cada ano, incluindo dezembro do ano anterior como referência para janeiro quando importado. Ausência de registros da fonte é distinta de zero do indicador. Os totais são dos dados importados, com aviso de que meses e anos podem estar incompletos. O atalho de períodos equivalentes usa a última data registrada da fonte no ano B e ajusta 29/02; durações diferentes são explicitadas. Gráficos mensais se ajustam à largura e mantêm os valores completos na tabela. O CSV exporta medida, município, classificação, períodos e variações.
+
+Armas somam unidades apreendidas. Drogas permitem registros ou kg reconhecidos, com cobertura do peso. Guarnições separam escala, força-tarefa e outros recursos e permitem vínculos ou pontos. A consulta autenticada usa uma projeção diária sem vítimas, ocorrências identificadas, relatos, policiais ou arquivos originais, disponível também ao perfil de consulta. Relatórios completos continuam exclusivos de administradores. A projeção é sincronizada no mesmo documento privado já autorizado; nenhuma base real é publicada no site público.
+
+Validação da entrega: suíte de backend com 105 casos, 49 testes da interface, Ruff e as 102 verificações do projeto legado. Ensaio do executável com bases exclusivamente sintéticas de 2025 e 2026 confirmou os 13 destinos, totais e variações, doze meses, comparação com o mês anterior, intervalos inválidos, CSV, navegação por clique/teclado e larguras de 320, 390, 768 e 1440 px. As imagens do comparativo no computador e celular foram inspecionadas. A instalação preserva o banco e as contas, verificados por SHA-256.
+
+Progresso funcional: 100% do escopo implementado. Validação operacional: 90% concluída e 10% restante, dependente da conferência oficial das bases. Firebase permanece Spark, sem novos serviços ou cobrança.
+
 ## Central de relatórios do legado — 0.1.65
 
 O menu Relatórios e apresentações abre uma central com documentos executivos, folder, consolidado, institucional, painel geral, MVI CAD e NEAC, conferência entre fontes, CVP, tentativas, TCO, mandados, visitas, sossego, armas, drogas, violência doméstica, guarnições, horários críticos e planejamento. A prévia usa o recorte escolhido e permite imprimir/salvar PDF, exportar CSV e XLSX. O resumo CSV do painel também está disponível. Tabelas conservam todas as categorias; gráficos de ranking destacam oito categorias com indicação explícita, e séries temporais mantêm todos os períodos.

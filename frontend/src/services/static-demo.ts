@@ -12,6 +12,7 @@ type View = {
   mvi_comparison: MviComparison
 }
 export type Snapshot = {
+  comparisons?: import('./comparison-model').ComparisonDataset
   reports?: import('./report-model').ReportDataset
   version: string
   years: number[]
@@ -218,6 +219,7 @@ export async function demoFetch(input: string, init?: RequestInit, provided?: Sn
   const url = new URL(input)
   const path = url.pathname
   if (path === '/reports/dataset') return data.reports ? response(data.reports) : response({ detail: 'Atualize o sistema local e aguarde a sincronização dos relatórios.' }, 409)
+  if (path === '/comparisons/dataset') return data.comparisons ? response(data.comparisons) : response({ detail: 'Atualize o sistema local e aguarde a sincronização dos comparativos.' }, 409)
   const view = viewFor(data, url.searchParams)
   if (path === '/indicators/summary') return response(view.summary)
   if (path === '/indicators/crimes/analysis') {

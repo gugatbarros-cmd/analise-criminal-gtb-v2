@@ -119,9 +119,53 @@ try {
   for (const [source, filename] of [['mvi_cad', 'mvi-cad.csv'], ['mvi_neac', 'mvi-neac.csv'], ['ocorrencias', 'ocorrencias-demo.csv'], ['armas', 'armas.csv'], ['drogas', 'drogas.csv'], ['guarnicoes', 'guarnicoes.csv']]) {
     const content = fs.readFileSync(path.join(root, 'fixtures/synthetic', filename), 'utf8');
     assert.equal(await evaluate(`fetch('/imports/${source}',{method:'POST',headers:{Authorization:'Bearer '+sessionStorage.getItem('gtb-v2-session'),'X-Filename':'${filename}'},body:${JSON.stringify(content)}}).then(response=>response.status)`), 200);
+    const previous = content.replaceAll('2026', '2025');
+    assert.equal(await evaluate(`fetch('/imports/${source}',{method:'POST',headers:{Authorization:'Bearer '+sessionStorage.getItem('gtb-v2-session'),'X-Filename':'2025-${filename}'},body:${JSON.stringify(previous)}}).then(response=>response.status)`), 200);
   }
   await send('Page.reload');
   await until(() => evaluate(`!!document.querySelector('#guarnicoes [data-chart-target]') && !!document.querySelector('.chart canvas')`), 'gráficos das seis fontes');
+  for (const target of ['ocorrencias', 'cvp', 'tentativas', 'tco', 'mandados', 'visitas', 'sossego', 'domestica', 'armas', 'drogas', 'guarnicoes', 'mvi-cad', 'mvi-neac']) {
+    await evaluate(`document.querySelector('[data-indicator-target="${target}"]')?.click()`);
+    const panel = `[data-comparison-indicator="${target}"]`;
+    await until(() => evaluate(`!!document.querySelector('${panel} table')`), `comparativo ${target}`);
+    assert.equal(await evaluate(`document.querySelector('${panel} tbody td').textContent !== '—'`), true, `base de 2025: ${target}`);
+    await evaluate(`Array.from(document.querySelectorAll('${panel} button')).find(el=>el.textContent==='Meses de cada ano').click()`);
+    assert.equal(await evaluate(`document.querySelectorAll('${panel} tbody tr').length`), 12, `doze meses: ${target}`);
+    assert.equal(await evaluate(`document.querySelectorAll('${panel} .comparison-month').length`), 12);
+  }
+  const comparison = '[data-comparison-indicator="cvp"]';
+  await evaluate(`document.querySelector('[data-indicator-target="cvp"]').click()`);
+  await evaluate(`Array.from(document.querySelectorAll('${comparison} button')).find(el=>el.textContent==='Entre anos').click()`);
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('${comparison} tbody td')).map(el=>el.textContent)`), ['2', '3', '+1', '+50%']);
+  await evaluate(`Array.from(document.querySelectorAll('${comparison} button')).find(el=>el.textContent==='Entre períodos').click()`);
+  for (const [index, value] of ['2025-01-01', '2025-01-31', '2026-01-01', '2026-01-31'].entries()) {
+    await evaluate(`(()=>{const el=document.querySelectorAll('${comparison} input[type=date]')[${index}];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'${value}');el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  }
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('${comparison} tbody td')).map(el=>el.textContent)`), ['1', '2', '+1', '+100%']);
+  await evaluate(`(()=>{const el=document.querySelectorAll('${comparison} input[type=date]')[1];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'2024-01-01');el.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+  assert.ok(await evaluate(`document.querySelector('${comparison} [role=alert]')?.textContent.includes('intervalos válidos')`));
+  await evaluate(`Array.from(document.querySelectorAll('${comparison} button')).find(el=>el.textContent==='Mesmo período do ano anterior').click()`);
+  const downloads = path.join(directory, 'downloads'); fs.mkdirSync(downloads);
+  await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
+  await evaluate(`Array.from(document.querySelectorAll('${comparison} button')).find(el=>el.textContent==='Baixar comparativo CSV').click()`);
+  await until(() => fs.readdirSync(downloads).some(name=>name.endsWith('.csv')), 'CSV de comparação');
+  assert.ok(fs.readFileSync(path.join(downloads, fs.readdirSync(downloads).find(name=>name.endsWith('.csv'))), 'utf8').includes('Diferença B − A'));
+  await evaluate(`Array.from(document.querySelectorAll('${comparison} button')).find(el=>el.textContent==='Meses de cada ano').click()`);
+  assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('${comparison} tbody tr:nth-child(2) td')).slice(-2).map(el=>el.textContent)`), ['-1 · -100%', '-2 · -100%']);
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1050, deviceScaleFactor: 1, mobile: false });
+  await evaluate(`document.querySelector('${comparison}').scrollIntoView({block:'start',behavior:'instant'})`);
+  fs.writeFileSync(path.join(directory, 'comparisons-desktop.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  for (const width of [320, 390, 768, 1440]) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: 900, screenWidth: width, screenHeight: 900, deviceScaleFactor: 1, mobile: width < 800 });
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const sizes = await evaluate(`(()=>{const el=document.querySelector('${comparison} .comparison-month-grid');return [el.getBoundingClientRect().width,el.parentElement.getBoundingClientRect().width]})()`);
+    assert.ok(sizes[0] > 0 && sizes[0] <= sizes[1] + 1, `comparação mensal visível e responsiva: ${width}px (${sizes.join(' / ')})`);
+    if (width === 390) {
+      await evaluate(`document.querySelector('${comparison}').scrollIntoView({block:'start',behavior:'instant'})`);
+      fs.writeFileSync(path.join(directory, 'comparisons-mobile.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+    }
+  }
+  console.log('Comparativos dos 13 indicadores: dois anos, 12 meses, intervalos, variações, validação de datas e CSV aprovados.');
   for (const target of ['ocorrencias', 'cvp', 'tentativas', 'tco', 'mandados', 'visitas', 'sossego', 'domestica', 'armas', 'drogas', 'guarnicoes', 'mvi-cad', 'mvi-neac']) {
     await evaluate(`document.querySelector('[data-chart-target="${target}"]').click()`);
     await until(() => evaluate(`location.hash==='#${target}' && document.activeElement?.id==='${target}'`), `gráfico ${target}`);
@@ -145,6 +189,7 @@ try {
     await until(() => evaluate(`Array.from(document.querySelectorAll('.series-chart-container svg')).every(el=>Math.abs(el.viewBox.baseVal.width-el.getBoundingClientRect().width)<2)`), `redimensionamento em ${width}px`);
     const scaling = await evaluate(`Array.from(document.querySelectorAll('.series-chart-container svg')).map(el=>({title:el.querySelector('title')?.textContent,viewBox:el.viewBox.baseVal.width,width:el.getBoundingClientRect().width,container:el.parentElement.getBoundingClientRect().width})).filter(el=>Math.abs(el.viewBox-el.width)>=2)`);
     assert.deepEqual(scaling, [], `escala legível em ${width}px`);
+    assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('.comparison-month-grid')).filter(el=>el.getBoundingClientRect().width>el.parentElement.getBoundingClientRect().width+1).map(el=>el.className)`), [], `comparativos ajustados em ${width}px`);
   }
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, screenWidth: 390, screenHeight: 844, deviceScaleFactor: 1, mobile: true });
   await send('Page.reload');

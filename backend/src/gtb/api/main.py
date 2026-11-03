@@ -16,7 +16,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.65"
+APP_VERSION = "0.1.66"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -143,6 +143,12 @@ def health() -> HealthResponse:
 def reports_dataset() -> dict:
     from gtb.reports import report_dataset
     return report_dataset(store)
+
+
+@app.get('/comparisons/dataset')
+def comparisons_dataset() -> dict:
+    from gtb.comparisons import comparison_dataset
+    return comparison_dataset(store)
 
 
 @app.post("/auth/login")

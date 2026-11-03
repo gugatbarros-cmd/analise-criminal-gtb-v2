@@ -4,13 +4,14 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from gtb.comparisons import comparison_dataset
 from gtb.db.store import Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.reports import report_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.65"
+VERSION = "0.1.66"
 
 
 def export() -> dict:
@@ -83,7 +84,7 @@ def export() -> dict:
                     version["valid_from"] = "2026-10-23 09:00:00"
         return {"version": VERSION, "years": years, "cities": cities, "views": views,
                 "records": records, "evidence": evidence, "details": details,
-                "batches": batches, "audit": audit, "reports": report_dataset(store)}
+                "batches": batches, "audit": audit, "reports": report_dataset(store), "comparisons": comparison_dataset(store)}
 
 
 if __name__ == "__main__":

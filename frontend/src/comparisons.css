@@ -1,0 +1,18 @@
+.indicator-comparisons { min-width: 0; }
+.indicator-comparisons .tabs { flex-wrap: wrap; }
+.indicator-comparisons .tabs button[aria-pressed="true"] { background: #123c7c; color: white; }
+.indicator-comparisons input, .indicator-comparisons select { max-width: 100%; min-width: 0; }
+.indicator-comparisons .filters { align-items: end; }
+.indicator-comparisons .filters label { min-width: 0; }
+.indicator-comparisons caption { text-align: left; padding: 12px 0; font-weight: 600; }
+.indicator-comparisons tfoot { background: #eef3f9; font-weight: 700; }
+.comparison-legend { display: flex; gap: 24px; margin: 16px 0; flex-wrap: wrap; }
+.comparison-legend span { display: flex; align-items: center; gap: 8px; }
+.comparison-legend i { width: 14px; height: 14px; border-radius: 3px; }
+.comparison-month-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin: 20px 0; }
+.comparison-month { min-width: 0; }
+.comparison-month-bar { position: relative; min-height: 30px; background: #eef3f9; margin: 5px 0; border-radius: 4px; overflow: hidden; }
+.comparison-month-bar i { display: block; position: absolute; inset: 0 auto 0 0; opacity: .24; }
+.comparison-month-bar span { position: relative; display: block; padding: 5px 8px; overflow-wrap: anywhere; font-size: .85rem; }
+@media (max-width: 1000px) { .comparison-month-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .comparison-month-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .indicator-comparisons .filters { grid-template-columns: minmax(0, 1fr); } }
