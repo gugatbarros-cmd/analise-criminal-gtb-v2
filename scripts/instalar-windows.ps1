@@ -27,6 +27,7 @@ try {
 
 New-Item -ItemType Directory -Path $installDirectory -Force | Out-Null
 Copy-Item -LiteralPath $sourceExecutable -Destination $installedExecutable -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'desktop\brasao.ico') -Destination (Join-Path $installDirectory 'brasao.ico') -Force
 Copy-Item -LiteralPath $sourceLauncher -Destination $installedLauncher -Force
 Copy-Item -LiteralPath $sourceUninstaller -Destination (Join-Path $installDirectory 'desinstalar-gtb.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'encerrar-gtb.ps1') -Destination (Join-Path $installDirectory 'encerrar-gtb.ps1') -Force
@@ -40,14 +41,14 @@ foreach ($destination in $destinations) {
   $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
   $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$installedLauncher`""
   $shortcut.WorkingDirectory = $installDirectory
-  $shortcut.IconLocation = "$installedExecutable,0"
+  $shortcut.IconLocation = "$(Join-Path $installDirectory 'brasao.ico'),0"
   $shortcut.Description = 'Análise Criminal GTB 2.0 - sistema local'
   $shortcut.Save()
   $stopShortcut = $shell.CreateShortcut((Join-Path $destination 'Encerrar GTB 2.0.lnk'))
   $stopShortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
   $stopShortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$(Join-Path $installDirectory 'encerrar-gtb.ps1')`""
   $stopShortcut.WorkingDirectory = $installDirectory
-  $stopShortcut.IconLocation = "$installedExecutable,0"
+  $stopShortcut.IconLocation = "$(Join-Path $installDirectory 'brasao.ico'),0"
   $stopShortcut.Save()
 }
 

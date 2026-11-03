@@ -1,4 +1,12 @@
-# Andamento da implantação — 29/10/2026
+# Andamento da implantação — 03/11/2026
+
+## Brasão do sistema na distribuição Windows — 0.1.62
+
+O brasão existente é convertido em ICO com sete resoluções (16 a 256 px), preservando sua imagem e transparência. O build incorpora esse ícone ao executável; o instalador e desinstalador recebem o mesmo brasão, e os atalhos usam o ICO instalado. O navegador também usa o brasão como favicon. A geração usa bibliotecas do próprio Windows, sem novo serviço ou dependência paga.
+
+A configuração local foi inspecionada: não existe credencial Firebase conectada. A sincronização automática continua disponível, mas o envio real ainda depende de login em Administração → Sincronização online. Nenhum dado real foi colocado no Git ou na demonstração pública. Implementação funcional: 100% do escopo inicial; validação operacional: 90% concluída e 10% restante, sem novas fases declaradas concluídas.
+
+Validação: 39 testes de interface, 11 testes de saúde/sincronização e 102 verificações do legado aprovados. O Windows reconheceu o ICO; os ícones foram extraídos dos executáveis do programa e do instalador e conferidos visualmente. O instalador foi executado e os atalhos e o registro de Aplicativos apontam para o brasão. Banco e contas mantiveram hashes idênticos após a instalação.
 
 ## Gráficos navegáveis e responsivos — 0.1.61
 

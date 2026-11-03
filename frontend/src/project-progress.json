@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-10-29",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.61 com gráficos navegáveis e responsivos, preservando filtros e fontes CAD/NEAC. Validação operacional: 90% concluída e 10% restante; conexão real depende do acesso Firebase autorizado.",
+  "updatedAt": "2026-11-03",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.62 com brasão nos executáveis, instalador, atalhos e navegador. Validação operacional: 90% concluída e 10% restante; envio de dados online depende da conexão Firebase autorizada na administração local.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

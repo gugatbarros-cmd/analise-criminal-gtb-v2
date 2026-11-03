@@ -19,6 +19,8 @@ VIAddVersionKey /LANG=1046 "LegalCopyright" "Projeto GTB"
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_TEXT "Abrir o sistema"
 !define MUI_FINISHPAGE_RUN_FUNCTION Launch
+!define MUI_ICON "..\desktop\brasao.ico"
+!define MUI_UNICON "..\desktop\brasao.ico"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -45,20 +47,21 @@ Section "Sistema completo" Main
   SetOutPath "$INSTDIR"
   SetOverwrite on
   File "..\dist\GTB2-Local.exe"
+  File "..\desktop\brasao.ico"
   File "iniciar-gtb.ps1"
   File "encerrar-gtb.ps1"
   File "..\README.md"
   WriteUninstaller "$INSTDIR\Desinstalar-GTB2.exe"
   CreateDirectory "$SMPROGRAMS\GTB 2.0"
-  CreateShortCut "$DESKTOP\Análise Criminal GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\iniciar-gtb.ps1"' "$INSTDIR\GTB2-Local.exe"
-  CreateShortCut "$SMPROGRAMS\GTB 2.0\Análise Criminal GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\iniciar-gtb.ps1"' "$INSTDIR\GTB2-Local.exe"
-  CreateShortCut "$SMPROGRAMS\GTB 2.0\Encerrar GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\encerrar-gtb.ps1"' "$INSTDIR\GTB2-Local.exe"
+  CreateShortCut "$DESKTOP\Análise Criminal GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\iniciar-gtb.ps1"' "$INSTDIR\brasao.ico"
+  CreateShortCut "$SMPROGRAMS\GTB 2.0\Análise Criminal GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\iniciar-gtb.ps1"' "$INSTDIR\brasao.ico"
+  CreateShortCut "$SMPROGRAMS\GTB 2.0\Encerrar GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\encerrar-gtb.ps1"' "$INSTDIR\brasao.ico"
   CreateShortCut "$SMPROGRAMS\GTB 2.0\Desinstalar.lnk" "$INSTDIR\Desinstalar-GTB2.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "DisplayName" "Análise Criminal GTB 2.0"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "Publisher" "Projeto GTB"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "DisplayIcon" "$INSTDIR\GTB2-Local.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "DisplayIcon" "$INSTDIR\brasao.ico"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "UninstallString" '$\"$INSTDIR\Desinstalar-GTB2.exe$\"'
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "QuietUninstallString" '$\"$INSTDIR\Desinstalar-GTB2.exe$\" /S'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "NoModify" 1
@@ -82,6 +85,7 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\GTB 2.0\Desinstalar.lnk"
   RMDir "$SMPROGRAMS\GTB 2.0"
   Delete "$INSTDIR\GTB2-Local.exe"
+  Delete "$INSTDIR\brasao.ico"
   Delete "$INSTDIR\iniciar-gtb.ps1"
   Delete "$INSTDIR\encerrar-gtb.ps1"
   Delete "$INSTDIR\desinstalar-gtb.ps1"

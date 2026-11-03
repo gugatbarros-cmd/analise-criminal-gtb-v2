@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $python = Join-Path $root '.venv\Scripts\python.exe'
+& (Join-Path $PSScriptRoot 'gerar-icone.ps1')
 if (-not (Test-Path -LiteralPath $python)) { throw 'Ambiente .venv ausente. Execute scripts\iniciar-backend.cmd uma vez.' }
 
 Push-Location (Join-Path $root 'frontend')
@@ -23,6 +24,7 @@ if (-not $SkipInstall) {
 Push-Location $root
 try {
   & $python -m PyInstaller --noconfirm --clean --onefile --windowed --name GTB2-Local `
+    --icon 'desktop\brasao.ico' `
     --add-data 'frontend\dist-local;web' `
     --collect-all duckdb --collect-all polars --collect-all openpyxl --collect-all xlrd `
     desktop\launcher.py

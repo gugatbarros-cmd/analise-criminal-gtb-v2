@@ -23,7 +23,7 @@ $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
 $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcher`""
 $shortcut.WorkingDirectory = $root
-$shortcut.IconLocation = "$target,0"
+$shortcut.IconLocation = "$(Join-Path $root 'desktop\brasao.ico'),0"
 $shortcut.Description = 'Analise Criminal GTB 2.0 - sistema local'
 $shortcut.Save()
 
