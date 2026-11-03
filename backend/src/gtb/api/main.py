@@ -11,17 +11,19 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from gtb.cad.automation import CadImportManager
 from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.66"
+APP_VERSION = "0.1.67"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
 auth_manager = AuthManager(DATA_DIR / "auth.sqlite3")
 cloud_sync = CloudSync(store, DATA_DIR, APP_VERSION)
+cad_import = CadImportManager(store, DATA_DIR, lambda: (cloud_sync.start(), cloud_sync.wake.set()))
 # A interface de desenvolvimento usa 5173; a interface embutida no executável
 # usa a mesma porta 8000 da API, inclusive para login e importação.
 LOCAL_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173",
@@ -50,6 +52,17 @@ class CreateUserRequest(LoginRequest):
 class OnlineCredentials(BaseModel):
     email: str
     password: str
+
+
+class CadStartRequest(BaseModel):
+    cpf: str
+    password: str
+    start_date: str
+    end_date: str
+
+
+class CadTokenRequest(BaseModel):
+    token: str
 
 
 app = FastAPI(title="Análise Criminal GTB 2.0", version=APP_VERSION)
@@ -92,7 +105,7 @@ async def authorize(request: Request, call_next):
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
         if (path.startswith(("/auth/users", "/online/", "/reports/"))) and user["role"] != "admin":
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
-        if request.method == "POST" and path.startswith("/imports/") and user["role"] == "viewer":
+        if request.method == "POST" and path.startswith(("/imports/", "/cad/")) and user["role"] == "viewer":
             return JSONResponse({"detail": "Perfil somente para consulta"}, status_code=403)
         request.state.user = user
         request.state.token = token
@@ -203,6 +216,34 @@ def create_user(body: CreateUserRequest, request: Request) -> dict:
 @app.get("/sources")
 def sources() -> dict:
     return {"items": list(SOURCES)}
+
+
+@app.get("/cad/status")
+def cad_status() -> dict:
+    return cad_import.status()
+
+
+@app.post("/cad/start")
+def cad_start(body: CadStartRequest) -> dict:
+    if demo_mode():
+        raise HTTPException(403, "Demonstração somente para consulta")
+    try:
+        return cad_import.start(body.cpf, body.password, body.start_date, body.end_date)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/cad/token")
+def cad_token(body: CadTokenRequest) -> dict:
+    try:
+        return cad_import.submit_token(body.token)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/cad/disconnect")
+def cad_disconnect() -> dict:
+    return cad_import.disconnect()
 
 
 @app.post("/imports/{source}")

@@ -26,7 +26,8 @@ try {
   & $python -m PyInstaller --noconfirm --clean --onefile --windowed --name GTB2-Local `
     --icon 'desktop\brasao.ico' `
     --add-data 'frontend\dist-local;web' `
-    --collect-all duckdb --collect-all polars --collect-all openpyxl --collect-all xlrd `
+    --add-data 'backend\src\gtb\cad\page_actions.js;gtb\cad' `
+    --collect-all duckdb --collect-all polars --collect-all openpyxl --collect-all xlrd --collect-all playwright `
     desktop\launcher.py
   if ($LASTEXITCODE -ne 0) { throw 'Empacotamento falhou' }
   Write-Output (Join-Path $root 'dist\GTB2-Local.exe')

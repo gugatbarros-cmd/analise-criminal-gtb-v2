@@ -18,6 +18,7 @@ export type BatchAudit = {
 }
 export type ImportResult = Pick<Batch, 'id' | 'row_count' | 'inserted' | 'updated' | 'unchanged' | 'quarantined' | 'differences' | 'status'> & { repeated: boolean }
 export type ImportValidation = { filename: string; source: Source; sha256: string; row_count: number; accepted: number; eligible: number; ineligible: number; quarantined: number; reasons: { reason: string; count: number }[] }
+export type CadStatus = { phase: string; message: string; result: null | { row_count: number; inserted: number; updated: number; quarantined: number; repeated: boolean } }
 export type RecordItem = { natural_key: string; event_date: string; municipality: string; occurrence: string; victim: string; nature: string; category: string; eligible: boolean; reason: string; version: number; solution: string; instrument: string; action_evidence: string; indicators: string[]; arm_quantity?: number; arm_situation?: string; arm_caliber?: string; arm_seized?: boolean; arm_restricted?: boolean; drug_quantity?: number; drug_unit?: string; drug_weight_grams?: number; drug_location?: string; team_score?: number; team_role?: string; team_group?: 'roster' | 'extra' | 'unlisted'; team_officers?: { name: string; registration: string; role: string }[] }
 export type RecordPage = { total: number; page: number; size: number; items: RecordItem[] }
 export type ConsolidatedRecord = Pick<RecordItem, 'natural_key' | 'event_date' | 'municipality' | 'occurrence' | 'victim' | 'nature' | 'category' | 'eligible' | 'reason' | 'version'> & { source: Source }
@@ -61,6 +62,24 @@ async function json<T>(response: Response): Promise<T> {
     throw new Error(body.detail || `Falha HTTP ${response.status}`)
   }
   return response.json() as Promise<T>
+}
+
+export async function getCadStatus(): Promise<CadStatus> {
+  return json(await apiFetch(`${baseUrl}/cad/status`))
+}
+
+export async function startCadImport(cpf: string, password: string, startDate: string, endDate: string): Promise<CadStatus> {
+  return json(await apiFetch(`${baseUrl}/cad/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cpf, password, start_date: startDate, end_date: endDate }) }))
+}
+
+export async function submitCadToken(token: string): Promise<CadStatus> {
+  return json(await apiFetch(`${baseUrl}/cad/token`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }) }))
+}
+
+export async function disconnectCad(): Promise<CadStatus> {
+  return json(await apiFetch(`${baseUrl}/cad/disconnect`, { method: 'POST' }))
 }
 
 export async function getSummary(year?: number, municipality?: string): Promise<Summary> {

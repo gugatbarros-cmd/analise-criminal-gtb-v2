@@ -1,5 +1,11 @@
 # Andamento da implantação — 03/11/2026
 
+## Importação alternativa do CAD no sistema local — 0.1.67
+
+O GTB 2.0 oferece uma segunda entrada para a base de ocorrências: consulta autorizada no CAD com intervalo escolhido, Polícia Militar e 10º BPM, seleção de todas as colunas, exportação XLS, validação e importação parcial auditável. A autenticação e o token são temporários; o arquivo fica no computador, fora do Git. O importador manual permanece disponível.
+
+Os testes sintéticos cobrem a validação das datas, o controle de acesso e o contrato da API. A execução completa pela nova tela foi confirmada localmente, inclusive o download e o registro do lote, sem incluir dados reais neste repositório. O instalador 0.1.67 foi executado e a aplicação instalada respondeu com a versão 0.1.67; o banco local foi preservado. Implementação funcional: 100%; validação operacional: 90% concluída e 10% restante, incluindo a conferência oficial das bases.
+
 ## Comparativos em todos os indicadores — 0.1.66
 
 Cada indicador oferece três modos: totais entre dois anos, dois intervalos personalizados e os doze meses de cada ano lado a lado. Seletores próprios permitem escolher os anos, a classificação e as medidas pertinentes. O município acompanha o filtro do painel; filtros das outras análises permanecem independentes e essa diferença aparece no quadro. Os comparativos incluem ocorrências, MVI CAD e NEAC separadamente, CVP, tentativas, TCO, mandados, visitas, sossego, violência doméstica, armas, drogas e guarnições.
