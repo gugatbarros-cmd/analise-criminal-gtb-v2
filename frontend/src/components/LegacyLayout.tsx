@@ -1,49 +1,50 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { IndicatorNavigationContext } from './IndicatorNavigation'
 import { isCloud } from '../services/cloud'
+import { iconForIndicator, SystemIcon, type IconName } from './SystemIcon'
 
-type MenuItem = { label: string; target: string; short: string; planned?: boolean }
+type MenuItem = { label: string; target: string; icon?: IconName; planned?: boolean }
 type MenuGroup = { label: string; items: MenuItem[] }
 
 const menuGroups: MenuGroup[] = [
   { label: 'Visão geral', items: [
-    { label: 'Visão Executiva', target: 'indicadores', short: 'VE' },
-    { label: 'MVI CAD', target: 'mvi-cad', short: 'MC' },
-    { label: 'MVI NEAC', target: 'mvi-neac', short: 'MN' },
+    { label: 'Visão Executiva', target: 'indicadores' },
+    { label: 'MVI CAD', target: 'mvi-cad' },
+    { label: 'MVI NEAC', target: 'mvi-neac' },
   ] },
   { label: 'Análises criminais', items: [
-    { label: 'Ocorrências', target: 'ocorrencias', short: 'OC' },
-    { label: 'Análise CVP', target: 'cvp', short: 'CV' },
-    { label: 'Tentativas de homicídio', target: 'tentativas', short: 'TH' },
-    { label: 'Violência doméstica', target: 'domestica', short: 'VD' },
-    { label: 'Cumprimento de mandados', target: 'mandados', short: 'CM' },
-    { label: 'Visitas orientativas', target: 'visitas', short: 'VO' },
-    { label: 'Avaliação TCO', target: 'tco', short: 'TC' },
-    { label: 'Perturbação do sossego', target: 'sossego', short: 'PS' },
+    { label: 'Ocorrências', target: 'ocorrencias' },
+    { label: 'Análise CVP', target: 'cvp' },
+    { label: 'Tentativas de homicídio', target: 'tentativas' },
+    { label: 'Violência doméstica', target: 'domestica' },
+    { label: 'Cumprimento de mandados', target: 'mandados' },
+    { label: 'Visitas orientativas', target: 'visitas' },
+    { label: 'Avaliação TCO', target: 'tco' },
+    { label: 'Perturbação do sossego', target: 'sossego' },
   ] },
   { label: 'Gestão operacional', items: [
-    { label: 'Análise de armas', target: 'armas', short: 'AR' },
-    { label: 'Estimativa de drogas', target: 'drogas', short: 'DR' },
-    { label: 'Produtividade das guarnições', target: 'guarnicoes', short: 'GU' },
-    { label: 'Planejamento operacional', target: 'municipios', short: 'PO' },
-    { label: 'Municípios do 10º BPM', target: 'municipios', short: 'MU' },
+    { label: 'Análise de armas', target: 'armas' },
+    { label: 'Estimativa de drogas', target: 'drogas' },
+    { label: 'Produtividade das guarnições', target: 'guarnicoes' },
+    { label: 'Planejamento operacional', target: 'municipios', icon: 'compass' },
+    { label: 'Municípios do 10º BPM', target: 'municipios' },
   ] },
   { label: 'Inteligência', items: [
-    { label: 'Análise avançada', target: 'tabela-geral', short: 'AA' },
-    { label: 'Inteligência estatística', target: 'indicadores', short: 'IE' },
-    { label: 'Soluções IA', target: 'assistente-local', short: 'IA' },
-    { label: 'Stiven', target: 'assistente-local', short: 'ST' },
+    { label: 'Análise avançada', target: 'tabela-geral' },
+    { label: 'Inteligência estatística', target: 'indicadores', icon: 'chart' },
+    { label: 'Soluções IA', target: 'assistente-local' },
+    { label: 'Stiven', target: 'assistente-local' },
   ] },
   { label: 'Relatórios e dados', items: [
-    { label: 'Relatórios e apresentações', target: 'indicadores', short: 'RP' },
-    { label: 'Importações', target: 'importacoes', short: 'IM' },
-    { label: 'Tabela geral consolidada', target: 'tabela-geral', short: 'TG' },
+    { label: 'Relatórios e apresentações', target: 'indicadores', icon: 'report' },
+    { label: 'Importações', target: 'importacoes' },
+    { label: 'Tabela geral consolidada', target: 'tabela-geral' },
   ] },
   { label: 'Administração', items: [
-    { label: 'Meu perfil', target: 'perfil', short: 'MP' },
-    { label: 'Controle de acesso', target: 'usuarios', short: 'CA' },
-    { label: 'Sincronização online', target: 'online-sync', short: 'SO' },
-    { label: 'Uso do Firebase', target: 'armazenamento', short: 'FB' },
+    { label: 'Meu perfil', target: 'perfil' },
+    { label: 'Controle de acesso', target: 'usuarios' },
+    { label: 'Sincronização online', target: 'online-sync' },
+    { label: 'Uso do Firebase', target: 'armazenamento' },
   ] },
 ]
 
@@ -105,7 +106,7 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
         {filtered.map(group => <section key={group.label} className="legacy-menu-group">
           <h2>{group.label}</h2>
           {group.items.map(item => <button type="button" key={item.label} className={active === item.label ? 'active' : ''} onClick={() => navigate(item)} title={item.label}>
-            <span className="legacy-menu-icon">{item.short}</span><span className="legacy-menu-label">{item.label}</span>{item.planned && <small>Em migração</small>}
+            <span className="legacy-menu-icon"><SystemIcon name={item.icon || iconForIndicator(item.target)} /></span><span className="legacy-menu-label">{item.label}</span>{item.planned && <small>Em migração</small>}
           </button>)}
         </section>)}
         {!filtered.length && <p className="legacy-menu-empty">Nenhuma função encontrada.</p>}

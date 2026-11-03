@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
+import { iconForIndicator, SystemIcon } from './SystemIcon'
 
 export const IndicatorNavigationContext = createContext<(target: string) => void>(() => {})
 export const IndicatorChartTargetContext = createContext('')
@@ -13,6 +14,7 @@ export function IndicatorCard({ target, label, children }: {
   const navigate = useContext(IndicatorNavigationContext)
   return <article className="indicator-card"><button type="button" className="indicator-card-button"
     data-indicator-target={target} aria-label={`Ver análise de ${label}`} onClick={() => navigate(target)}>
+    <SystemIcon name={label === 'Peso de drogas' ? 'weight' : iconForIndicator(target)} className="indicator-icon" />
     {children}
   </button></article>
 }

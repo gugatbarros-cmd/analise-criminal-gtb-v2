@@ -1,5 +1,13 @@
 # Andamento da implantação — 03/11/2026
 
+## Ícones dos indicadores e menu — 0.1.64
+
+Os quadros da Visão Executiva recebem figuras vetoriais próprias: caveira em MVI CAD/NEAC, cannabis em drogas, peso no total em kg, arma em apreensões, saco de valores em CVP, coração com pulso em tentativas, escudo com casa em violência doméstica, martelo em mandados, casa com pessoa em visitas, documento conferido em TCO e alto-falante em sossego. As figuras usam traços e preenchimentos discretos, com cores por assunto e nitidez em telas de qualquer densidade.
+
+Todos os itens do menu lateral substituem as siglas por ícones, incluindo guarnições, municípios, planejamento, inteligência, relatórios, importação, perfil, acesso e sincronização. O menu recolhido mantém figuras e títulos; a navegação por clique e teclado permanece disponível. Os desenhos são locais, funcionam sem conexão e não acrescentam serviços ou cobranças. Rótulos acessíveis continuam nos botões e os SVGs são decorativos, evitando leitura duplicada.
+
+Implementação funcional: 100% do escopo inicial; validação operacional: 90% concluída e 10% restante, com conferência oficial das bases ainda pendente. Validação desta entrega: 39 testes de interface, quatro testes de saúde/versão da API, Ruff e 102 verificações do legado aprovados; compilação TypeScript/Vite concluída. O executável foi conferido em navegador com importações sintéticas, ícones nos 13 quadros e em todos os itens do menu, navegação por clique e teclado e larguras de 320, 390, 768 e 1440 px. As imagens de computador e celular foram inspecionadas. A instalação real registrou a versão 0.1.64 e manteve os hashes do banco e das contas idênticos.
+
 ## Modelo NEAC/MDX — 0.1.63
 
 Leitura de XLS, XLSX e CSV do modelo com Cidade, Bairro, colunas auxiliares, Dia/Mês/Ano, Data, Hora, Nome Vítima, Idade/Sexo, Instrumento e Subjetividade Complementar. A data pode estar na coluna auxiliar adjacente; quando não informada, só é composta com dia, mês e ano válidos. Dia isolado não é tratado como serial Excel. Divergência entre ano e data exige revisão. Colunas sem nome com conteúdo são preservadas por posição, incluindo o campo adjacente ao IML; IML não é usado como identificador da vítima.
