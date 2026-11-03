@@ -36,7 +36,7 @@ const menuGroups: MenuGroup[] = [
     { label: 'Stiven', target: 'assistente-local' },
   ] },
   { label: 'Relatórios e dados', items: [
-    { label: 'Relatórios e apresentações', target: 'indicadores', icon: 'report' },
+    { label: 'Relatórios e apresentações', target: 'relatorios', icon: 'report' },
     { label: 'Importações', target: 'importacoes' },
     { label: 'Tabela geral consolidada', target: 'tabela-geral' },
   ] },

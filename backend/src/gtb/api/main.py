@@ -16,7 +16,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.64"
+APP_VERSION = "0.1.65"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -90,7 +90,7 @@ async def authorize(request: Request, call_next):
         user = auth_manager.user_for_token(token)
         if not user:
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
-        if (path.startswith(("/auth/users", "/online/"))) and user["role"] != "admin":
+        if (path.startswith(("/auth/users", "/online/", "/reports/"))) and user["role"] != "admin":
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
         if request.method == "POST" and path.startswith("/imports/") and user["role"] == "viewer":
             return JSONResponse({"detail": "Perfil somente para consulta"}, status_code=403)
@@ -137,6 +137,12 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok", version=APP_VERSION,
                           mode="demo" if demo_mode() else "local" if auth_manager.has_users()
                           else "setup")
+
+
+@app.get('/reports/dataset')
+def reports_dataset() -> dict:
+    from gtb.reports import report_dataset
+    return report_dataset(store)
 
 
 @app.post("/auth/login")

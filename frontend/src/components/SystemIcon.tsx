@@ -42,7 +42,7 @@ const indicatorIcons: Record<string, IconName> = {
   mandados: 'warrant', visitas: 'visit', tco: 'clipboard', sossego: 'sound',
   guarnicoes: 'team', municipios: 'map', 'tabela-geral': 'table',
   'assistente-local': 'sparkles', importacoes: 'upload', perfil: 'user',
-  usuarios: 'access', 'online-sync': 'sync', armazenamento: 'database',
+  usuarios: 'access', 'online-sync': 'sync', armazenamento: 'database', relatorios: 'report',
 }
 
 export function iconForIndicator(target: string): IconName {

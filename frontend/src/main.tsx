@@ -29,6 +29,7 @@ import { LocalAssistant } from './components/LocalAssistant'
 import { StorageStatus } from './components/StorageStatus'
 import { Ranking } from './components/Ranking'
 import { IndicatorCard, IndicatorSection } from './components/IndicatorNavigation'
+import { ReportCenter } from './components/ReportCenter'
 import { getBatches, getSummary, upload, validateUpload, type Source } from './services/api'
 import { clearSession, getMe, getSessionToken, logout, saveSession } from './services/auth'
 import { getHealth } from './services/health'
@@ -79,10 +80,10 @@ function App() {
     }, 60000)
     return () => { clearInterval(timer); window.removeEventListener('gtb-cloud-updated', update) }
   }, [canRead])
-  const summary = useQuery({ queryKey: ['summary', year, municipality], queryFn: () => getSummary(year ? Number(year) : undefined, municipality || undefined), enabled: health.isSuccess && canRead })
-  const batches = useQuery({ queryKey: ['batches', batchPage], queryFn: () => getBatches(batchPage), enabled: health.isSuccess && canRead })
+  const summary = useQuery({ queryKey: ['summary', token, year, municipality], queryFn: () => getSummary(year ? Number(year) : undefined, municipality || undefined), enabled: health.isSuccess && canRead })
+  const batches = useQuery({ queryKey: ['batches', token, batchPage], queryFn: () => getBatches(batchPage), enabled: health.isSuccess && canRead })
   useEffect(() => {
-    const expired = () => { clearSession(); setToken(''); queryClient.clear() }
+    const expired = () => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }
     window.addEventListener('gtb-session-expired', expired)
     return () => window.removeEventListener('gtb-session-expired', expired)
   }, [])
@@ -91,7 +92,15 @@ function App() {
       if (!file) throw new Error('Selecione um arquivo CSV, XLS ou XLSX.')
       return upload(source, file, scope)
     },
-    onSuccess: () => { setValidatedFile(''); setBatchPage(1); void queryClient.invalidateQueries({ queryKey: ['summary'] }); void queryClient.invalidateQueries({ queryKey: ['crime-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['batches'] }); void queryClient.invalidateQueries({ queryKey: ['batch-audit'] }); void queryClient.invalidateQueries({ queryKey: ['records'] }); void queryClient.invalidateQueries({ queryKey: ['tco-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['domestic-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['arms-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['drugs-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['teams-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-analysis'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-comparison'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-detail'] }); void queryClient.invalidateQueries({ queryKey: ['mvi-versions'] }); void queryClient.invalidateQueries({ queryKey: ['operational-analysis'] }) },
+    onSuccess: async () => {
+      const affected = new Set(['report-dataset', 'summary', 'crime-analysis', 'batches', 'batch-audit',
+        'records', 'tco-analysis', 'domestic-analysis', 'arms-analysis', 'drugs-analysis', 'teams-analysis',
+        'mvi-analysis', 'mvi-comparison', 'mvi-detail', 'mvi-versions', 'operational-analysis'])
+      // Não aceitar uma resposta iniciada antes do commit da importação.
+      await queryClient.cancelQueries({ predicate: query => affected.has(String(query.queryKey[0])) })
+      setValidatedFile(''); setBatchPage(1)
+      await queryClient.invalidateQueries({ predicate: query => affected.has(String(query.queryKey[0])) })
+    },
   })
   const validator = useMutation({
     mutationFn: async () => {
@@ -107,7 +116,7 @@ function App() {
   if (['local', 'online'].includes(health.data?.mode || '') && auth.isPending)
     return <main className="shell"><p className="empty">Validando sessão local…</p></main>
 
-  return <LegacyLayout onNavigate={navigateToIndicator} version={health.data?.version || '0.1.64'} demo={demo} username={auth.data?.username} onLogout={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.clear() }) }}><main className="shell">
+  return <LegacyLayout onNavigate={navigateToIndicator} version={health.data?.version || '0.1.65'} demo={demo} username={auth.data?.username} onLogout={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }) }}><main className="shell">
     <section className="hero"><div><p className="eyebrow">{isCloud ? 'Consulta online protegida' : demo ? 'Prévia com dados sintéticos' : 'Ambiente local para bases reais'}</p><h1>{isCloud ? 'Painel sincronizado' : demo ? 'Painel de demonstração' : 'Visão Executiva'}</h1><p>{isCloud ? 'As análises refletem a última sincronização deste computador. Importe e atualize as bases no sistema local.' : demo ? 'Explore indicadores, casos e histórico com exemplos fictícios. Esta demonstração é somente para consulta e não recebe arquivos.' : 'Valide e importe bases reais somente neste computador, confira o histórico de alterações e compare CAD e NEAC sem combinar as fontes. O sistema anterior continua em produção.'}</p></div><div className="status" role="status"><span className={health.isSuccess ? 'dot active' : 'dot'} />{health.isPending ? 'Verificando API…' : health.isError ? 'Serviço indisponível' : isCloud ? 'Consulta online' : 'API local ativa'}</div></section>
     {isCloud && <section className="notice" aria-label="Atualização online"><p>Última sincronização: {cloudInfo().syncedAt ? new Date(cloudInfo().syncedAt!).toLocaleString('pt-BR') : 'aguardando dados'} · Versão dos dados: {cloudInfo().version || '—'}</p><button type="button" onClick={() => { void refreshCloud().then(() => { setCloudError(''); void queryClient.invalidateQueries() }).catch(error => setCloudError(error instanceof Error ? error.message : 'Falha ao atualizar.')) }}>Atualizar consulta</button>{(cloudError || summary.isError) && <p className="error" role="alert">{cloudError || summary.error?.message}</p>}</section>}
     {demo && <nav className="quick-nav" aria-label="Explorar demonstração"><a href="#andamento">Andamento</a><a href="#indicadores">Indicadores</a><a href="#mvi">MVI por fonte</a><a href="#operacoes">Outros indicadores</a><a href="#importacoes">Importações sintéticas</a></nav>}
@@ -137,6 +146,7 @@ function App() {
     <IndicatorSection id="armas"><ArmsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
     <IndicatorSection id="drogas"><DrugsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
     <IndicatorSection id="guarnicoes"><TeamsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
+    <div id="relatorios"><ReportCenter year={year ? Number(year) : undefined} municipality={municipality || undefined} version={health.data?.version || '0.1.65'} allowed={!!demo || auth.data?.role === 'admin'} /></div>
     <div id="municipios"><MunicipalityOverview year={year ? Number(year) : undefined} /></div>
     <div id="tabela-geral"><ConsolidatedTable year={year ? Number(year) : undefined} municipality={municipality || undefined} /></div>
     <div id="assistente-local"><LocalAssistant summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} /></div>

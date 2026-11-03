@@ -3,6 +3,7 @@ node_modules/
 dist/
 dist-local/
 dist-check/
+dist-check-*/
 build/
 *.spec
 *.pyc

@@ -35,6 +35,9 @@ export type MviComparison = { cad_total: number; neac_total: number; candidate_p
 export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; is_current: boolean; fields: Record<string, string> }
 export type MviRecordVersion = { version: number; is_current: boolean; valid_from: string; valid_to: string | null; batch_id: string; eligible: boolean; category: string }
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+export async function getReportDataset(): Promise<import('./report-model').ReportDataset> {
+  return json(await apiFetch(`${baseUrl}/reports/dataset`))
+}
 const apiFetch: typeof fetch = (input, init) => {
   if (isCloud) return cloudFetch(String(input), init)
   if (import.meta.env.VITE_STATIC_DEMO === '1') return demoFetch(String(input), init)

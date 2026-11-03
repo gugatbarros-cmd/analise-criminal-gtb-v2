@@ -1,0 +1,71 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Planejamento operacional · GTB 2.0</title>
+<link rel="stylesheet" href="planning.css"><link rel="stylesheet" href="leaflet/leaflet.min.css">
+<style>body{margin:0;padding:16px;background:#f3f6fa;font-family:Segoe UI,Arial,sans-serif}#operationalPlanningTab{display:block}#systemToast{display:none}.operational-map{min-height:520px}@media print{@page{size:A4 landscape;margin:8mm}body{padding:0}}</style></head><body><main>    <div id="operationalPlanningTab" class="tab-panel operational-planning-page">
+      <section class="operational-hero">
+        <div>
+          <span class="operational-eyebrow">Tabuleiro territorial · 10º BPM</span>
+          <h1>Planejamento Operacional</h1>
+          <p>Organize guarnições, pontos de bloqueio e áreas de atuação em um cenário visual privado.</p>
+        </div>
+        <div class="operational-security-badge"><span aria-hidden="true">🔒</span><span><strong>Planejamento privado</strong><small>Salvo somente neste navegador</small></span></div>
+      </section>
+
+      <section class="operational-command-bar" aria-label="Dados da operação">
+        <label>Nome da operação<input id="operationName" maxlength="80" value="Operação planejada" autocomplete="off"></label>
+        <label>Município<select id="operationMunicipality"></select></label>
+        <label>Cenário salvo<select id="operationScenario"><option value="">Novo planejamento</option></select></label>
+        <div class="operational-command-actions">
+          <button id="operationSave" type="button">Salvar</button>
+          <button id="operationDuplicate" class="secondary" type="button">Duplicar</button>
+          <button id="operationExport" class="secondary" type="button">Exportar imagem</button>
+          <button id="operationPdf" class="secondary" type="button">Gerar PDF</button>
+          <button id="operationClear" class="danger-outline" type="button">Limpar</button>
+        </div>
+      </section>
+
+      <section class="operational-board-layout">
+        <aside class="operational-palette" aria-label="Guarnições disponíveis">
+          <div class="operational-panel-title"><div><span>Recursos</span><strong>Guarnições</strong></div><span id="operationAvailableCount" class="operational-counter">6</span></div>
+          <p>Arraste para o mapa ou toque em uma guarnição e depois no ponto desejado.</p>
+          <div id="operationUnitPalette" class="operational-unit-palette"></div>
+          <button id="operationAddUnit" class="operational-add-unit" type="button">+ Nova guarnição</button>
+          <div class="operational-divider"></div>
+          <div class="operational-panel-title"><div><span>Ferramentas</span><strong>Marcações</strong></div></div>
+          <div class="operational-tools" role="toolbar" aria-label="Ferramentas de desenho">
+            <button type="button" data-operation-tool="select" class="active">↖ Mover</button>
+            <button type="button" data-operation-tool="point">● Ponto</button>
+            <button type="button" data-operation-tool="line">╱ Linha</button>
+            <button type="button" data-operation-tool="area">⬡ Área</button>
+          </div>
+          <p id="operationToolHint" class="operational-tool-hint">Arraste as guarnições para ajustar o posicionamento.</p>
+        </aside>
+
+        <div class="operational-map-shell">
+          <div class="operational-map-topline">
+            <div><strong id="operationMapTitle">Operação planejada</strong><span id="operationMapSubtitle">Palmeira dos Índios · AL</span></div>
+            <div class="operational-map-stats"><span><strong id="operationUnitCount">0</strong> guarnições</span><span><strong id="operationStaffCount">0</strong> policiais</span><span><strong id="operationMarkCount">0</strong> marcações</span></div>
+          </div>
+          <div id="operationalMap" role="application" aria-label="Mapa interativo para posicionamento de guarnições"></div>
+          <div class="operational-map-legend"><span><i class="legend-unit"></i> Guarnição</span><span><i class="legend-point"></i> Ponto operacional</span><span><i class="legend-area"></i> Área planejada</span></div>
+        </div>
+
+        <aside class="operational-inspector" aria-label="Detalhes do planejamento">
+          <div class="operational-panel-title"><div><span>Comando</span><strong>Resumo do emprego</strong></div></div>
+          <div id="operationSummary" class="operational-summary"></div>
+          <div class="operational-divider"></div>
+          <div id="operationInspectorEmpty" class="operational-inspector-empty"><span>◎</span><strong>Nenhum item selecionado</strong><p>Selecione uma guarnição ou marcação no mapa para editar seus dados.</p></div>
+          <form id="operationInspectorForm" class="operational-inspector-form" hidden>
+            <input id="operationSelectedId" type="hidden">
+            <label>Identificação<input id="operationSelectedName" maxlength="50" required></label>
+            <label id="operationSelectedTypeLabel">Tipo<select id="operationSelectedType"><option value="radiopatrulha">Radiopatrulha</option><option value="rocam">ROCAM</option><option value="forca-tatica">Força Tática</option><option value="supervisao">Supervisão</option><option value="equipe-pe">Equipe a pé</option><option value="apoio">Apoio</option></select></label>
+            <label id="operationSelectedStaffLabel">Efetivo<input id="operationSelectedStaff" type="number" min="1" max="30" value="3"></label>
+            <label>Observações<textarea id="operationSelectedNotes" maxlength="240" rows="3" placeholder="Missão, referência ou orientação..."></textarea></label>
+            <div class="operational-inspector-actions"><button type="submit">Aplicar</button><button id="operationRemoveSelected" class="danger-outline" type="button">Remover</button></div>
+          </form>
+        </aside>
+      </section>
+      <p class="operational-disclaimer">Ferramenta de apoio visual. Confirme endereços, condições locais e ordens de serviço pelos canais oficiais antes do emprego operacional.</p>
+    </div>
+
+</main><div id="systemToast" role="status"><span></span></div>
+<script src="leaflet/leaflet.min.js"></script><script src="operational-planning.js"></script><script>initializeOperationalPlanning();</script></body></html>

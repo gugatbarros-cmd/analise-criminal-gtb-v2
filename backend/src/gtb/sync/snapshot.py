@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 from gtb.db.store import Store
 from gtb.ingestion.adapters.normalize import SOURCES
+from gtb.reports import report_dataset
 
 
 def build_consistent_snapshot(store: Store, version: str) -> dict:
@@ -91,4 +92,5 @@ def build_snapshot(store: Store, version: str) -> dict:
         # tabelas processadas, análises, histórico MVI e contagens de importação.
         return {'version': version, 'syncedAt': datetime.now(UTC).isoformat(),
             'years': years, 'cities': cities, 'views': views, 'records': records, 'details': details,
-            'evidence': evidence, 'batches': batches, 'audit': {}, 'auditLocalOnly': True}
+            'evidence': evidence, 'batches': batches, 'audit': {}, 'auditLocalOnly': True,
+            'reports': report_dataset(store)}

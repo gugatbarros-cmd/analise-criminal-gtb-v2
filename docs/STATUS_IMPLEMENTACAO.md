@@ -1,5 +1,19 @@
 # Andamento da implantação — 03/11/2026
 
+## Central de relatórios do legado — 0.1.65
+
+O menu Relatórios e apresentações abre uma central com documentos executivos, folder, consolidado, institucional, painel geral, MVI CAD e NEAC, conferência entre fontes, CVP, tentativas, TCO, mandados, visitas, sossego, armas, drogas, violência doméstica, guarnições, horários críticos e planejamento. A prévia usa o recorte escolhido e permite imprimir/salvar PDF, exportar CSV e XLSX. O resumo CSV do painel também está disponível. Tabelas conservam todas as categorias; gráficos de ranking destacam oito categorias com indicação explícita, e séries temporais mantêm todos os períodos.
+
+O editor temático de violência doméstica reaproveita os vetores, arte, paginação e exportação PowerPoint editável do legado. O tabuleiro original de planejamento foi isolado em sua própria página, com cenários privados no navegador, PDF e PNG esquemático. Bibliotecas e imagens são locais; mapas de ruas mantêm as camadas gratuitas já usadas no legado. Nenhuma base, conta ou cenário real é copiado para arquivos públicos.
+
+Os relatórios recebem uma projeção de campos processados e decisões de inclusão já armazenadas. Não há nova classificação automática de ocorrências nem soma entre CAD e NEAC. A projeção exclui relatos, telefones e endereços completos. Importações invalidam a consulta dos relatórios e alterações dos dados fecham prévias antigas, evitando exportar números diferentes da tela. A sincronização autenticada inclui a projeção; snapshots anteriores exibem orientação para atualizar o sistema local. Somente administradores geram relatórios, como no legado, e o encerramento da sessão fecha o editor temático.
+
+Comparações usam períodos equivalentes, com ajuste de 29/02 para o ano anterior e indicação de data de corte. Unidades, registros, peso e pontos têm medidas distintas. Datas/horários e perfis ausentes permanecem identificados. Conferências exatas de MVI são sugestões para revisão; ambiguidades não recebem vínculo automático. A conferência não importa decisões manuais de vínculo do legado.
+
+Validação automatizada: 103 testes de backend, 44 de interface, Ruff, compilação TypeScript/Vite e 102 verificações do legado aprovados. No executável, o navegador criou os 21 PDFs e baixou XLSX com quatro abas, PowerPoint com 22 slides editáveis e PNG do tabuleiro, usando exclusivamente dados sintéticos. Também foram verificados cadastro, saída, nova entrada, atualização após importação, navegação e larguras de 320, 390 e 768 px. Respostas iniciadas antes do commit de uma importação são canceladas antes da nova consulta; dados privados são limpos ao sair e consultas do painel usam a sessão na chave, preservando somente a verificação pública de saúde. O instalador registrou 0.1.65 e preservou os hashes do banco e das contas. A projeção dos dados existentes foi conferida em leitura, sem alterar o arquivo original.
+
+Implementação funcional: 100% do escopo inicial. Validação operacional: 90% concluída e 10% restante; a paridade oficial dos números e a cobertura das bases ainda exigem conferência. [Inventário dos modelos](RELATORIOS_LEGADO.md).
+
 ## Ícones dos indicadores e menu — 0.1.64
 
 Os quadros da Visão Executiva recebem figuras vetoriais próprias: caveira em MVI CAD/NEAC, cannabis em drogas, peso no total em kg, arma em apreensões, saco de valores em CVP, coração com pulso em tentativas, escudo com casa em violência doméstica, martelo em mandados, casa com pessoa em visitas, documento conferido em TCO e alto-falante em sossego. As figuras usam traços e preenchimentos discretos, com cores por assunto e nitidez em telas de qualquer densidade.
