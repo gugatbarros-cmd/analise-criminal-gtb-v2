@@ -57,6 +57,12 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
     }}><label>Token recebido do CAD<input ref={token} autoComplete="one-time-code" required /></label>
       <div className="import-actions"><button type="submit" disabled={verify.isPending}>Confirmar token</button></div></form>}
     {status.data && <p role="status">{status.data.message}</p>}
+    {status.data && status.data.phase !== 'idle' && <div className="cad-progress">
+      <div className="cad-progress-heading"><strong>Andamento da consulta e importação</strong>
+        <span>{status.data.progress}%</span></div>
+      <progress value={status.data.progress} max={100} aria-label="Andamento da importação do CAD" />
+      <small>O percentual avança quando cada etapa é confirmada. A gravação no banco termina em 100%.</small>
+    </div>}
     {status.data?.result && <p className="success" role="status">{status.data.result.repeated ? 'Arquivo já importado.' :
       `Lote concluído: ${status.data.result.inserted} novos, ${status.data.result.updated} atualizados, ${status.data.result.quarantined} em quarentena.`}</p>}
     {status.isError && <p className="error" role="alert">{status.error.message}</p>}

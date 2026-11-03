@@ -1,5 +1,9 @@
 # Andamento da implantação — 03/11/2026
 
+## Barra de andamento da importação CAD — 0.1.68
+
+A tela local mostra uma barra e o percentual das etapas confirmadas, da abertura do CAD à gravação do lote. Durante a seleção das colunas, o percentual acompanha a quantidade transferida. A gravação no banco mantém o progresso abaixo de 100% até ser confirmada. Testes sintéticos verificam o contrato de progresso, a monotonicidade e a atualização ao selecionar colunas. O instalador 0.1.68 foi aplicado; a aplicação instalada respondeu com a versão 0.1.68 e os arquivos locais de banco e contas foram preservados. Implementação funcional: 100%; validação operacional: 90% concluída e 10% restante para as conferências oficiais das bases.
+
 ## Importação alternativa do CAD no sistema local — 0.1.67
 
 O GTB 2.0 oferece uma segunda entrada para a base de ocorrências: consulta autorizada no CAD com intervalo escolhido, Polícia Militar e 10º BPM, seleção de todas as colunas, exportação XLS, validação e importação parcial auditável. A autenticação e o token são temporários; o arquivo fica no computador, fora do Git. O importador manual permanece disponível.

@@ -12,7 +12,7 @@ Arquivos originais, backups, contas locais, quarentena e divergências permanece
 
 ### Importação alternativa do CAD
 
-Na aplicação **local**, em Importações, use **Buscar ocorrências no CAD**. Informe CPF, senha e as datas inicial e final; confirme o token recebido. O navegador oficial do CAD abre no computador, consulta Polícia Militar e 10º BPM, seleciona todas as colunas e baixa o XLS. O GTB 2.0 pré-valida e importa o arquivo na base de ocorrências com escopo parcial. O XLS fica em `data/cad-downloads`, fora do Git. O Chrome ou Edge precisa estar instalado. Esta função não aparece na consulta online e preserva a importação manual. O fluxo completo da versão 0.1.67 foi validado na aplicação local; a conferência oficial das bases permanece pendente.
+Na aplicação **local**, em Importações, use **Buscar ocorrências no CAD**. Informe CPF, senha e as datas inicial e final; confirme o token recebido. O navegador oficial do CAD abre no computador, consulta Polícia Militar e 10º BPM, seleciona todas as colunas e baixa o XLS. O GTB 2.0 pré-valida e importa o arquivo na base de ocorrências com escopo parcial. Uma barra mostra o percentual das etapas confirmadas, inclusive a seleção das colunas, e chega a 100% após o registro do lote. O XLS fica em `data/cad-downloads`, fora do Git. O Chrome ou Edge precisa estar instalado. Esta função não aparece na consulta online e preserva a importação manual. O fluxo completo foi validado na aplicação local; a conferência oficial das bases permanece pendente.
 
 ## Requisitos
 

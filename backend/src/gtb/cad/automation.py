@@ -44,15 +44,20 @@ class CadImportManager:
         self.worker: threading.Thread | None = None
         self.phase = "idle"
         self.message = "Informe CPF, senha e o intervalo desejado para consultar o CAD."
+        self.progress = 0
         self.result: dict | None = None
 
-    def _set(self, phase: str, message: str, result: dict | None = None) -> None:
+    def _set(self, phase: str, message: str, result: dict | None = None,
+             progress: int | None = None) -> None:
         with self.lock:
             self.phase, self.message, self.result = phase, message, result
+            if progress is not None:
+                self.progress = max(self.progress, min(100, max(0, progress)))
 
     def status(self) -> dict:
         with self.lock:
-            return {"phase": self.phase, "message": self.message, "result": self.result}
+            return {"phase": self.phase, "message": self.message,
+                    "progress": self.progress, "result": self.result}
 
     def start(self, cpf: str, password: str, start_date: str, end_date: str) -> dict:
         if not re.fullmatch(r"\d{11}", cpf or "") or not password or len(password) > 200:
@@ -62,6 +67,7 @@ class CadImportManager:
             if self.worker and self.worker.is_alive():
                 raise ValueError("Já existe uma consulta CAD em andamento. Encerre-a antes de começar outra.")
             self.phase, self.message, self.result = "opening", "Abrindo o CAD…", None
+            self.progress = 2
             self.commands = queue.Queue()
             self.stop.clear()
             self.worker = threading.Thread(
@@ -76,7 +82,7 @@ class CadImportManager:
         if self.status()["phase"] != "token":
             raise ValueError("Aguarde o pedido de token do CAD.")
         self.commands.put(("token", token))
-        self._set("verifying", "Token enviado. Aguardando confirmação do CAD…")
+        self._set("verifying", "Token enviado. Aguardando confirmação do CAD…", progress=10)
         return self.status()
 
     def disconnect(self) -> dict:
@@ -123,7 +129,7 @@ class CadImportManager:
         page.locator("#cpf").fill(cpf)
         page.locator("#senha").fill(password)
         page.locator('#login-form input[type="submit"]').click()
-        self._set("token", "Aguarde o token do CAD e informe-o aqui.")
+        self._set("token", "Aguarde o token do CAD e informe-o aqui.", progress=8)
 
     def _await_access(self, page) -> None:
         deadline = time.monotonic() + 600
@@ -132,7 +138,7 @@ class CadImportManager:
             if page.is_closed():
                 raise ValueError("A janela do CAD foi fechada.")
             if urlparse(page.url).path == MENU_PATH:
-                self._set("filtering", "Acesso confirmado. Preparando a consulta.")
+                self._set("filtering", "Acesso confirmado. Preparando a consulta.", progress=15)
                 return
             error = page.locator("#errolog")
             if error.count() and error.is_visible() and error.inner_text().strip():
@@ -195,11 +201,12 @@ class CadImportManager:
                 pass
         raise TimeoutError(f"O CAD não mostrou {label} após a etapa anterior.")
 
-    def _action(self, page, action: str, message: str, options: dict | None = None) -> dict:
+    def _action(self, page, action: str, message: str, options: dict | None = None,
+                progress: int | None = None) -> dict:
         self._check_stop()
         if not page.url.startswith(CAD_ORIGIN + "/"):
             raise ValueError("A página atual não pertence ao CAD.")
-        self._set("filtering", message)
+        self._set("filtering", message, progress=progress)
         result = page.evaluate(f"({ACTIONS})({json.dumps(action)}, {json.dumps(options or {})})")
         if not result or not result.get("ok"):
             raise ValueError(result.get("reason", f"O CAD não concluiu {action}.") if result else
@@ -207,10 +214,14 @@ class CadImportManager:
         return result
 
     def _select_all_columns(self, page) -> None:
+        initial_count = None
         for _ in range(200):
             inventory = self._action(page, "columnInventory", "Selecionando as colunas do relatório.")
             if not inventory.get("count"):
+                self._set("filtering", "Todas as colunas foram selecionadas.", progress=70)
                 return
+            if initial_count is None:
+                initial_count = inventory["count"]
             start, end = inventory["from"], inventory["to"]
             viewport = page.evaluate("({width: innerWidth, height: innerHeight})")
             for point in (start, end):
@@ -225,6 +236,9 @@ class CadImportManager:
             after = self._action(page, "columnInventory", "Conferindo as colunas selecionadas.")
             if after.get("count", 0) >= inventory["count"]:
                 raise ValueError("O CAD não confirmou a seleção de uma coluna.")
+            selected = initial_count - after.get("count", 0)
+            self._set("filtering", f"Selecionando as colunas: {selected} de {initial_count}.",
+                      progress=40 + (30 * selected // initial_count))
         raise ValueError("A lista de colunas excedeu o limite esperado.")
 
     def _download_and_import(self, page, start_date: str, end_date: str) -> None:
@@ -232,25 +246,25 @@ class CadImportManager:
         if not page.url.startswith(OCCURRENCES_URL):
             raise ValueError("A consulta de ocorrências não abriu no CAD.")
         self._wait_control(page, "Pesquisar")
-        self._action(page, "dateRangeMode", "Selecionando o intervalo de datas.")
+        self._action(page, "dateRangeMode", "Selecionando o intervalo de datas.", progress=18)
         page.wait_for_timeout(800)
         self._action(page, "dateRangeValues", "Preenchendo as datas da consulta.",
-                     {"startDate": start_date, "endDate": end_date})
-        self._action(page, "agency", "Selecionando Polícia Militar.")
+                     {"startDate": start_date, "endDate": end_date}, progress=22)
+        self._action(page, "agency", "Selecionando Polícia Militar.", progress=25)
         page.wait_for_timeout(800)
-        self._action(page, "unit", "Selecionando 10º BPM.")
-        self._action(page, "search", "Pesquisando ocorrências no CAD.")
+        self._action(page, "unit", "Selecionando 10º BPM.", progress=28)
+        self._action(page, "search", "Pesquisando ocorrências no CAD.", progress=32)
         self._wait_control(page, "Colunas", 120000)
-        self._action(page, "columnMenu", "Abrindo a configuração de colunas.")
+        self._action(page, "columnMenu", "Abrindo a configuração de colunas.", progress=40)
         self._wait_control(page, "Aplicar")
         self._select_all_columns(page)
-        self._action(page, "columns", "Aplicando todas as colunas.")
+        self._action(page, "columns", "Aplicando todas as colunas.", progress=72)
         self._wait_control(page, "Exportação", 120000)
-        self._action(page, "exportMenu", "Abrindo as opções de exportação.")
+        self._action(page, "exportMenu", "Abrindo as opções de exportação.", progress=75)
         page.wait_for_timeout(300)
-        self._action(page, "xls", "Gerando a planilha XLS.")
+        self._action(page, "xls", "Gerando a planilha XLS.", progress=78)
         self._wait_control(page, "Baixar", 120000)
-        self._set("downloading", "Baixando o XLS do CAD…")
+        self._set("downloading", "Baixando o XLS do CAD…", progress=80)
         with page.expect_download(timeout=120000) as transfer:
             page.get_by_text("Baixar", exact=True).click()
         download = transfer.value
@@ -266,11 +280,11 @@ class CadImportManager:
         content = saved.read_bytes()
         if not content or len(content) > MAX_UPLOAD_BYTES:
             raise ValueError("O XLS está vazio ou acima do limite de 64 MB.")
-        self._set("validating", "Validando a planilha antes da importação.")
+        self._set("validating", "Validando a planilha antes da importação.", progress=88)
         validation = self.store.validate_file("ocorrencias", filename, content)
         if validation["accepted"] == 0:
             raise ValueError("Nenhuma ocorrência válida foi encontrada no XLS.")
-        self._set("importing", "Importando ocorrências no sistema 2.0.")
+        self._set("importing", "Importando ocorrências no sistema 2.0.", progress=95)
         result = self.store.import_file("ocorrencias", filename, content, "partial")
         if self.on_import:
             self.on_import()
@@ -278,4 +292,4 @@ class CadImportManager:
             "row_count": result["row_count"], "inserted": result["inserted"],
             "updated": result["updated"], "quarantined": result["quarantined"],
             "repeated": result["repeated"],
-        })
+        }, progress=100)

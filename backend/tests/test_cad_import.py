@@ -48,3 +48,46 @@ def test_viewer_cannot_start_cad(tmp_path, monkeypatch):
     })
     assert response.status_code == 403
     assert manager.status()["phase"] == "idle"
+
+
+def test_cad_progress_is_monotonic_and_only_finishes_on_completion(tmp_path):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    assert manager.status()["progress"] == 0
+    manager._set("filtering", "Consulta", progress=40)
+    manager._set("filtering", "Aguardando", progress=32)
+    assert manager.status()["progress"] == 40
+    manager._set("importing", "Gravando", progress=95)
+    assert manager.status()["progress"] == 95
+    manager._set("complete", "Concluído", {"inserted": 1}, progress=100)
+    assert manager.status()["progress"] == 100
+
+
+def test_cad_column_progress_uses_confirmed_selection(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    counts = iter([2, 1, 1, 0, 0])
+    inventory = lambda: {"count": next(counts), "from": {"x": 1, "y": 1},
+                         "to": {"x": 2, "y": 2}}
+    monkeypatch.setattr(manager, "_action", lambda *_args: inventory())
+
+    class Mouse:
+        def move(self, *_args, **_kwargs):
+            pass
+
+        def down(self):
+            pass
+
+        def up(self):
+            pass
+
+    class Page:
+        mouse = Mouse()
+
+        def evaluate(self, _script):
+            return {"width": 10, "height": 10}
+
+        def wait_for_timeout(self, _milliseconds):
+            pass
+
+    manager._select_all_columns(Page())
+    assert manager.status()["progress"] == 70
+    assert manager.status()["message"] == "Todas as colunas foram selecionadas."
