@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Carregamento dos relatórios sob demanda — 0.1.70
+
+A Central de Relatórios e seu conjunto completo de dados são carregados somente quando a área é aberta pelo menu ou pelo botão da própria seção. O relatório detalhado do painel e os relatórios especializados também têm módulos separados e só carregam após o comando de geração. A página inicial mantém os indicadores e a navegação, sem iniciar a consulta de dados dos relatórios. O teste no navegador confirmou zero módulos da Central na abertura e carregamento após o clique no menu; os 50 testes de interface passaram. O instalador 0.1.70 foi aplicado e a aplicação instalada respondeu na mesma versão, preservando os arquivos locais de banco e contas. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para as conferências oficiais das bases.
+
 ## Última atualização sob cada indicador — 0.1.69
 
 Os cartões da Visão Executiva mostram a data da última importação concluída da fonte usada no cálculo. MVI CAD e NEAC são independentes; CVP, tentativas, TCO, mandados, visitas, sossego e violência doméstica seguem a base de ocorrências. Armas e drogas usam suas bases específicas quando disponíveis e a base geral no modo alternativo. A data vem do histórico completo de lotes, sem depender da página atual da auditoria ou dos filtros do painel. Sem lote, o cartão indica ausência de importação. A suíte passou com 111 testes de backend e 50 de interface; o instalador 0.1.69 foi aplicado e respondeu com a versão 0.1.69, preservando os arquivos locais de banco e contas. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para as conferências oficiais das bases.
