@@ -50,6 +50,28 @@ function domesticContent(all: ReportRow[], rows: ReportRow[]): string {
     + distribution('Vínculo informado', count(rows, row => row.relationship))
     + distribution('Tipo de agressão informado', count(rows, row => row.aggression))
 }
+function mviNeacCommandContent(data: ReportDataset, scope: ReportScope): string {
+  const rows = selectReportRows(filterReportRows(data.rows, scope), 'mvi-neac')
+  const validHours = rows.filter(row => row.hour !== null)
+  const months = count(rows, row => row.date.slice(0, 7)).sort((a, b) => a[0].localeCompare(b[0]))
+  const cities = count(rows, row => row.city)
+  const summary = page('1. Síntese para o Comando',
+    kpis([['Vítimas elegíveis', rows.length], ['Municípios com vítimas', cities.length], ['Horários informados', `${validHours.length} de ${rows.length}`]])
+    + (rows.length ? `<p>O maior quantitativo do recorte está em <strong>${escapeHtml(cities[0][0])}</strong>, com <strong>${n(cities[0][1])}</strong> vítima(s). A leitura considera exclusivamente os registros elegíveis da fonte NEAC.</p>` : '<p class="note">Nenhuma vítima elegível no recorte. Confira a importação NEAC e os filtros antes de apresentar este informe.</p>')
+    + '<p class="note">Unidade de contagem: vítima elegível. O total NEAC não deve ser somado ao CAD, pois as fontes podem representar o mesmo fato.</p>', scopeLabel(scope))
+  const trend = page('2. Evolução e distribuição territorial',
+    distribution('Vítimas por mês', months, 'vítimas')
+    + distribution('Vítimas por município', cities, 'vítimas'))
+  const profile = page('3. Perfil e qualidade dos registros',
+    distribution('Classificações', count(rows, row => row.category || row.nature), 'vítimas')
+    + distribution('Sexo informado', count(rows, row => row.sex), 'vítimas')
+    + distribution('Faixas etárias', count(rows, ageBand), 'vítimas')
+    + distribution('Dia da semana', count(rows, weekday), 'vítimas')
+    + distribution('Faixas de duas horas · horários válidos', count(validHours, hourBand), 'vítimas')
+    + `<p class="note">Cobertura de horário: ${validHours.length} de ${rows.length} vítima(s) (${rows.length ? n(100 * validHours.length / rows.length) : '0'}%). Campos ausentes permanecem “Não informado”. A distribuição por horário usa apenas os registros com hora válida.</p>`)
+  return summary + trend + profile + page('4. Relação auditável NEAC', auditRows(rows, 'mvi-neac')
+    + '<p class="note">Esta relação individual compõe o PDF para conferência interna. A versão para WhatsApp contém apenas agregados.</p>')
+}
 function moduleContent(data: ReportDataset, id: ReportId, scope: ReportScope, options: ReportOptions): string {
   const all = filterReportRows(data.rows, scope), rows = selectReportRows(all, id)
   const arms = id === 'armas', drugs = id === 'drogas', mvi = id.startsWith('mvi-')
@@ -117,6 +139,7 @@ export function buildReportDocument(data: ReportDataset, id: ReportId, scope: Re
     content += modules.map(module => page(reportCatalog.find(item => item.id === module)!.title, moduleContent(data, module, scope, options))).join('')
   } else if (id === 'conferencia-mvi') content = page('Conferência independente CAD × NEAC', '<p>Correspondência conservadora por nome completo, data e município. Possíveis pares exigem revisão humana; casos ambíguos não recebem vínculo automático. Os totais das fontes não são somados.</p>' + table(['Situação para revisão', 'Data NEAC', 'Município', 'Vítima NEAC', 'Ocorrência NEAC', 'Ocorrência CAD'], mviConferences(filterReportRows(data.rows, scope)).map(item => [item.status, item.neac.date, item.neac.city, item.neac.victim, item.neac.occurrence, item.cad?.occurrence || ''])))
   else if (id === 'tco') content = tcoPages(data, scope)
+  else if (id === 'mvi-neac') content = mviNeacCommandContent(data, scope)
   else if (id === 'executivo' || id === 'folder') {
     const rows = selectReportRows(filterReportRows(data.rows, scope), 'geral')
     content = page('Indicadores e comparativos para reunião', executiveContent(data, scope))

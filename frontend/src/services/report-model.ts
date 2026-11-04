@@ -19,7 +19,7 @@ export const reportCatalog = [
   { id: 'institucional', title: 'Relatório institucional', icon: 'report', description: 'Panorama completo, qualidade das bases e memória do recorte.', legacy: 'dashboardPdfButton' },
   { id: 'geral', title: 'Painel geral', icon: 'dashboard', description: 'Ocorrências, naturezas, territórios, horários e soluções.', legacy: 'generalPdfButton' },
   { id: 'mvi-cad', title: 'MVI CAD', icon: 'skull', description: 'Vítimas, classificação, perfil, meios, horários e dias sem MVI.', legacy: 'mviPdfButton' },
-  { id: 'mvi-neac', title: 'MVI NEAC', icon: 'skull', description: 'Relatório independente da fonte NEAC, com os mesmos quadros de análise.', legacy: 'mviNeacTab' },
+  { id: 'mvi-neac', title: 'MVI NEAC · Informe para o Comando', icon: 'skull', description: 'PDF com síntese, evolução, municípios, perfil e memória; resumo agregado para WhatsApp.', legacy: 'mviNeacTab' },
   { id: 'conferencia-mvi', title: 'Conferência CAD × NEAC', icon: 'table', description: 'Consolidação para revisão e planilha XLSX com fontes separadas e possíveis pares.', legacy: 'exportMviNeacConsolidation' },
   { id: 'cvp', title: 'Crimes Violentos contra o Patrimônio', icon: 'robbery', description: 'Roubos, evolução, comparativos e distribuição territorial.', legacy: 'cvpPdfButton' },
   { id: 'tentativas', title: 'Tentativas de homicídio', icon: 'attempt', description: 'Ocorrências, meios empregados e perfis de tempo e território.', legacy: 'attemptPdfButton' },

@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Informe MVI NEAC para o Comando — 0.1.72
+
+A Central de Relatórios gera um informe MVI NEAC com síntese para o Comando, evolução mensal, distribuição por município, classificações, perfil, cobertura de horários, relação auditável e memória da fonte. O botão de impressão permite salvar o documento em PDF. A mesma prévia oferece um texto agregado para WhatsApp, com link de compartilhamento e opção de copiar, sem nomes de vítimas nem números de ocorrência. O recorte respeita os filtros do relatório e usa exclusivamente vítimas elegíveis NEAC; CAD não é somado. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Central de Acesso e saudação — 0.1.71
 
 A administração local ganhou a Central de Acesso, mantendo os perfis Administrador, Analista e Consulta. Novas senhas podem ter 8 a 256 caracteres e devem incluir letra maiúscula, letra minúscula e caractere especial; as contas antigas continuam válidas, pois a verificação de login usa a hash já armazenada. A entrada e a área principal mostram Bom dia, Boa tarde ou Boa noite conforme o relógio local, junto à data. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para as conferências oficiais das bases.

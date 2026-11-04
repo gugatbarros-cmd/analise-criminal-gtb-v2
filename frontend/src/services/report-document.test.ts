@@ -36,6 +36,24 @@ describe('relatórios trazidos do legado', () => {
     expect(JSON.stringify(thematic)).not.toContain('Pessoa CAD')
     expect(thematic.groups['Horário']).toEqual([['Não informado', 1]])
   })
+  it('organiza o informe NEAC para comando e mantém o CAD fora dos totais', () => {
+    vi.stubGlobal('location', { origin: 'http://localhost:5173' })
+    const rows = [
+      fact({ source: 'mvi_neac', victim: 'Vítima Sintética', city: 'Igaci', date: '2026-03-01', hour: 20, category: 'Homicídio doloso' }),
+      fact({ source: 'mvi_neac', victim: 'Outra Vítima Sintética', city: 'Igaci', date: '2026-03-02', hour: null, category: 'Homicídio doloso' }),
+      fact({ source: 'mvi_cad', victim: 'Pessoa CAD', city: 'Igaci', date: '2026-03-02' }),
+      fact({ source: 'mvi_neac', eligible: false, victim: 'Registro inelegível' }),
+    ]
+    const html = buildReportDocument(dataset(rows), 'mvi-neac', { year: 2026 }, options, 'test')
+    expect(html).toContain('Síntese para o Comando')
+    expect(html).toContain('Evolução e distribuição territorial')
+    expect(html).toContain('Perfil e qualidade dos registros')
+    expect(html).toContain('Vítimas elegíveis</span><strong>2')
+    expect(html).toContain('Horários informados</span><strong>1 de 2')
+    expect(html).toContain('Vítima Sintética')
+    expect(html).not.toContain('Pessoa CAD')
+    expect(html).not.toContain('Registro inelegível')
+  })
   it('gera todos os modelos documentais com metadados e preserva todas as categorias na tabela', () => {
     vi.stubGlobal('location', { origin: 'http://localhost:5173' })
     const rows = Array.from({ length: 14 }, (_, index) => fact({ city: 'Igaci', nature: `Natureza ${index}` }))

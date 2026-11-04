@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-04",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.71 com Central de Acesso, senha local de 8 caracteres com requisitos de composição e saudação por horário e data. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.72 com informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -36,7 +36,7 @@
       "weight": 25,
       "completed": 9,
       "total": 10,
-      "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC",
+      "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC; informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp",
       "remaining": "Paridade oficial e demais campos derivados"
     },
     {

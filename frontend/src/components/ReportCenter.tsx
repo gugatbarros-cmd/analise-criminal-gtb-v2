@@ -5,6 +5,7 @@ import { bpmCities, reportCatalog, type ReportId, type ReportOptions, type Repor
 import { buildReportDocument, printReport, reportCsv, summaryCsv } from '../services/report-document'
 import { openDomesticPresentation } from '../services/domestic-presentation'
 import { exportReportWorkbook } from '../services/report-spreadsheet'
+import { buildMviNeacWhatsapp } from '../services/mvi-neac-share'
 import { SystemIcon } from './SystemIcon'
 import '../reports.css'
 
@@ -15,17 +16,19 @@ export function ReportCenter({ year, municipality, version, allowed }: { year?: 
   const [preview, setPreview] = useState('')
   const [planning, setPlanning] = useState(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
   const data = useQuery({ queryKey: ['report-dataset'], queryFn: getReportDataset, enabled: allowed })
   const authorized = useRef(allowed)
   authorized.current = allowed
   useEffect(() => { authorized.current = allowed; return () => { authorized.current = false; document.querySelector<HTMLDialogElement>('.domestic-report-studio')?.close() } }, [allowed])
   useEffect(() => { setPreview('') }, [data.data])
   useEffect(() => { setScope(previous => ({ ...previous, year, city: municipality })); setPreview('') }, [year, municipality])
-  const update = (patch: Partial<ReportScope>) => { setScope(value => ({ ...value, ...patch })); setPreview(''); setError('') }
+  const update = (patch: Partial<ReportScope>) => { setScope(value => ({ ...value, ...patch })); setPreview(''); setError(''); setCopied(false) }
   const customize = (patch: Partial<ReportOptions>) => { setOptions(value => ({ ...value, ...patch })); setPreview('') }
   const chosen = reportCatalog.find(item => item.id === selected)!
+  const whatsappText = preview && selected === 'mvi-neac' && data.data ? buildMviNeacWhatsapp(data.data, scope) : ''
   const prepare = async (id: ReportId) => {
-    setSelected(id); setError(''); setPlanning(false); setPreview('')
+    setSelected(id); setError(''); setPlanning(false); setPreview(''); setCopied(false)
     if (scope.start && scope.end && scope.start > scope.end) { setError('A data inicial deve ser anterior ou igual à data final.'); return }
     if (id.startsWith('mvi-') && !options.referenceDate) { setError('Informe a data de referência dos dias sem MVI.'); return }
     if (id === 'planejamento') { setPlanning(true); return }
@@ -73,7 +76,7 @@ export function ReportCenter({ year, municipality, version, allowed }: { year?: 
       {data.isError && <div className="error" role="alert">{data.error.message} <button type="button" onClick={() => void data.refetch()}>Tentar novamente</button></div>}
       <div className="report-catalog">{reportCatalog.map(item => <button type="button" data-report-id={item.id} key={item.id} className={selected === item.id ? 'report-choice selected' : 'report-choice'} disabled={!data.data && item.id !== 'planejamento'} onClick={() => void prepare(item.id)}><SystemIcon name={item.icon} /><strong>{item.title}</strong><span>{item.description}</span><small>{item.id === 'domestica-apresentacao' ? 'Abrir editor · PDF e PPTX →' : item.id === 'planejamento' ? 'Abrir tabuleiro · PDF e PNG →' : 'Preparar relatório →'}</small></button>)}</div>
       {error && <p className="error" role="alert">{error}</p>}
-      {preview && <div className="report-preview" aria-label="Prévia do relatório selecionado"><div className="section-head"><h3>{chosen.title}</h3><div className="report-toolbar"><button type="button" className="primary" onClick={() => { void printReport(preview).catch(failure => setError(String(failure.message))) }}>Imprimir ou salvar PDF</button><button type="button" onClick={exportCsv}>Exportar CSV</button><button type="button" onClick={() => setPreview('')}>Fechar prévia</button></div></div><iframe title={`Prévia: ${chosen.title}`} srcDoc={preview} sandbox="allow-same-origin" /></div>}
+      {preview && <div className="report-preview" aria-label="Prévia do relatório selecionado"><div className="section-head"><h3>{chosen.title}</h3><div className="report-toolbar"><button type="button" className="primary" onClick={() => { void printReport(preview).catch(failure => setError(String(failure.message))) }}>Imprimir ou salvar PDF</button><button type="button" onClick={exportCsv}>Exportar CSV</button><button type="button" onClick={() => setPreview('')}>Fechar prévia</button></div></div><iframe title={`Prévia: ${chosen.title}`} srcDoc={preview} sandbox="allow-same-origin" />{whatsappText && <div className="whatsapp-report"><h4>Resumo para WhatsApp</h4><p className="muted">Confira o texto antes de compartilhar. Ele contém apenas totais e distribuições, sem identificação de vítimas.</p><textarea aria-label="Texto do resumo MVI NEAC para WhatsApp" readOnly value={whatsappText} rows={16} /><div className="report-toolbar"><a className="whatsapp-share" href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer">Abrir no WhatsApp</a><button type="button" onClick={() => { if (!navigator.clipboard?.writeText) { setError('Não foi possível copiar o texto. Selecione e copie a prévia acima.'); return } void navigator.clipboard.writeText(whatsappText).then(() => setCopied(true)).catch(() => setError('Não foi possível copiar o texto. Selecione e copie a prévia acima.')) }}>Copiar texto</button></div>{copied && <p className="success" role="status">Resumo copiado.</p>}</div>}</div>}
       {planning && <div className="report-preview"><div className="section-head"><h3>Tabuleiro do planejamento operacional</h3><button type="button" onClick={() => setPlanning(false)}>Fechar tabuleiro</button></div><p className="muted">Cenários salvos neste navegador. Mapa de ruas depende de conexão; a exportação PNG é uma prancha esquemática.</p><iframe title="Planejamento operacional com PDF e PNG" src={`${import.meta.env.BASE_URL}assets/reports/planning.html`} /></div>}
     </>}
   </section>
