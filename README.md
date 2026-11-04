@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Versão local 0.1.72. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Versão local 0.1.73. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Em **Relatórios e apresentações → MVI NEAC · Informe para o Comando**, prepare a prévia com o período desejado. Use **Imprimir ou salvar PDF** para o documento completo e **Abrir no WhatsApp** para compartilhar o resumo sem dados pessoais.
 
@@ -18,7 +18,7 @@ Na aplicação **local**, em Importações, use **Buscar ocorrências no CAD**. 
 
 Na Visão Executiva, cada indicador mostra abaixo do valor a data da última importação concluída da fonte usada no cálculo. Quando ainda não há lote dessa fonte, aparece “sem importação”.
 
-A Central de Relatórios busca seus dados somente ao abrir **Relatórios e apresentações** pelo menu ou pelo botão da seção. Os demais modelos de relatório carregam quando sua geração é solicitada.
+A Central de Relatórios abre sem buscar a base completa. Os dados são consultados quando você clica no modelo para gerar o relatório ou em **Exportar resumo CSV**. Dados já consultados são reaproveitados até uma nova importação.
 
 ## Requisitos
 

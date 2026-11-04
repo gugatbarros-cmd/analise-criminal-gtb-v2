@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Geração individual de relatórios — 0.1.73
+
+A Central de Relatórios abre sem consultar o conjunto completo de dados. O clique em um modelo gera sua prévia e inicia a consulta somente se os dados ainda não estiverem disponíveis; o resumo CSV consulta os dados ao ser solicitado. Uma importação invalida o cache e fecha prévias antigas para que a geração seguinte use os dados atualizados. O carregamento mostra o relatório em andamento. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Informe MVI NEAC para o Comando — 0.1.72
 
 A Central de Relatórios gera um informe MVI NEAC com síntese para o Comando, evolução mensal, distribuição por município, classificações, perfil, cobertura de horários, relação auditável e memória da fonte. O botão de impressão permite salvar o documento em PDF. A mesma prévia oferece um texto agregado para WhatsApp, com link de compartilhamento e opção de copiar, sem nomes de vítimas nem números de ocorrência. O recorte respeita os filtros do relatório e usa exclusivamente vítimas elegíveis NEAC; CAD não é somado. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para conferência oficial das bases.

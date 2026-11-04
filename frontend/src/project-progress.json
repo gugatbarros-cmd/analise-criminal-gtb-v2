@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-04",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.72 com informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.73 com a Central de Relatórios carregando os dados somente ao gerar o modelo escolhido. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -27,7 +27,7 @@
       "weight": 20,
       "completed": 4,
       "total": 5,
-      "done": "CSV/XLS/XLSX, pré-validação obrigatória sem gravação, backup automático por lote, versões, histórico e auditoria paginados, restauração, ensaio de um milhão de linhas, quatro layouts fornecidos lidos localmente e comparador de seis fontes; alternativa CAD validada de ponta a ponta na aplicação local, com pré-validação do XLS, barra de andamento por etapa e data da última importação por indicador; relatórios carregados sob demanda",
+      "done": "CSV/XLS/XLSX, pré-validação obrigatória sem gravação, backup automático por lote, versões, histórico e auditoria paginados, restauração, ensaio de um milhão de linhas, quatro layouts fornecidos lidos localmente e comparador de seis fontes; alternativa CAD validada de ponta a ponta na aplicação local, com pré-validação do XLS, barra de andamento por etapa e data da última importação por indicador; dados da Central de Relatórios consultados somente ao gerar um modelo ou exportar o resumo CSV",
       "remaining": "Receber as duas fontes restantes, comparar totais oficiais e desempenho com o legado"
     },
     {
