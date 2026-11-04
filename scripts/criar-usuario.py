@@ -29,7 +29,7 @@ def main() -> int:
             print("Administrador não autenticado.", file=sys.stderr)
             return 1
         actor = session
-    password = getpass.getpass("Senha da nova conta (mínimo 12 caracteres): ")
+    password = getpass.getpass("Senha da nova conta (mínimo 8 caracteres; maiúscula, minúscula e especial): ")
     confirmation = getpass.getpass("Repita a senha: ")
     if password != confirmation:
         print("As senhas não conferem.", file=sys.stderr)

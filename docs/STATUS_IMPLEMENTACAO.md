@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Central de Acesso e saudação — 0.1.71
+
+A administração local ganhou a Central de Acesso, mantendo os perfis Administrador, Analista e Consulta. Novas senhas podem ter 8 a 256 caracteres e devem incluir letra maiúscula, letra minúscula e caractere especial; as contas antigas continuam válidas, pois a verificação de login usa a hash já armazenada. A entrada e a área principal mostram Bom dia, Boa tarde ou Boa noite conforme o relógio local, junto à data. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para as conferências oficiais das bases.
+
 ## Carregamento dos relatórios sob demanda — 0.1.70
 
 A Central de Relatórios e seu conjunto completo de dados são carregados somente quando a área é aberta pelo menu ou pelo botão da própria seção. O relatório detalhado do painel e os relatórios especializados também têm módulos separados e só carregam após o comando de geração. A página inicial mantém os indicadores e a navegação, sem iniciar a consulta de dados dos relatórios. O teste no navegador confirmou zero módulos da Central na abertura e carregamento após o clique no menu; os 50 testes de interface passaram. O instalador 0.1.70 foi aplicado e a aplicação instalada respondeu na mesma versão, preservando os arquivos locais de banco e contas. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para as conferências oficiais das bases.

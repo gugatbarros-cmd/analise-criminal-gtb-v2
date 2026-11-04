@@ -53,8 +53,12 @@ class AuthManager:
                     actor: dict | None = None) -> None:
         if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_.-]{2,31}", username):
             raise ValueError("Usuário deve ter 3 a 32 caracteres válidos")
-        if len(password) < 12 or len(password) > 256:
-            raise ValueError("Senha deve ter de 12 a 256 caracteres")
+        if not 8 <= len(password) <= 256:
+            raise ValueError("Senha deve ter de 8 a 256 caracteres")
+        if (not any(char.isupper() for char in password)
+                or not any(char.islower() for char in password)
+                or not any(not char.isalnum() and not char.isspace() for char in password)):
+            raise ValueError("Senha deve incluir letra maiúscula, letra minúscula e caractere especial")
         if role not in ROLES:
             raise ValueError("Papel desconhecido")
         with self.lock, self._connect() as db:

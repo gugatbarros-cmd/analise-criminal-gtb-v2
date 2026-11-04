@@ -35,13 +35,13 @@ def test_comparisons_keep_current_versions_years_units_and_no_personal_identifie
 
 def test_comparisons_require_login_and_allow_viewer_without_reports_access(tmp_path, monkeypatch):
     manager = AuthManager(tmp_path / 'auth.sqlite3')
-    manager.create_user('admin', 'synthetic-password-admin', 'admin')
-    manager.create_user('reader', 'synthetic-password-reader', 'viewer', actor={'username': 'admin', 'role': 'admin'})
+    manager.create_user('admin', 'Admin!Synthetic1', 'admin')
+    manager.create_user('reader', 'Reader!Synthetic1', 'viewer', actor={'username': 'admin', 'role': 'admin'})
     monkeypatch.setattr(main, 'auth_manager', manager)
     monkeypatch.setattr(main, 'store', Store(tmp_path / 'gtb.duckdb'))
     client = TestClient(main.app)
     assert client.get('/comparisons/dataset').status_code == 401
-    token = client.post('/auth/login', json={'username': 'reader', 'password': 'synthetic-password-reader'}).json()['token']
+    token = client.post('/auth/login', json={'username': 'reader', 'password': 'Reader!Synthetic1'}).json()['token']
     headers = {'Authorization': 'Bearer ' + token}
     assert client.get('/comparisons/dataset', headers=headers).json()['rows'] == []
     assert client.get('/reports/dataset', headers=headers).status_code == 403

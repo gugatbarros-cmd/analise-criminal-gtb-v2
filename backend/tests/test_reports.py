@@ -43,13 +43,13 @@ def test_report_projection_preserves_sources_units_and_originals(tmp_path):
 
 def test_report_dataset_restricts_access_to_admin(tmp_path, monkeypatch):
     manager = AuthManager(tmp_path / 'auth.sqlite3')
-    manager.create_user('admin', 'password-synthetic-admin', 'admin')
-    manager.create_user('reader', 'password-synthetic-reader', 'viewer', actor={'username': 'admin', 'role': 'admin'})
+    manager.create_user('admin', 'Admin!Synthetic1', 'admin')
+    manager.create_user('reader', 'Reader!Synthetic1', 'viewer', actor={'username': 'admin', 'role': 'admin'})
     monkeypatch.setattr(main, 'auth_manager', manager)
     monkeypatch.setattr(main, 'store', Store(tmp_path / 'gtb.duckdb'))
     client = TestClient(main.app)
     assert client.get('/reports/dataset').status_code == 401
-    for username, password, status in [('reader', 'password-synthetic-reader', 403), ('admin', 'password-synthetic-admin', 200)]:
+    for username, password, status in [('reader', 'Reader!Synthetic1', 403), ('admin', 'Admin!Synthetic1', 200)]:
         token = client.post('/auth/login', json={'username': username, 'password': password}).json()['token']
         response = client.get('/reports/dataset', headers={'Authorization': 'Bearer ' + token})
         assert response.status_code == status

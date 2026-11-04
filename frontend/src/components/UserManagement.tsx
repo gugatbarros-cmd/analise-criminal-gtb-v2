@@ -16,14 +16,15 @@ export function UserManagement({ token }: { token: string }) {
     mutationFn: () => createUser(token, username, password, role),
     onSuccess: () => { setUsername(''); setPassword(''); setRole('viewer'); void client.invalidateQueries({ queryKey: ['users'] }) },
   })
-  return <section className="panel" aria-label="Gerenciar usuários locais">
-    <div className="section-head"><div><p className="eyebrow">Acesso ao sistema local</p><h2>Usuários e perfis</h2></div></div>
+  return <section className="panel" aria-label="Central de Acesso">
+    <div className="section-head"><div><p className="eyebrow">Contas e permissões locais</p><h2>Central de Acesso</h2></div></div>
     <p className="muted">Administrador cria contas; analista pode importar e consultar; perfil de consulta não pode importar. As senhas ficam derivadas no banco local de autenticação.</p>
     {users.isError && <p className="error" role="alert">Não foi possível listar as contas.</p>}
     {users.data && <div className="user-list">{users.data.map(user => <span key={user.username}>{user.username} · {roleLabels[user.role]}</span>)}</div>}
     <form onSubmit={event => { event.preventDefault(); creation.mutate() }}>
       <label>Novo usuário<input value={username} minLength={3} maxLength={32} autoComplete="off" required onChange={event => setUsername(event.target.value)} /></label>
-      <label>Senha inicial<input type="password" value={password} minLength={12} maxLength={256} autoComplete="new-password" required onChange={event => setPassword(event.target.value)} /></label>
+      <label>Senha inicial<input type="password" value={password} minLength={8} maxLength={256} autoComplete="new-password" aria-describedby="password-rules" required onChange={event => setPassword(event.target.value)} /></label>
+      <p id="password-rules" className="muted password-rules">Mínimo de 8 caracteres, com letra maiúscula, letra minúscula e caractere especial.</p>
       <label>Perfil<select value={role} onChange={event => setRole(event.target.value as LocalUser['role'])}><option value="viewer">Consulta</option><option value="analyst">Analista</option><option value="admin">Administrador</option></select></label>
       <button type="submit" className="primary" disabled={creation.isPending}>Criar conta</button>
       {creation.isError && <p className="error" role="alert">{creation.error.message}</p>}

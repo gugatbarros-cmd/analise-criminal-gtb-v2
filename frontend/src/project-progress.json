@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-04",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.70 com relatórios carregados somente sob demanda. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.71 com Central de Acesso, senha local de 8 caracteres com requisitos de composição e saudação por horário e data. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -54,7 +54,7 @@
       "weight": 10,
       "completed": 4,
       "total": 5,
-      "done": "Contas locais, perfis, backup integral verificável, restauração validada e executável Windows instalável no perfil do usuário, com inicializador supervisionado, atalhos, log de falhas e atualização que preserva os dados",
+      "done": "Central de Acesso com criação de perfis e senha local de 8 caracteres com maiúscula, minúscula e especial; saudação por horário e data; backup integral verificável, restauração validada e executável Windows instalável no perfil do usuário, com inicializador supervisionado, atalhos, log de falhas e atualização que preserva os dados",
       "remaining": "Backup dos dados operacionais do legado, operação paralela e aprovação do plano de troca"
     }
   ]

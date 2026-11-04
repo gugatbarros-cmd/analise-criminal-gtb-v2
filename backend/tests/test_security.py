@@ -14,16 +14,16 @@ def test_local_auth_hashes_passwords_and_revokes_sessions(tmp_path):
     manager = AuthManager(path)
     assert not manager.has_users()
     with pytest.raises(PermissionError):
-        manager.create_user("viewer", "a-strong-password", "viewer")
-    manager.create_user("admin", "a-strong-password", "admin")
+        manager.create_user("viewer", "Abcdefg!234", "viewer")
+    manager.create_user("admin", "Abcdefg!234", "admin")
     assert manager.authenticate("admin", "incorrect-password") is None
-    session = manager.authenticate("admin", "a-strong-password")
+    session = manager.authenticate("admin", "Abcdefg!234")
     assert session["role"] == "admin"
     with sqlite3.connect(path) as db:
-        assert b"a-strong-password" not in path.read_bytes()
+        assert b"Abcdefg!234" not in path.read_bytes()
         assert db.execute("SELECT token_hash FROM sessions").fetchone()[0] != session["token"]
-    manager.create_user("reader", "reader-password-123", "viewer", session)
-    assert manager.authenticate("reader", "reader-password-123")["role"] == "viewer"
+    manager.create_user("reader", "Reader!123", "viewer", session)
+    assert manager.authenticate("reader", "Reader!123")["role"] == "viewer"
     assert manager.user_for_token(session["token"])["username"] == "admin"
     manager.revoke(session["token"])
     assert manager.user_for_token(session["token"]) is None
@@ -31,10 +31,27 @@ def test_local_auth_hashes_passwords_and_revokes_sessions(tmp_path):
 
 def test_repeated_wrong_passwords_throttle_login(tmp_path):
     manager = AuthManager(tmp_path / "auth.sqlite3")
-    manager.create_user("admin", "a-strong-password", "admin")
+    manager.create_user("admin", "Abcdefg!234", "admin")
     for _ in range(5):
         assert manager.authenticate("admin", "wrong-password") is None
-    assert manager.authenticate("admin", "a-strong-password") is None
+    assert manager.authenticate("admin", "Abcdefg!234") is None
+
+
+def test_new_password_policy_accepts_shorter_complex_password_and_preserves_old_login(tmp_path):
+    manager = AuthManager(tmp_path / "auth.sqlite3")
+    for password in ("Short!1", "lowercase!1", "UPPERCASE!1", "NoSpecial1", "Abc def12"):
+        with pytest.raises(ValueError):
+            manager.create_user("admin", password, "admin")
+    manager.create_user("admin", "Abcdef!1", "admin")
+    assert manager.authenticate("admin", "Abcdef!1") is not None
+    # Uma conta criada antes da nova regra continua autenticando pela hash armazenada.
+    old_password = "legacy-password-123"
+    with sqlite3.connect(manager.path) as db:
+        salt = db.execute("SELECT salt FROM users WHERE username = 'admin'").fetchone()[0]
+        import hashlib
+        digest = hashlib.scrypt(old_password.encode(), salt=salt, n=2**14, r=8, p=1, dklen=32)
+        db.execute("UPDATE users SET password_hash = ? WHERE username = 'admin'", (digest,))
+    assert manager.authenticate("admin", old_password) is not None
 
 
 def test_api_requires_local_login_and_enforces_roles(tmp_path, monkeypatch):
@@ -44,19 +61,19 @@ def test_api_requires_local_login_and_enforces_roles(tmp_path, monkeypatch):
     client = TestClient(main.app)
     assert client.get("/health").json()["mode"] == "setup"
     assert client.get("/indicators/summary").status_code == 503
-    manager.create_user("admin", "administrator-password", "admin")
+    manager.create_user("admin", "Admin!12345", "admin")
     assert client.get("/health").json()["mode"] == "local"
     assert client.get("/indicators/summary").status_code == 401
     login = client.post("/auth/login", json={"username": "admin",
-                                               "password": "administrator-password"})
+                                               "password": "Admin!12345"})
     assert login.status_code == 200
     admin_headers = {"Authorization": f"Bearer {login.json()['token']}"}
     assert client.get("/auth/me", headers=admin_headers).json()["role"] == "admin"
     assert client.post("/auth/users", json={"username": "reader", "role": "viewer",
-                                             "password": "reader-password-123"},
+                                             "password": "Reader!123"},
                        headers=admin_headers).status_code == 200
     reader = client.post("/auth/login", json={"username": "reader",
-                                                "password": "reader-password-123"}).json()
+                                                "password": "Reader!123"}).json()
     reader_headers = {"Authorization": f"Bearer {reader['token']}"}
     assert client.get("/indicators/summary", headers=reader_headers).status_code == 200
     assert client.get("/auth/users", headers=reader_headers).status_code == 403
@@ -72,7 +89,7 @@ def test_api_requires_local_login_and_enforces_roles(tmp_path, monkeypatch):
 
 def test_api_rejects_unknown_browser_origin_and_host(tmp_path, monkeypatch):
     manager = AuthManager(tmp_path / "auth.sqlite3")
-    manager.create_user("admin", "administrator-password", "admin")
+    manager.create_user("admin", "Admin!12345", "admin")
     monkeypatch.setattr(main, "auth_manager", manager)
     client = TestClient(main.app)
     assert client.get("/health", headers={"Origin": "https://malicious.invalid"}).status_code == 403
@@ -85,7 +102,7 @@ def test_packaged_browser_can_setup_login_import_and_logout(tmp_path, monkeypatc
     monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
     client = TestClient(main.app, base_url="http://127.0.0.1:8000")
     headers = {"Origin": origin}
-    account = {"username": "synthetic-admin", "password": "synthetic-password-123"}
+    account = {"username": "synthetic-admin", "password": "Synthetic!123"}
     # A rota estática é montada apenas pelo executável; a API isolada devolve
     # 404, sem exigir autenticação para a imagem da própria tela de login.
     assert client.get("/logo-10bpm-3d-ui.png", headers=headers).status_code == 404
