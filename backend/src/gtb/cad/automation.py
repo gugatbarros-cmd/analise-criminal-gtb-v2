@@ -22,6 +22,7 @@ MENU_PATH = "/app/cad/cad_blank_menu_respons/cad_blank_menu_respons.php"
 OCCURRENCES_URL = CAD_ORIGIN + "/app/cad/cad_grid_tb_ocor_consulta_com_cadastro/"
 TOKEN_WORDS = re.compile(r"token|c[oó]digo|verification|otp|2fa", re.IGNORECASE)
 ACTIONS = Path(__file__).with_name("page_actions.js").read_text(encoding="utf-8").strip()
+XLS_DOWNLOAD_TIMEOUT_SECONDS = 15 * 60
 
 
 def check_period(start_date: str, end_date: str) -> None:
@@ -346,12 +347,22 @@ class CadImportManager:
             watch_page(candidate)
         context.on("page", watch_page)
         try:
+            started = time.monotonic()
             self._action(page, "xls", "Gerando a planilha XLS.", progress=78)
-            deadline = time.monotonic() + 120
+            deadline = started + XLS_DOWNLOAD_TIMEOUT_SECONDS
             clicked_download = False
+            reported_minute = -1
             download_label = re.compile(r"\bBaixar\b", re.IGNORECASE)
             while not downloads and time.monotonic() < deadline:
                 self._check_stop()
+                elapsed_minute = int((time.monotonic() - started) // 60)
+                if elapsed_minute != reported_minute:
+                    reported_minute = elapsed_minute
+                    if clicked_download:
+                        message = f"Aguardando o navegador receber o XLS ({elapsed_minute} min). Você pode cancelar."
+                    else:
+                        message = f"Aguardando o CAD gerar o XLS ({elapsed_minute} min). Você pode cancelar."
+                    self._set("downloading", message, progress=78)
                 if not clicked_download:
                     for candidate in context.pages:
                         if candidate.is_closed() or not candidate.url.startswith(CAD_ORIGIN + "/"):
@@ -383,7 +394,9 @@ class CadImportManager:
                     active_page.wait_for_timeout(500)
             self._check_stop()
             if not downloads:
-                raise TimeoutError("O CAD não apresentou o download do XLS após a exportação.")
+                if clicked_download:
+                    raise TimeoutError("O CAD mostrou Baixar, mas o navegador não recebeu o XLS em 15 minutos.")
+                raise TimeoutError("O CAD não liberou o download do XLS em 15 minutos. Tente um período menor.")
             self._set("downloading", "Recebendo o XLS do CAD…", progress=80)
             return downloads[0]
         finally:

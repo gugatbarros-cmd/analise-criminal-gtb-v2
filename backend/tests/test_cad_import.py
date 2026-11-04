@@ -2,6 +2,7 @@
 
 import pytest
 import threading
+from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from gtb.api import main
@@ -205,3 +206,39 @@ def test_cad_clicks_baixar_inside_export_frame(tmp_path, monkeypatch):
     page = Page()
     monkeypatch.setattr(manager, "_action", lambda *_args, **_kwargs: None)
     assert manager._request_xls_download(page) is download
+
+
+def test_cad_waits_for_large_xls_beyond_two_minutes(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    elapsed = [0.0]
+    download = object()
+    monkeypatch.setattr("gtb.cad.automation.time", SimpleNamespace(monotonic=lambda: elapsed[0]))
+    monkeypatch.setattr(manager, "_action", lambda *_args, **_kwargs: None)
+
+    class Events:
+        def __init__(self):
+            self.handlers = {}
+        def on(self, name, callback):
+            self.handlers.setdefault(name, []).append(callback)
+        def remove_listener(self, name, callback):
+            self.handlers[name].remove(callback)
+        def emit(self, name, value):
+            for callback in self.handlers.get(name, []):
+                callback(value)
+
+    class Page(Events):
+        url = "https://analisacad.seguranca.al.gov.br/consulta/"
+        frames = []
+        def __init__(self):
+            super().__init__()
+            self.context = Events()
+            self.context.pages = [self]
+        def is_closed(self):
+            return False
+        def wait_for_timeout(self, _milliseconds):
+            elapsed[0] += 30
+            if elapsed[0] >= 180:
+                self.emit("download", download)
+
+    assert manager._request_xls_download(Page()) is download
+    assert elapsed[0] >= 180

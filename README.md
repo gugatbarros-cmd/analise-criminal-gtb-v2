@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Versão local 0.1.78. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Versão local 0.1.79. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Em **Relatórios e apresentações → MVI NEAC · Informe para o Comando**, prepare a prévia com o período desejado. Use **Imprimir ou salvar PDF** para o documento completo e **Abrir no WhatsApp** para compartilhar o resumo sem dados pessoais.
 

@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Espera de arquivos grandes do CAD — 0.1.79
+
+A tentativa de importar o primeiro semestre de 2025 terminou com a mensagem de que o download não apareceu. O assistente aguardava somente dois minutos depois de pedir o XLS. Agora aguarda até 15 minutos, informa a cada minuto o tempo decorrido e mantém o cancelamento disponível. Se o prazo acabar, distingue entre o CAD não ter liberado o botão e o navegador não ter recebido o arquivo após o clique. A alteração não substitui nem apaga registros existentes. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.
+
 ## Exportação XLS no CAD — 0.1.78
 
 A captura da tela oficial mostrou "Arquivo gerado com sucesso" e o botão "Baixar" visível, enquanto o assistente local informava que não o encontrara. O fluxo anterior verificava apenas os controles da página principal e passava a observar downloads depois dessa busca. A automação agora observa o download antes de selecionar XLS e procura "Baixar" também em abas e quadros do CAD, aceitando tanto o download iniciado diretamente quanto o iniciado pelo botão. Testes sintéticos cobrem os dois caminhos; a confirmação com uma consulta real ainda depende da próxima execução pelo usuário. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.

@@ -11,7 +11,7 @@ from gtb.reports import report_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.78"
+VERSION = "0.1.79"
 
 
 def export() -> dict:

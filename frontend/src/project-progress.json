@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-04",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.78 com captura do download XLS desde a seleção da exportação e reconhecimento de Baixar na tela ou quadro do CAD. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.79 amplia a espera do XLS do CAD para 15 minutos e informa o tempo decorrido com cancelamento disponível. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
