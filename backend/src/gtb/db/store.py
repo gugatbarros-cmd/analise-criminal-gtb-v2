@@ -442,6 +442,8 @@ class Store:
                 WHERE {where} AND source IN ('armas', 'drogas')""", params).fetchall()
             coverage = dict(db.execute("SELECT source, count(*) FROM record_versions "
                                        "WHERE is_current GROUP BY source").fetchall())
+            latest_imports = dict(db.execute("SELECT source, max(imported_at) FROM import_batches "
+                                             "GROUP BY source").fetchall())
             general_raw = db.execute(f"SELECT raw_json FROM record_versions WHERE {where} "
                                      "AND source = 'ocorrencias'", params).fetchall()
         general_arms, general_drugs = 0, 0
@@ -486,6 +488,8 @@ class Store:
                 "general_arm_occurrences": general_arms, "general_drug_occurrences": general_drugs,
                 "drug_weight_grams": drug_grams, "weighted_drug_records": weighted_records,
                 "source_coverage": {source: coverage.get(source, 0) for source in SOURCES},
+                "last_imported_at": {source: str(latest_imports[source]) if source in latest_imports
+                                     else None for source in SOURCES},
                 "occurrence_charts": {"monthly": ranking(month_counts, True),
                                       "cities": ranking(city_counts), "natures": ranking(nature_counts)},
                 "quarantined_rows": quarantine_count,

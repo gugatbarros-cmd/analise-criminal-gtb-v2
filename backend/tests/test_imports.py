@@ -90,6 +90,18 @@ def test_sources_independent_and_idempotent(tmp_path):
     assert not list((tmp_path / "data" / "raw").glob("stage-*"))
 
 
+def test_summary_reports_latest_import_date_per_source_independent_of_filters(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    assert all(value is None for value in store.summary()["last_imported_at"].values())
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([cad()]))
+    first_date = str(store.batches()[0]["imported_at"])
+    store.import_file("mvi_neac", "neac.csv", csv_bytes([neac()]))
+    dates = store.summary(year=1900)["last_imported_at"]
+    assert dates["mvi_cad"] == first_date
+    assert dates["mvi_neac"] == str(store.batches()[0]["imported_at"])
+    assert dates["ocorrencias"] is None
+
+
 def test_validation_reports_quarantine_without_persisting_real_import(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     content = csv_bytes([

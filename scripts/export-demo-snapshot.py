@@ -11,7 +11,7 @@ from gtb.reports import report_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.68"
+VERSION = "0.1.69"
 
 
 def export() -> dict:
@@ -47,6 +47,9 @@ def export() -> dict:
                     "mvi": {source: store.mvi_analysis(source, year, city)
                             for source in ("mvi_cad", "mvi_neac")},
                     "mvi_comparison": store.mvi_comparison(year, city),
+                }
+                views[lookup]["summary"]["last_imported_at"] = {
+                    source: "2026-10-23 09:00:00" for source in SOURCES
                 }
 
         evidence = {}

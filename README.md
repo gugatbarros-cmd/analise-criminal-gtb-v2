@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Versão 0.1.66. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Versão local 0.1.69. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte o e-mail e a senha de administrador ou analista ativo do sistema antigo. O Firebase permanece no Spark, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases do legado. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
 
@@ -13,6 +13,8 @@ Arquivos originais, backups, contas locais, quarentena e divergências permanece
 ### Importação alternativa do CAD
 
 Na aplicação **local**, em Importações, use **Buscar ocorrências no CAD**. Informe CPF, senha e as datas inicial e final; confirme o token recebido. O navegador oficial do CAD abre no computador, consulta Polícia Militar e 10º BPM, seleciona todas as colunas e baixa o XLS. O GTB 2.0 pré-valida e importa o arquivo na base de ocorrências com escopo parcial. Uma barra mostra o percentual das etapas confirmadas, inclusive a seleção das colunas, e chega a 100% após o registro do lote. O XLS fica em `data/cad-downloads`, fora do Git. O Chrome ou Edge precisa estar instalado. Esta função não aparece na consulta online e preserva a importação manual. O fluxo completo foi validado na aplicação local; a conferência oficial das bases permanece pendente.
+
+Na Visão Executiva, cada indicador mostra abaixo do valor a data da última importação concluída da fonte usada no cálculo. Quando ainda não há lote dessa fonte, aparece “sem importação”.
 
 ## Requisitos
 

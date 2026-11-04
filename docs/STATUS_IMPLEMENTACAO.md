@@ -1,4 +1,8 @@
-# Andamento da implantação — 03/11/2026
+# Andamento da implantação — 04/11/2026
+
+## Última atualização sob cada indicador — 0.1.69
+
+Os cartões da Visão Executiva mostram a data da última importação concluída da fonte usada no cálculo. MVI CAD e NEAC são independentes; CVP, tentativas, TCO, mandados, visitas, sossego e violência doméstica seguem a base de ocorrências. Armas e drogas usam suas bases específicas quando disponíveis e a base geral no modo alternativo. A data vem do histórico completo de lotes, sem depender da página atual da auditoria ou dos filtros do painel. Sem lote, o cartão indica ausência de importação. A suíte passou com 111 testes de backend e 50 de interface; o instalador 0.1.69 foi aplicado e respondeu com a versão 0.1.69, preservando os arquivos locais de banco e contas. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para as conferências oficiais das bases.
 
 ## Barra de andamento da importação CAD — 0.1.68
 

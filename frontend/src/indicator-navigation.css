@@ -4,3 +4,4 @@
 .legacy-workspace .indicator-card-button:hover{background:#edf4fc}
 .legacy-workspace .indicator-card-button:focus-visible{outline:3px solid #dda928;outline-offset:-3px;background:#edf4fc}
 .indicator-card-button>span,.indicator-card-button>small{padding-right:16px}
+.legacy-workspace .indicator-card-button .indicator-update{display:block;margin-top:auto;padding-top:12px;font-size:.72rem;font-weight:600;color:#526a82;line-height:1.35}

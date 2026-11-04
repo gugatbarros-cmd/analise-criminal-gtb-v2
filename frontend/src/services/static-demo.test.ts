@@ -22,15 +22,16 @@ it('serve consultas sintéticas com filtros e bloqueia escrita', async () => {
     team_group: 'roster', team_score: 5,
     team_officers: [{ name: 'AGENTE FICTÍCIO', registration: 'SYN001', role: 'COMANDANTE' }] }
   const data = {
-    version: '0.1.68', years: [2026], cities: ['Igaci'],
+    version: '0.1.69', years: [2026], cities: ['Igaci'],
     views: { '*|*': { summary: { visitas: 1 }, arms: { total: 4, seized: 3 }, drugs: { total: 4, total_weight_grams: 1000.1 }, teams: { roster_occurrences: 3, weighted_points: 11 }, mvi_comparison: { candidate_pairs: 1 } }, '1900|*': { summary: { visitas: 0 }, arms: { total: 0, seized: 0 }, drugs: { total: 0, total_weight_grams: 0 }, teams: { roster_occurrences: 0, weighted_points: 0 }, mvi_comparison: { candidate_pairs: 0 } } },
     records: { ocorrencias: [caseItem], armas: [armItem, armOther], drogas: [drugItem], guarnicoes: [teamItem] }, evidence: { 'Visitas|2026|demo1': 'Visita confirmada' },
-    details: {}, batches: [{ id: 'demo-batch-mvi_cad', source: 'mvi_cad' }], audit: { 'demo-batch-mvi_cad': { divergences: [{ source: 'mvi_cad', natural_key: 'k', reason: 'ausente' }], quarantine: [{ row_number: 2, reason: 'sem chave', fields: { Nome: 'Pessoa Fictícia' } }] } },
+    details: {}, batches: [{ id: 'demo-batch-mvi_cad', source: 'mvi_cad', imported_at: '2026-11-04 09:00:00' }], audit: { 'demo-batch-mvi_cad': { divergences: [{ source: 'mvi_cad', natural_key: 'k', reason: 'ausente' }], quarantine: [{ row_number: 2, reason: 'sem chave', fields: { Nome: 'Pessoa Fictícia' } }] } },
   }
   const read = vi.fn().mockResolvedValue(Response.json(data))
   vi.stubGlobal('fetch', read)
   const summary = await demoFetch('http://127.0.0.1:8000/indicators/summary')
-  expect((await summary.json()).visitas).toBe(1)
+  expect(await summary.json()).toMatchObject({ visitas: 1,
+    last_imported_at: { mvi_cad: '2026-11-04 09:00:00' } })
   const arms = await demoFetch('http://127.0.0.1:8000/indicators/arms/analysis')
   expect((await arms.json()).seized).toBe(3)
   const armsFiltered = await demoFetch('http://127.0.0.1:8000/indicators/arms/analysis?month=1&arm_type=Pistola&situation=Apreendida')

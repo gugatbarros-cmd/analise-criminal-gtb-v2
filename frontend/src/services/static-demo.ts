@@ -221,7 +221,15 @@ export async function demoFetch(input: string, init?: RequestInit, provided?: Sn
   if (path === '/reports/dataset') return data.reports ? response(data.reports) : response({ detail: 'Atualize o sistema local e aguarde a sincronização dos relatórios.' }, 409)
   if (path === '/comparisons/dataset') return data.comparisons ? response(data.comparisons) : response({ detail: 'Atualize o sistema local e aguarde a sincronização dos comparativos.' }, 409)
   const view = viewFor(data, url.searchParams)
-  if (path === '/indicators/summary') return response(view.summary)
+  if (path === '/indicators/summary') {
+    const last_imported_at = { ...view.summary.last_imported_at }
+    for (const batch of data.batches) {
+      if (!batch.imported_at) continue
+      const previous = last_imported_at[batch.source]
+      if (!previous || batch.imported_at > previous) last_imported_at[batch.source] = batch.imported_at
+    }
+    return response({ ...view.summary, last_imported_at })
+  }
   if (path === '/indicators/crimes/analysis') {
     const kind = url.searchParams.get('kind') || ''
     if (!['CVP', 'Tentativa de homicídio'].includes(kind)) return response({ detail: 'Indicador desconhecido' }, 422)
