@@ -11,7 +11,7 @@ from gtb.reports import report_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.73"
+VERSION = "0.1.74"
 
 
 def export() -> dict:
@@ -85,9 +85,12 @@ def export() -> dict:
                 for version in detail["versions"]:
                     version["batch_id"] = batch_ids[version["batch_id"]]
                     version["valid_from"] = "2026-10-23 09:00:00"
+        reports = report_dataset(store)
+        reports["updatedAt"] = "2026-10-23 09:00:00"
+        reports["sourceUpdatedAt"] = {source: "2026-10-23 09:00:00" for source in SOURCES}
         return {"version": VERSION, "years": years, "cities": cities, "views": views,
                 "records": records, "evidence": evidence, "details": details,
-                "batches": batches, "audit": audit, "reports": report_dataset(store), "comparisons": comparison_dataset(store)}
+                "batches": batches, "audit": audit, "reports": reports, "comparisons": comparison_dataset(store)}
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ export type ReportRow = {
   location: string; team: string; teamGroup: string; points: number
   officers: { name: string; registration: string; role: string }[]
 }
-export type ReportDataset = { rows: ReportRow[]; updatedAt: string | null; batches: number; quarantined: number }
+export type ReportDataset = { rows: ReportRow[]; updatedAt: string | null; sourceUpdatedAt?: Partial<Record<Source, string>>; batches: number; quarantined: number }
 export type ReportScope = { year?: number; city?: string; month?: number; start?: string; end?: string; nature?: string; category?: string; situation?: string; team?: string }
 export type ReportOptions = { title?: string; author: string; unit: string; notes: string; actions: string; issued?: string; referenceDate: string }
 export const reportCatalog = [

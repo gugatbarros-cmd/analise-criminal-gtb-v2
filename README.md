@@ -1,8 +1,10 @@
 # Análise Criminal GTB 2.0
 
-Versão local 0.1.73. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Versão local 0.1.74. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Em **Relatórios e apresentações → MVI NEAC · Informe para o Comando**, prepare a prévia com o período desejado. Use **Imprimir ou salvar PDF** para o documento completo e **Abrir no WhatsApp** para compartilhar o resumo sem dados pessoais.
+
+O informe MVI NEAC e o texto para WhatsApp apresentam a comparação com o mesmo período do ano anterior, os meses dos dois anos lado a lado e a data da última importação da planilha NEAC. A versão para WhatsApp usa emojis para identificar as seções. Meses sem registros aparecem como zero, sem presumir que a planilha esteja completa.
 
 Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte o e-mail e a senha de administrador ou analista ativo do sistema antigo. O Firebase permanece no Spark, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases do legado. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
 

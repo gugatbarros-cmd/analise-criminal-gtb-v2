@@ -41,11 +41,19 @@ describe('relatórios trazidos do legado', () => {
     const rows = [
       fact({ source: 'mvi_neac', victim: 'Vítima Sintética', city: 'Igaci', date: '2026-03-01', hour: 20, category: 'Homicídio doloso' }),
       fact({ source: 'mvi_neac', victim: 'Outra Vítima Sintética', city: 'Igaci', date: '2026-03-02', hour: null, category: 'Homicídio doloso' }),
+      fact({ source: 'mvi_neac', victim: 'Anterior Sintética', city: 'Igaci', date: '2025-03-01', hour: 20 }),
       fact({ source: 'mvi_cad', victim: 'Pessoa CAD', city: 'Igaci', date: '2026-03-02' }),
       fact({ source: 'mvi_neac', eligible: false, victim: 'Registro inelegível' }),
     ]
-    const html = buildReportDocument(dataset(rows), 'mvi-neac', { year: 2026 }, options, 'test')
+    const data = { ...dataset(rows), sourceUpdatedAt: { mvi_neac: '2026-11-03 17:18:00' } }
+    const html = buildReportDocument(data, 'mvi-neac', { year: 2026 }, options, 'test')
     expect(html).toContain('Síntese para o Comando')
+    expect(html).toContain('Comparativo com o ano anterior')
+    expect(html).toContain('2025-01-01 a 2025-03-02')
+    expect(html).toContain('2026-01-01 a 2026-03-02')
+    expect(html).toContain('Evolução mês a mês')
+    expect(html).toContain('<td>março</td><td>1</td><td>2</td><td>+1</td>')
+    expect(html).toContain('Planilha NEAC · última importação:</strong> 03/11/2026 17:18')
     expect(html).toContain('Evolução e distribuição territorial')
     expect(html).toContain('Perfil e qualidade dos registros')
     expect(html).toContain('Vítimas elegíveis</span><strong>2')

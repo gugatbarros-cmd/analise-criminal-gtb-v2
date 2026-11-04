@@ -30,6 +30,7 @@ def report_dataset(store) -> dict:
             eligible,indicators,occurrence,victim,raw_json FROM record_versions
             WHERE is_current ORDER BY source,event_date,natural_key""").fetchall()
         batches = db.execute('SELECT max(imported_at),count(*) FROM import_batches').fetchone()
+        source_imports = db.execute('SELECT source,max(imported_at) FROM import_batches GROUP BY source').fetchall()
         quarantine = db.execute('SELECT count(*) FROM quarantine').fetchone()[0]
     facts = []
     for source, day, city, nature, category, eligible, indicators, occurrence, victim, raw in records:
@@ -61,4 +62,5 @@ def report_dataset(store) -> dict:
             'officers': team_officers(team_field(row, 'officers')) if source == 'guarnicoes' else [],
         })
     return {'rows': facts, 'updatedAt': str(batches[0]) if batches[0] else None,
+            'sourceUpdatedAt': {source: str(imported_at) for source, imported_at in source_imports},
             'batches': batches[1], 'quarantined': quarantine}

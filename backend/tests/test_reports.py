@@ -23,6 +23,8 @@ def test_report_projection_preserves_sources_units_and_originals(tmp_path):
     with store._connect() as db:
         original = db.execute('SELECT * FROM record_versions ORDER BY source,natural_key,version').fetchall()
     dataset = report_dataset(store)
+    assert dataset['sourceUpdatedAt']['mvi_neac']
+    assert dataset['sourceUpdatedAt']['mvi_cad']
     encoded = json.dumps(dataset)
     assert 'SEGREDO-RELATO' not in encoded and 'SEGREDO-TELEFONE' not in encoded
     assert {row['source'] for row in dataset['rows']} == {'ocorrencias', 'armas', 'drogas', 'guarnicoes', 'mvi_cad', 'mvi_neac'}

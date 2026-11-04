@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-04",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.73 com a Central de Relatórios carregando os dados somente ao gerar o modelo escolhido. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.74 com comparativo anual e mensal no informe MVI NEAC, data da planilha e resumo para WhatsApp com emojis. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -36,7 +36,7 @@
       "weight": 25,
       "completed": 9,
       "total": 10,
-      "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC; informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp",
+      "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC; informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp com comparação do mesmo período do ano anterior, meses lado a lado e data da última importação NEAC",
       "remaining": "Paridade oficial e demais campos derivados"
     },
     {

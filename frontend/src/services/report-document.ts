@@ -1,6 +1,7 @@
 import { ageBand, bpmCities, comparisonScopes, count, filterReportRows, fold, hourBand, reportCatalog, scopeLabel, selectReportRows, weekday, type Entry, type ReportDataset, type ReportId, type ReportOptions, type ReportRow, type ReportScope } from './report-model'
 
 import { mviConferences } from './report-spreadsheet'
+import { formatNeacImportDate, mviNeacComparison } from './mvi-neac-comparison'
 
 export const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!)
 const n = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
@@ -52,24 +53,33 @@ function domesticContent(all: ReportRow[], rows: ReportRow[]): string {
 }
 function mviNeacCommandContent(data: ReportDataset, scope: ReportScope): string {
   const rows = selectReportRows(filterReportRows(data.rows, scope), 'mvi-neac')
+  const annual = mviNeacComparison(data, scope)
   const validHours = rows.filter(row => row.hour !== null)
   const months = count(rows, row => row.date.slice(0, 7)).sort((a, b) => a[0].localeCompare(b[0]))
   const cities = count(rows, row => row.city)
   const summary = page('1. Síntese para o Comando',
     kpis([['Vítimas elegíveis', rows.length], ['Municípios com vítimas', cities.length], ['Horários informados', `${validHours.length} de ${rows.length}`]])
     + (rows.length ? `<p>O maior quantitativo do recorte está em <strong>${escapeHtml(cities[0][0])}</strong>, com <strong>${n(cities[0][1])}</strong> vítima(s). A leitura considera exclusivamente os registros elegíveis da fonte NEAC.</p>` : '<p class="note">Nenhuma vítima elegível no recorte. Confira a importação NEAC e os filtros antes de apresentar este informe.</p>')
+    + `<p><strong>Planilha NEAC · última importação:</strong> ${escapeHtml(formatNeacImportDate(data))}</p>`
     + '<p class="note">Unidade de contagem: vítima elegível. O total NEAC não deve ser somado ao CAD, pois as fontes podem representar o mesmo fato.</p>', scopeLabel(scope))
-  const trend = page('2. Evolução e distribuição territorial',
+  const annualPage = page('2. Comparativo com o ano anterior', annual
+    ? `<p>Mesmo período: ${annual.year - 1} de ${escapeHtml(annual.previousStart)} a ${escapeHtml(annual.previousEnd)}; ${annual.year} de ${escapeHtml(annual.currentStart)} a ${escapeHtml(annual.currentEnd)}.</p>`
+      + kpis([[String(annual.year - 1), annual.previous], [String(annual.year), annual.current], ['Diferença', `${annual.difference > 0 ? '+' : ''}${n(annual.difference)}`], ['Variação', annual.variationPercent === null ? 'Sem base percentual' : `${annual.variationPercent > 0 ? '+' : ''}${n(annual.variationPercent)}%`]])
+      + `<h3>Evolução mês a mês · ${annual.year - 1} × ${annual.year}</h3>`
+      + table(['Mês', String(annual.year - 1), String(annual.year), 'Diferença'], annual.months.map(item => [new Date(Date.UTC(annual.year, item.month - 1, 1)).toLocaleDateString('pt-BR', { month: 'long', timeZone: 'UTC' }), item.previous, item.current, `${item.current - item.previous > 0 ? '+' : ''}${item.current - item.previous}`]))
+      + '<p class="note">Cada ano usa as mesmas datas do período, inclusive o corte do último mês. Mês sem registro aparece como zero; isso não confirma cobertura completa da planilha. Se o ano anterior for zero, não se calcula percentual.</p>'
+    : '<p class="note">Informe datas inicial e final dentro do mesmo ano para comparar períodos equivalentes.</p>')
+  const trend = page('3. Evolução e distribuição territorial',
     distribution('Vítimas por mês', months, 'vítimas')
     + distribution('Vítimas por município', cities, 'vítimas'))
-  const profile = page('3. Perfil e qualidade dos registros',
+  const profile = page('4. Perfil e qualidade dos registros',
     distribution('Classificações', count(rows, row => row.category || row.nature), 'vítimas')
     + distribution('Sexo informado', count(rows, row => row.sex), 'vítimas')
     + distribution('Faixas etárias', count(rows, ageBand), 'vítimas')
     + distribution('Dia da semana', count(rows, weekday), 'vítimas')
     + distribution('Faixas de duas horas · horários válidos', count(validHours, hourBand), 'vítimas')
     + `<p class="note">Cobertura de horário: ${validHours.length} de ${rows.length} vítima(s) (${rows.length ? n(100 * validHours.length / rows.length) : '0'}%). Campos ausentes permanecem “Não informado”. A distribuição por horário usa apenas os registros com hora válida.</p>`)
-  return summary + trend + profile + page('4. Relação auditável NEAC', auditRows(rows, 'mvi-neac')
+  return summary + annualPage + trend + profile + page('5. Relação auditável NEAC', auditRows(rows, 'mvi-neac')
     + '<p class="note">Esta relação individual compõe o PDF para conferência interna. A versão para WhatsApp contém apenas agregados.</p>')
 }
 function moduleContent(data: ReportDataset, id: ReportId, scope: ReportScope, options: ReportOptions): string {
@@ -128,7 +138,7 @@ function tcoPages(data: ReportDataset, scope: ReportScope): string {
 export function buildReportDocument(data: ReportDataset, id: ReportId, scope: ReportScope, options: ReportOptions, version: string): string {
   const title = options.title?.trim() || reportCatalog.find(item => item.id === id)!.title
   const emitted = options.issued || new Date().toLocaleString('pt-BR')
-  const metadata = `<p>${escapeHtml(scopeLabel(scope))}</p><p>Emissão: ${escapeHtml(emitted)} · Atualização das bases: ${escapeHtml(data.updatedAt || 'Sem importações')} · Sistema ${escapeHtml(version)}</p>`
+  const metadata = `<p>${escapeHtml(scopeLabel(scope))}</p><p>Emissão: ${escapeHtml(emitted)} · Atualização das bases: ${escapeHtml(data.updatedAt || 'Sem importações')} · Sistema ${escapeHtml(version)}</p>${id === 'mvi-neac' ? `<p>Planilha NEAC · última importação: ${escapeHtml(formatNeacImportDate(data))}</p>` : ''}`
   const letterhead = `<header class="letterhead"><img src="${asset('logo-10bpm-3d-estatistica.png')}" alt="Brasão do 10º BPM"><div><strong>POLÍCIA MILITAR DE ALAGOAS</strong><span>${escapeHtml(options.unit || '10º Batalhão de Polícia Militar')}</span><small>Palmeira dos Índios · AL</small></div></header>`
   const landscape = id === 'folder' || id === 'planejamento'
   const cover = `<section class="report-cover ${id === 'folder' ? 'folder-cover' : ''}">${letterhead}<p class="eyebrow">ANÁLISE CRIMINAL · 10º BPM</p><h1>${escapeHtml(title)}</h1>${metadata}<p>Responsável: ${escapeHtml(options.author || 'Não informado')}</p></section>`
