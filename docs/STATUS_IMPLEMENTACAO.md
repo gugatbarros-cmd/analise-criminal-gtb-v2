@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Data inválida na importação CAD — 0.1.77
+
+A captura da falha mostrou o período de 01/01/2025 a 31/06/2025. O último dia informado não existe em junho; o campo de data não gerava valor válido, e o botão "Consultar e importar" permanecia desativado sem explicar o motivo. A tela agora mantém o botão disponível quando não há consulta em andamento e exibe uma mensagem específica para data inexistente, data ausente ou intervalo invertido. O CPF e a senha digitados não são apagados quando a data precisa ser corrigida. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.
+
 ## Cancelamento e sessão CAD; emojis WhatsApp — 0.1.76
 
 A consulta CAD pode ser cancelada antes da gravação no banco, inclusive enquanto aguarda o navegador ou o download. Após conclusão, cancelamento ou erro recuperável, a mesma janela autenticada permanece disponível para outro intervalo, sem novo CPF, senha ou token. O usuário pode encerrar a sessão; se o CAD redirecionar ao login, o sistema informa a expiração e solicita nova autenticação. A sessão pertence ao perfil local que a abriu, existe apenas na memória do processo e termina ao sair da conta ou fechar o aplicativo. Durante a gravação transacional do lote, o cancelamento informa que é necessário aguardar sua conclusão. O resumo MVI NEAC para WhatsApp usa emojis de um único caractere e separadores simples para evitar quadradinhos em aplicativos com suporte limitado. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.

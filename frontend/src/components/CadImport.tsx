@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { cancelCadImport, disconnectCad, getCadStatus, startCadImport, submitCadToken } from '../services/api'
+import { cadPeriodError } from '../services/cad-period'
 
 export function CadImport({ onComplete }: { onComplete: () => void }) {
   const cpf = useRef<HTMLInputElement>(null)
   const password = useRef<HTMLInputElement>(null)
   const token = useRef<HTMLInputElement>(null)
+  const startInput = useRef<HTMLInputElement>(null)
+  const endInput = useRef<HTMLInputElement>(null)
   const completed = useRef(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [localError, setLocalError] = useState('')
+  const [dateError, setDateError] = useState('')
   const status = useQuery({ queryKey: ['cad-status'], queryFn: getCadStatus, refetchInterval: 1500 })
-  const start = useMutation({ mutationFn: ({ cpf, password }: { cpf: string; password: string }) =>
-    startCadImport(cpf, password, startDate, endDate), onSuccess: () => { setLocalError(''); void status.refetch() },
+  const start = useMutation({ mutationFn: ({ cpf, password, first, last }: { cpf: string; password: string; first: string; last: string }) =>
+    startCadImport(cpf, password, first, last), onSuccess: () => { setLocalError(''); void status.refetch() },
     onError: error => setLocalError(error.message) })
   const verify = useMutation({ mutationFn: submitCadToken,
     onSuccess: () => { setLocalError(''); void status.refetch() },
@@ -38,19 +42,30 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
     <div className="section-head"><div><p className="eyebrow">Alternativa de importação</p>
       <h2 id="cad-import-title">Buscar ocorrências no CAD</h2></div></div>
     <p className="muted">Escolha o intervalo. O sistema consulta Polícia Militar e 10º BPM, seleciona todas as colunas, baixa o XLS e importa na base local de ocorrências. A sessão do CAD fica aberta até expirar ou você encerrá-la; CPF, senha e token não são salvos.</p>
-    <form onSubmit={event => {
+    <form noValidate onSubmit={event => {
       event.preventDefault()
+      const first = startInput.current?.value || ''
+      const last = endInput.current?.value || ''
+      const invalid = cadPeriodError(first, last)
+      setDateError(invalid)
+      if (invalid) return
       const value = password.current?.value || ''
       const documentId = (cpf.current?.value || '').replace(/\D/g, '')
+      if (!status.data?.session_active && (documentId.length !== 11 || !value)) {
+        setLocalError('Informe CPF e senha do CAD para iniciar a consulta.')
+        return
+      }
       if (password.current) password.current.value = ''
       if (cpf.current) cpf.current.value = ''
-      start.mutate({ cpf: documentId, password: value })
+      setLocalError('')
+      start.mutate({ cpf: documentId, password: value, first, last })
     }}>
-      <label>Data inicial<input type="date" value={startDate} onChange={event => setStartDate(event.target.value)} required /></label>
-      <label>Data final<input type="date" value={endDate} min={startDate} onChange={event => setEndDate(event.target.value)} required /></label>
+      <label>Data inicial<input ref={startInput} type="date" value={startDate} onChange={event => { setStartDate(event.target.value); setDateError('') }} onInput={event => { if (event.currentTarget.validity.badInput) setDateError('Confira a data inicial: o dia informado não existe neste mês.') }} aria-invalid={!!dateError} required /></label>
+      <label>Data final<input ref={endInput} type="date" value={endDate} min={startDate} onChange={event => { setEndDate(event.target.value); setDateError('') }} onInput={event => { if (event.currentTarget.validity.badInput) setDateError('Confira a data final: o dia informado não existe neste mês.') }} aria-invalid={!!dateError} required /></label>
+      {dateError && <p className="error" role="alert">{dateError}</p>}
       {!status.data?.session_active && <><label>CPF do CAD<input ref={cpf} inputMode="numeric" autoComplete="off" maxLength={14} required /></label>
       <label>Senha do CAD<input ref={password} type="password" autoComplete="off" required /></label></>}
-      <div className="import-actions"><button type="submit" className="primary" disabled={!!busy || !startDate || !endDate || startDate > endDate}>Consultar e importar</button></div>
+      <div className="import-actions"><button type="submit" className="primary" disabled={!!busy}>Consultar e importar</button></div>
     </form>
     {status.data?.session_active && <p className="success" role="status">Sessão do CAD ativa. Escolha outro período para reutilizar o acesso.</p>}
     {status.data?.phase === 'token' && <form onSubmit={event => {
