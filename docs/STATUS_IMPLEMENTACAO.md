@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Cancelamento e sessão CAD; emojis WhatsApp — 0.1.76
+
+A consulta CAD pode ser cancelada antes da gravação no banco, inclusive enquanto aguarda o navegador ou o download. Após conclusão, cancelamento ou erro recuperável, a mesma janela autenticada permanece disponível para outro intervalo, sem novo CPF, senha ou token. O usuário pode encerrar a sessão; se o CAD redirecionar ao login, o sistema informa a expiração e solicita nova autenticação. A sessão pertence ao perfil local que a abriu, existe apenas na memória do processo e termina ao sair da conta ou fechar o aplicativo. Durante a gravação transacional do lote, o cancelamento informa que é necessário aguardar sua conclusão. O resumo MVI NEAC para WhatsApp usa emojis de um único caractere e separadores simples para evitar quadradinhos em aplicativos com suporte limitado. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.
+
 ## Mensagem MVI NEAC para WhatsApp — 0.1.75
 
 A mensagem para WhatsApp ganhou seções curtas com emojis Unicode explícitos, cabeçalho, panorama, comparativo anual, meses lado a lado, municípios, classificações e fonte. A Central mostra a mensagem em uma prévia visual que renderiza negrito e emojis; o botão de compartilhamento usa o link de mensagem pronta documentado pelo WhatsApp e o botão de cópia preserva o texto completo, com um método alternativo para navegadores sem API de área de transferência. Um teste no navegador confirmou emojis visíveis, presentes no parâmetro do link e no texto copiado. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para conferência oficial das bases.

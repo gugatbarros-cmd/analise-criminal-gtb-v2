@@ -2,12 +2,12 @@ import { count, filterReportRows, scopeLabel, selectReportRows, type ReportDatas
 import { formatNeacImportDate, mviNeacComparison } from './mvi-neac-comparison'
 
 const icon = {
-  shield: '\u{1F6E1}\uFE0F', chart: '\u{1F4CA}', calendar: '\u{1F4C5}', folder: '\u{1F5C2}\uFE0F',
-  people: '\u{1F465}', compare: '\u{1F4C8}', months: '\u{1F5D3}\uFE0F', pin: '\u{1F4CD}',
-  tag: '\u{1F3F7}\uFE0F', clock: '\u{1F552}', info: '\u2139\uFE0F', up: '\u2197\uFE0F',
-  down: '\u2198\uFE0F', equal: '\u27A1\uFE0F', bullet: '\u25AB\uFE0F',
+  chart: '\u{1F4CA}', calendar: '\u{1F4C5}', folder: '\u{1F4CB}',
+  people: '\u{1F465}', compare: '\u{1F4C8}', months: '\u{1F4C6}', pin: '\u{1F4CD}',
+  tag: '\u{1F4CC}', clock: '\u{1F552}', info: '\u{1F4DD}', up: '\u{1F4C8}',
+  down: '\u{1F4C9}', equal: '\u{1F4CA}', bullet: '-',
 }
-const divider = '━━━━━━━━━━━━━━━━━━'
+const divider = '--------------------'
 const monthName = (month: number) => ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][month - 1]
 const top = (entries: [string, number][], limit: number) => entries.slice(0, limit)
   .map(([label, total]) => `${icon.bullet} ${label}: *${total}*`).join('\n') || `${icon.bullet} Sem registros no recorte`
@@ -25,7 +25,7 @@ export function buildMviNeacWhatsapp(data: ReportDataset, scope: ReportScope, is
   const variation = annual?.variationPercent === null || annual === null ? 'sem base percentual'
     : `${annual.variationPercent > 0 ? '+' : ''}${annual.variationPercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
   const lines = [
-    `${icon.shield} *10º BPM | PMAL*`,
+    `${icon.chart} *10º BPM | PMAL*`,
     `${icon.chart} *MVI NEAC · INFORME AO COMANDO*`,
     `${icon.calendar} Emissão: ${issued.toLocaleDateString('pt-BR')}`,
     `${icon.pin} Área: ${scope.city || '10º BPM'}`,
@@ -40,8 +40,8 @@ export function buildMviNeacWhatsapp(data: ReportDataset, scope: ReportScope, is
     annual ? `${icon.bullet} ${annual.year}: *${annual.current}* vítima(s) · ${annual.currentStart} a ${annual.currentEnd}` : '',
     annual ? `${direction} Diferença: *${difference}* · Variação: *${variation}*` : '',
     '',
-    annual ? `${icon.months} *MÊS A MÊS · ${annual.year - 1} → ${annual.year}*` : '',
-    annual ? annual.months.map(item => `${icon.bullet} ${monthName(item.month)}: ${item.previous} → ${item.current}`).join('\n') : '',
+    annual ? `${icon.months} *MÊS A MÊS · ${annual.year - 1} > ${annual.year}*` : '',
+    annual ? annual.months.map(item => `${icon.bullet} ${monthName(item.month)}: ${item.previous} > ${item.current}`).join('\n') : '',
     '',
     `${icon.pin} *MUNICÍPIOS COM MAIS VÍTIMAS*`,
     top(count(rows, row => row.city), 5),

@@ -11,6 +11,7 @@ build/
 *.tsbuildinfo
 __pycache__/
 .pytest_cache/
+backend/test-temp-*/
 .ruff_cache/
 .env
 !.env.example

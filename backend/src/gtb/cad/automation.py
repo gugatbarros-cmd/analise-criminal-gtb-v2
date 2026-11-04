@@ -33,6 +33,10 @@ def check_period(start_date: str, end_date: str) -> None:
         raise ValueError("Informe um intervalo válido com a data inicial anterior à final.")
 
 
+class CadCancelled(Exception):
+    """A consulta foi interrompida pelo usuário antes de gravar o lote."""
+
+
 class CadImportManager:
     def __init__(self, store: Store, data_dir: Path, on_import=None):
         self.store = store
@@ -40,12 +44,15 @@ class CadImportManager:
         self.on_import = on_import
         self.commands: queue.Queue[tuple[str, str]] = queue.Queue()
         self.stop = threading.Event()
+        self.cancel_requested = threading.Event()
         self.lock = threading.Lock()
         self.worker: threading.Thread | None = None
         self.phase = "idle"
         self.message = "Informe CPF, senha e o intervalo desejado para consultar o CAD."
         self.progress = 0
         self.result: dict | None = None
+        self.session_active = False
+        self.session_owner = ""
 
     def _set(self, phase: str, message: str, result: dict | None = None,
              progress: int | None = None) -> None:
@@ -54,22 +61,38 @@ class CadImportManager:
             if progress is not None:
                 self.progress = max(self.progress, min(100, max(0, progress)))
 
-    def status(self) -> dict:
+    def status(self, owner: str = "") -> dict:
         with self.lock:
+            if owner and self.session_owner and owner != self.session_owner:
+                return {"phase": "idle", "message": "A sessão CAD pertence a outro perfil local.",
+                        "progress": 0, "result": None, "session_active": False}
             return {"phase": self.phase, "message": self.message,
-                    "progress": self.progress, "result": self.result}
+                    "progress": self.progress, "result": self.result,
+                    "session_active": self.session_active}
 
-    def start(self, cpf: str, password: str, start_date: str, end_date: str) -> dict:
-        if not re.fullmatch(r"\d{11}", cpf or "") or not password or len(password) > 200:
-            raise ValueError("Informe os 11 dígitos do CPF e a senha do CAD.")
+    def start(self, cpf: str, password: str, start_date: str, end_date: str, owner: str = "") -> dict:
         check_period(start_date, end_date)
         with self.lock:
             if self.worker and self.worker.is_alive():
-                raise ValueError("Já existe uma consulta CAD em andamento. Encerre-a antes de começar outra.")
+                if self.session_owner != owner:
+                    raise ValueError("A sessão CAD pertence a outro perfil local.")
+                if not self.session_active or self.phase not in {"ready", "complete", "error", "cancelled"}:
+                    raise ValueError("Já existe uma consulta CAD em andamento. Cancele-a antes de começar outra.")
+                self.phase, self.message, self.result = "filtering", "Reutilizando a sessão do CAD…", None
+                self.progress = 2
+                self.cancel_requested.clear()
+                self.commands.put(("import", (start_date, end_date)))
+                return {"phase": self.phase, "message": self.message, "progress": self.progress,
+                        "result": self.result, "session_active": True}
+            if not re.fullmatch(r"\d{11}", cpf or "") or not password or len(password) > 200:
+                raise ValueError("Informe os 11 dígitos do CPF e a senha do CAD.")
             self.phase, self.message, self.result = "opening", "Abrindo o CAD…", None
             self.progress = 2
             self.commands = queue.Queue()
             self.stop.clear()
+            self.cancel_requested.clear()
+            self.session_active = False
+            self.session_owner = owner
             self.worker = threading.Thread(
                 target=self._run, args=(cpf, password, start_date, end_date), daemon=True
             )
@@ -85,14 +108,36 @@ class CadImportManager:
         self._set("verifying", "Token enviado. Aguardando confirmação do CAD…", progress=10)
         return self.status()
 
-    def disconnect(self) -> dict:
+    def disconnect(self, owner: str = "") -> dict:
+        if self.session_owner and self.session_owner != owner:
+            raise ValueError("A sessão CAD pertence a outro perfil local.")
         self.stop.set()
+        self.cancel_requested.set()
         self.commands.put(("disconnect", ""))
+        if self.worker and self.worker.is_alive():
+            self._set("disconnecting", "Encerrando a sessão do CAD…")
+        else:
+            self._set("idle", "Sessão do CAD encerrada.", progress=0)
+        return self.status()
+
+    def cancel(self, owner: str = "") -> dict:
+        if self.session_owner and self.session_owner != owner:
+            raise ValueError("A sessão CAD pertence a outro perfil local.")
+        current = self.status()
+        if current["phase"] == "importing":
+            raise ValueError("A gravação do lote já começou. Aguarde sua conclusão para preservar os dados.")
+        if current["phase"] not in {"opening", "token", "verifying", "filtering", "downloading", "validating"}:
+            return current
+        self.cancel_requested.set()
+        self.commands.put(("cancel", ""))
+        self._set("cancelling", "Cancelando a consulta do CAD…")
         return self.status()
 
     def _check_stop(self) -> None:
         if self.stop.is_set():
             raise ValueError("Sessão do CAD encerrada.")
+        if self.cancel_requested.is_set():
+            raise CadCancelled()
 
     def _run(self, cpf: str, password: str, start_date: str, end_date: str) -> None:
         try:
@@ -106,17 +151,60 @@ class CadImportManager:
                     page = context.new_page()
                     self._login(page, cpf, password)
                     self._await_access(page)
-                    self._download_and_import(page, start_date, end_date)
-                    # A sessão do CAD é temporária e termina após o lote.
+                    with self.lock:
+                        self.session_active = True
+                    keep_session = self._run_import(page, start_date, end_date)
+                    while keep_session and not self.stop.is_set() and not page.is_closed():
+                        try:
+                            command, value = self.commands.get(timeout=1)
+                        except queue.Empty:
+                            continue
+                        if command == "import":
+                            keep_session = self._run_import(page, *value)
+                        elif command == "disconnect":
+                            break
                 finally:
                     browser.close()
+                    with self.lock:
+                        self.session_active = False
+                        self.session_owner = ""
+                    if self.stop.is_set():
+                        self._set("idle", "Sessão do CAD encerrada.", progress=0)
+                    elif self.status()["phase"] not in {"error", "cancelled"}:
+                        self._set("error", "A janela do CAD foi fechada. Entre novamente para consultar.")
+        except CadCancelled:
+            if not self.stop.is_set():
+                self._set("cancelled", "Consulta cancelada. Inicie outra quando desejar.")
         except PlaywrightError:
-            self._set("error", "O navegador não concluiu a etapa: " + self.status()["message"])
+            if not self.stop.is_set():
+                self._set("error", "O navegador não concluiu a etapa: " + self.status()["message"])
         except (ValueError, OSError, TimeoutError) as error:
-            self._set("error", str(error)[:500])
+            if not self.stop.is_set():
+                self._set("error", str(error)[:500])
         except Exception:  # noqa: BLE001 — erro inesperado não pode deixar a interface aguardando.
-            self._set("error", "A consulta CAD parou antes de confirmar a importação. "
-                      "Confira a janela oficial e tente novamente.")
+            if not self.stop.is_set():
+                self._set("error", "A consulta CAD parou antes de confirmar a importação. "
+                          "Confira a janela oficial e tente novamente.")
+
+    def _run_import(self, page, start_date: str, end_date: str) -> bool:
+        try:
+            self._download_and_import(page, start_date, end_date)
+            return True
+        except CadCancelled:
+            self._set("cancelled", "Consulta cancelada. A sessão do CAD permanece disponível.")
+            return True
+        except (PlaywrightError, ValueError, OSError, TimeoutError) as error:
+            if page.is_closed() or not page.url.startswith(CAD_ORIGIN + "/") or urlparse(page.url).path == urlparse(LOGIN_URL).path:
+                with self.lock:
+                    self.session_active = False
+                self._set("error", "A sessão do CAD expirou. Entre novamente para consultar.")
+                return False
+            else:
+                self._set("error", str(error)[:500])
+                return True
+        except Exception:  # noqa: BLE001
+            self._set("error", "A consulta CAD falhou. A sessão continua aberta; tente novamente ou encerre-a.")
+            return True
 
     def _login(self, page, cpf: str, password: str) -> None:
         page.goto(LOGIN_URL, wait_until="load", timeout=45000)
@@ -265,9 +353,22 @@ class CadImportManager:
         self._action(page, "xls", "Gerando a planilha XLS.", progress=78)
         self._wait_control(page, "Baixar", 120000)
         self._set("downloading", "Baixando o XLS do CAD…", progress=80)
-        with page.expect_download(timeout=120000) as transfer:
-            page.get_by_text("Baixar", exact=True).click()
-        download = transfer.value
+        downloads = []
+        def received_download(download):
+            downloads.append(download)
+        page.on("download", received_download)
+        try:
+            page.get_by_text("Baixar", exact=True).click(timeout=10000)
+            deadline = time.monotonic() + 120
+            while not downloads and time.monotonic() < deadline:
+                self._check_stop()
+                page.wait_for_timeout(500)
+            self._check_stop()
+            if not downloads:
+                raise TimeoutError("O CAD não iniciou o download do XLS.")
+            download = downloads[0]
+        finally:
+            page.remove_listener("download", received_download)
         if download.failure():
             raise ValueError("O CAD não concluiu o download do XLS.")
         filename = Path(download.suggested_filename).name
@@ -282,6 +383,7 @@ class CadImportManager:
             raise ValueError("O XLS está vazio ou acima do limite de 64 MB.")
         self._set("validating", "Validando a planilha antes da importação.", progress=88)
         validation = self.store.validate_file("ocorrencias", filename, content)
+        self._check_stop()
         if validation["accepted"] == 0:
             raise ValueError("Nenhuma ocorrência válida foi encontrada no XLS.")
         self._set("importing", "Importando ocorrências no sistema 2.0.", progress=95)

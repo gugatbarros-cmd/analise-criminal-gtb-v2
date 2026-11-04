@@ -1,6 +1,7 @@
 """A entrada CAD exige sessão local autorizada e período válido."""
 
 import pytest
+import threading
 from fastapi.testclient import TestClient
 
 from gtb.api import main
@@ -91,3 +92,47 @@ def test_cad_column_progress_uses_confirmed_selection(tmp_path, monkeypatch):
     manager._select_all_columns(Page())
     assert manager.status()["progress"] == 70
     assert manager.status()["message"] == "Todas as colunas foram selecionadas."
+
+
+def test_cad_cancel_releases_query_and_keeps_authenticated_session(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    manager.session_active = True
+    manager._set("filtering", "Consultando", progress=40)
+    assert manager.cancel()["phase"] == "cancelling"
+    class Page:
+        url = "https://analisacad.seguranca.al.gov.br/app/cad/consulta/"
+        def is_closed(self):
+            return False
+    monkeypatch.setattr(manager, "_download_and_import", lambda *_args: manager._check_stop())
+    assert manager._run_import(Page(), "2026-11-01", "2026-11-03") is True
+    assert manager.status()["phase"] == "cancelled"
+    assert manager.status()["session_active"] is True
+
+
+def test_cad_reuses_session_without_credentials_and_blocks_other_local_profile(tmp_path):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    release = threading.Event()
+    manager.worker = threading.Thread(target=release.wait, daemon=True)
+    manager.worker.start()
+    try:
+        manager.session_active = True
+        manager.session_owner = "operador-a"
+        manager._set("complete", "Lote concluído", progress=100)
+        assert manager.status("operador-b")["session_active"] is False
+        with pytest.raises(ValueError, match="outro perfil"):
+            manager.start("", "", "2026-11-01", "2026-11-03", "operador-b")
+        status = manager.start("", "", "2026-11-01", "2026-11-03", "operador-a")
+        assert status["phase"] == "filtering"
+        assert status["session_active"] is True
+        assert manager.commands.get_nowait() == ("import", ("2026-11-01", "2026-11-03"))
+        assert manager.disconnect("operador-a")["phase"] == "disconnecting"
+    finally:
+        release.set()
+        manager.worker.join(timeout=2)
+
+
+def test_cad_cannot_cancel_started_database_write(tmp_path):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    manager._set("importing", "Gravando", progress=95)
+    with pytest.raises(ValueError, match="gravação do lote já começou"):
+        manager.cancel()

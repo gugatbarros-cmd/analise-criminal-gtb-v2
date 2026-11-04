@@ -17,7 +17,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.75"
+APP_VERSION = "0.1.76"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -55,8 +55,8 @@ class OnlineCredentials(BaseModel):
 
 
 class CadStartRequest(BaseModel):
-    cpf: str
-    password: str
+    cpf: str = ""
+    password: str = ""
     start_date: str
     end_date: str
 
@@ -195,6 +195,10 @@ def me(request: Request) -> dict:
 
 @app.post("/auth/logout")
 def logout(request: Request) -> dict:
+    try:
+        cad_import.disconnect(request.state.user["username"])
+    except ValueError:
+        pass
     auth_manager.revoke(request.state.token)
     return {"status": "ok"}
 
@@ -219,16 +223,17 @@ def sources() -> dict:
 
 
 @app.get("/cad/status")
-def cad_status() -> dict:
-    return cad_import.status()
+def cad_status(request: Request) -> dict:
+    return cad_import.status(request.state.user["username"])
 
 
 @app.post("/cad/start")
-def cad_start(body: CadStartRequest) -> dict:
+def cad_start(body: CadStartRequest, request: Request) -> dict:
     if demo_mode():
         raise HTTPException(403, "Demonstração somente para consulta")
     try:
-        return cad_import.start(body.cpf, body.password, body.start_date, body.end_date)
+        return cad_import.start(body.cpf, body.password, body.start_date, body.end_date,
+                                request.state.user["username"])
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 
@@ -242,8 +247,19 @@ def cad_token(body: CadTokenRequest) -> dict:
 
 
 @app.post("/cad/disconnect")
-def cad_disconnect() -> dict:
-    return cad_import.disconnect()
+def cad_disconnect(request: Request) -> dict:
+    try:
+        return cad_import.disconnect(request.state.user["username"])
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/cad/cancel")
+def cad_cancel(request: Request) -> dict:
+    try:
+        return cad_import.cancel(request.state.user["username"])
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 @app.post("/imports/{source}")
