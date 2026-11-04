@@ -5,9 +5,18 @@ import { bpmCities, reportCatalog, type ReportId, type ReportOptions, type Repor
 import { buildReportDocument, printReport, reportCsv, summaryCsv } from '../services/report-document'
 import { openDomesticPresentation } from '../services/domestic-presentation'
 import { exportReportWorkbook } from '../services/report-spreadsheet'
-import { buildMviNeacWhatsapp } from '../services/mvi-neac-share'
+import { buildMviNeacWhatsapp, whatsappShareUrl } from '../services/mvi-neac-share'
 import { SystemIcon } from './SystemIcon'
 import '../reports.css'
+
+function WhatsappMessagePreview({ message }: { message: string }) {
+  return <div className="whatsapp-message" aria-label="Prévia da mensagem para WhatsApp">{message.split('\n').map((line, index) =>
+    <div key={index} className={!line ? 'message-gap' : line.startsWith('━') ? 'message-divider' : undefined}>
+      {line.split(/(\*[^*]+\*|_[^_]+_)/g).map((part, partIndex) => part.startsWith('*') && part.endsWith('*')
+        ? <strong key={partIndex}>{part.slice(1, -1)}</strong>
+        : part.startsWith('_') && part.endsWith('_') ? <em key={partIndex}>{part.slice(1, -1)}</em> : part)}
+    </div>)}</div>
+}
 
 export function ReportCenter({ year, municipality, version, allowed }: { year?: number; municipality?: string; version: string; allowed: boolean }) {
   const [scope, setScope] = useState<ReportScope>({ year, city: municipality })
@@ -36,6 +45,24 @@ export function ReportCenter({ year, municipality, version, allowed }: { year?: 
   const customize = (patch: Partial<ReportOptions>) => { requestId.current += 1; setOptions(value => ({ ...value, ...patch })); setPreview(''); setLoadingAction(null) }
   const chosen = reportCatalog.find(item => item.id === selected)!
   const whatsappText = preview && selected === 'mvi-neac' && data.data ? buildMviNeacWhatsapp(data.data, scope) : ''
+  const copyWhatsapp = async () => {
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(whatsappText)
+      else {
+        const field = document.createElement('textarea')
+        field.value = whatsappText
+        field.style.position = 'fixed'
+        field.style.opacity = '0'
+        document.body.appendChild(field)
+        field.select()
+        const copied = document.execCommand('copy')
+        field.remove()
+        if (!copied) throw Error('Cópia indisponível')
+      }
+      setCopied(true)
+      setError('')
+    } catch { setError('Não foi possível copiar automaticamente. Selecione a mensagem na prévia e copie manualmente.') }
+  }
   const loadDataset = async () => {
     if (!authorized.current) throw Error('Acesso aos relatórios não autorizado.')
     if (data.data && !queryClient.getQueryState(['report-dataset'])?.isInvalidated) return data.data
@@ -105,7 +132,7 @@ export function ReportCenter({ year, municipality, version, allowed }: { year?: 
       {preview && <button type="button" onClick={exportWorkbook}>Exportar relatório selecionado em Excel (XLSX)</button>}
       <div className="report-catalog">{reportCatalog.map(item => <button type="button" data-report-id={item.id} key={item.id} className={selected === item.id ? 'report-choice selected' : 'report-choice'} disabled={!!loadingAction} onClick={() => { void prepare(item.id) }}><SystemIcon name={item.icon} /><strong>{item.title}</strong><span>{item.description}</span><small>{item.id === 'domestica-apresentacao' ? 'Abrir editor · PDF e PPTX →' : item.id === 'planejamento' ? 'Abrir tabuleiro · PDF e PNG →' : 'Gerar relatório →'}</small></button>)}</div>
       {error && <p className="error" role="alert">{error}</p>}
-      {preview && <div className="report-preview" aria-label="Prévia do relatório selecionado"><div className="section-head"><h3>{chosen.title}</h3><div className="report-toolbar"><button type="button" className="primary" onClick={() => { void printReport(preview).catch(failure => setError(String(failure.message))) }}>Imprimir ou salvar PDF</button><button type="button" onClick={exportCsv}>Exportar CSV</button><button type="button" onClick={() => setPreview('')}>Fechar prévia</button></div></div><iframe title={`Prévia: ${chosen.title}`} srcDoc={preview} sandbox="allow-same-origin" />{whatsappText && <div className="whatsapp-report"><h4>Resumo para WhatsApp</h4><p className="muted">Confira o texto antes de compartilhar. Ele contém apenas totais e distribuições, sem identificação de vítimas.</p><textarea aria-label="Texto do resumo MVI NEAC para WhatsApp" readOnly value={whatsappText} rows={16} /><div className="report-toolbar"><a className="whatsapp-share" href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`} target="_blank" rel="noopener noreferrer">Abrir no WhatsApp</a><button type="button" onClick={() => { if (!navigator.clipboard?.writeText) { setError('Não foi possível copiar o texto. Selecione e copie a prévia acima.'); return } void navigator.clipboard.writeText(whatsappText).then(() => setCopied(true)).catch(() => setError('Não foi possível copiar o texto. Selecione e copie a prévia acima.')) }}>Copiar texto</button></div>{copied && <p className="success" role="status">Resumo copiado.</p>}</div>}</div>}
+      {preview && <div className="report-preview" aria-label="Prévia do relatório selecionado"><div className="section-head"><h3>{chosen.title}</h3><div className="report-toolbar"><button type="button" className="primary" onClick={() => { void printReport(preview).catch(failure => setError(String(failure.message))) }}>Imprimir ou salvar PDF</button><button type="button" onClick={exportCsv}>Exportar CSV</button><button type="button" onClick={() => setPreview('')}>Fechar prévia</button></div></div><iframe title={`Prévia: ${chosen.title}`} srcDoc={preview} sandbox="allow-same-origin" />{whatsappText && <div className="whatsapp-report"><h4>Mensagem para WhatsApp</h4><p className="muted">Confira a mensagem com emojis antes de compartilhar. Ela contém somente dados agregados.</p><WhatsappMessagePreview message={whatsappText} /><div className="report-toolbar"><a className="whatsapp-share" href={whatsappShareUrl(whatsappText)} target="_blank" rel="noopener noreferrer">Abrir WhatsApp com emojis</a><button type="button" onClick={() => { void copyWhatsapp() }}>Copiar mensagem com emojis</button></div>{copied && <p className="success" role="status">Mensagem com emojis copiada. Cole na conversa desejada.</p>}</div>}</div>}
       {planning && <div className="report-preview"><div className="section-head"><h3>Tabuleiro do planejamento operacional</h3><button type="button" onClick={() => setPlanning(false)}>Fechar tabuleiro</button></div><p className="muted">Cenários salvos neste navegador. Mapa de ruas depende de conexão; a exportação PNG é uma prancha esquemática.</p><iframe title="Planejamento operacional com PDF e PNG" src={`${import.meta.env.BASE_URL}assets/reports/planning.html`} /></div>}
     </>}
   </section>

@@ -1,39 +1,59 @@
 import { count, filterReportRows, scopeLabel, selectReportRows, type ReportDataset, type ReportScope } from './report-model'
 import { formatNeacImportDate, mviNeacComparison } from './mvi-neac-comparison'
 
+const icon = {
+  shield: '\u{1F6E1}\uFE0F', chart: '\u{1F4CA}', calendar: '\u{1F4C5}', folder: '\u{1F5C2}\uFE0F',
+  people: '\u{1F465}', compare: '\u{1F4C8}', months: '\u{1F5D3}\uFE0F', pin: '\u{1F4CD}',
+  tag: '\u{1F3F7}\uFE0F', clock: '\u{1F552}', info: '\u2139\uFE0F', up: '\u2197\uFE0F',
+  down: '\u2198\uFE0F', equal: '\u27A1\uFE0F', bullet: '\u25AB\uFE0F',
+}
+const divider = '━━━━━━━━━━━━━━━━━━'
+const monthName = (month: number) => ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][month - 1]
+const top = (entries: [string, number][], limit: number) => entries.slice(0, limit)
+  .map(([label, total]) => `${icon.bullet} ${label}: *${total}*`).join('\n') || `${icon.bullet} Sem registros no recorte`
+
+export function whatsappShareUrl(message: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`
+}
+
 export function buildMviNeacWhatsapp(data: ReportDataset, scope: ReportScope, issued = new Date()): string {
   const rows = selectReportRows(filterReportRows(data.rows, scope), 'mvi-neac')
-  const top = (entries: [string, number][], limit: number) => entries.slice(0, limit)
-    .map(([label, total]) => `• ${label}: ${total}`).join('\n') || '• Sem registros no recorte'
   const annual = mviNeacComparison(data, scope, issued)
   const validHours = rows.filter(row => row.hour !== null).length
-  return [
-    '📊 *10º BPM / PMAL · MVI NEAC*',
-    `📅 *Informe ao Comando · ${issued.toLocaleDateString('pt-BR')}*`,
-    scopeLabel(scope),
-    `🗂️ *Planilha NEAC · última importação:* ${formatNeacImportDate(data)}`,
+  const direction = annual ? annual.difference > 0 ? icon.up : annual.difference < 0 ? icon.down : icon.equal : icon.equal
+  const difference = annual ? `${annual.difference > 0 ? '+' : ''}${annual.difference}` : ''
+  const variation = annual?.variationPercent === null || annual === null ? 'sem base percentual'
+    : `${annual.variationPercent > 0 ? '+' : ''}${annual.variationPercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
+  const lines = [
+    `${icon.shield} *10º BPM | PMAL*`,
+    `${icon.chart} *MVI NEAC · INFORME AO COMANDO*`,
+    `${icon.calendar} Emissão: ${issued.toLocaleDateString('pt-BR')}`,
+    `${icon.pin} Área: ${scope.city || '10º BPM'}`,
+    `${icon.folder} Planilha NEAC importada em: ${formatNeacImportDate(data)}`,
+    divider,
+    `${icon.people} *PANORAMA DO RECORTE*`,
+    `*Vítimas elegíveis: ${rows.length}* · ${new Set(rows.map(row => row.city)).size} município(s)`,
+    `${icon.info} Filtros: ${scopeLabel(scope)}`,
     '',
-    `👥 *Vítimas elegíveis: ${rows.length}*`,
-    `Municípios com registros: ${new Set(rows.map(row => row.city)).size}`,
+    `${icon.compare} *COMPARATIVO COM O ANO ANTERIOR*`,
+    annual ? `${icon.bullet} ${annual.year - 1}: *${annual.previous}* vítima(s) · ${annual.previousStart} a ${annual.previousEnd}` : 'Informe datas dentro do mesmo ano para comparar.',
+    annual ? `${icon.bullet} ${annual.year}: *${annual.current}* vítima(s) · ${annual.currentStart} a ${annual.currentEnd}` : '',
+    annual ? `${direction} Diferença: *${difference}* · Variação: *${variation}*` : '',
     '',
-    annual ? `📈 *Mesmo período · ${annual.year - 1} × ${annual.year}*` : '📈 *Comparativo anual*',
-    annual ? `${annual.year - 1}: ${annual.previous} vítima(s) · ${annual.previousStart} a ${annual.previousEnd}` : 'Informe datas do mesmo ano para comparar.',
-    annual ? `${annual.year}: ${annual.current} vítima(s) · ${annual.currentStart} a ${annual.currentEnd}` : '',
-    annual ? `Diferença: ${annual.difference > 0 ? '+' : ''}${annual.difference} · Variação: ${annual.variationPercent === null ? 'sem base percentual' : `${annual.variationPercent > 0 ? '+' : ''}${annual.variationPercent.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`}` : '',
+    annual ? `${icon.months} *MÊS A MÊS · ${annual.year - 1} → ${annual.year}*` : '',
+    annual ? annual.months.map(item => `${icon.bullet} ${monthName(item.month)}: ${item.previous} → ${item.current}`).join('\n') : '',
     '',
-    annual ? `📆 *Mês a mês · ${annual.year - 1} × ${annual.year}*` : '',
-    annual ? annual.months.map(item => `• ${String(item.month).padStart(2, '0')}: ${annual.year - 1} ${item.previous} | ${annual.year} ${item.current}`).join('\n') : '',
-    '',
-    '🏙️ *Municípios com mais vítimas*',
+    `${icon.pin} *MUNICÍPIOS COM MAIS VÍTIMAS*`,
     top(count(rows, row => row.city), 5),
     '',
-    '📌 *Classificações mais frequentes*',
+    `${icon.tag} *CLASSIFICAÇÕES MAIS FREQUENTES*`,
     top(count(rows, row => row.category || row.nature), 3),
     '',
-    `🕒 Horário informado: ${validHours} de ${rows.length} vítimas.`,
-    rows.length ? '' : 'Sem vítimas no recorte; confira se a base NEAC foi importada e se os filtros estão corretos.',
-    'ℹ️ Fonte: NEAC, somente vítimas elegíveis. CAD e NEAC são fontes independentes e não devem ser somados.',
-    'Meses sem registro aparecem como zero; isso não confirma cobertura completa da planilha.',
-    'Resumo agregado, sem identificação de vítimas. Confira o PDF antes do encaminhamento.',
-  ].filter((line, index, lines) => line || lines[index - 1] !== '').join('\n').trim()
+    `${icon.clock} Horário informado: ${validHours} de ${rows.length} vítima(s).`,
+    rows.length ? '' : 'Sem vítimas no recorte. Confira a importação NEAC e os filtros.',
+    divider,
+    `${icon.info} *Fonte:* NEAC, apenas vítimas elegíveis. CAD e NEAC não devem ser somados. Zero em um mês não confirma cobertura completa da planilha.`,
+    '_Resumo agregado, sem nomes de vítimas ou números de ocorrência._',
+  ]
+  return lines.filter((line, index) => line || lines[index - 1] !== '').join('\n').trim()
 }

@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Mensagem MVI NEAC para WhatsApp — 0.1.75
+
+A mensagem para WhatsApp ganhou seções curtas com emojis Unicode explícitos, cabeçalho, panorama, comparativo anual, meses lado a lado, municípios, classificações e fonte. A Central mostra a mensagem em uma prévia visual que renderiza negrito e emojis; o botão de compartilhamento usa o link de mensagem pronta documentado pelo WhatsApp e o botão de cópia preserva o texto completo, com um método alternativo para navegadores sem API de área de transferência. Um teste no navegador confirmou emojis visíveis, presentes no parâmetro do link e no texto copiado. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Comparativo MVI NEAC no informe e no WhatsApp — 0.1.74
 
 O PDF do Comando e o resumo para WhatsApp apresentam as vítimas elegíveis NEAC do ano selecionado e do mesmo período do ano anterior, com datas de corte explícitas, diferença absoluta e variação percentual quando existe base anterior. Uma tabela mostra cada mês dos dois anos lado a lado, inclusive meses sem registro. A data exibida é a última importação da planilha NEAC, separada das atualizações das demais fontes; bases online anteriores sem esse metadado mostram que a data não está informada. O resumo para WhatsApp usa emojis nas seções e continua sem nomes de vítimas ou números de ocorrência. Os totais CAD não entram nessa comparação. A implementação funcional permanece 100% concluída; a validação operacional permanece 90% concluída e 10% restante para conferência oficial das bases.
