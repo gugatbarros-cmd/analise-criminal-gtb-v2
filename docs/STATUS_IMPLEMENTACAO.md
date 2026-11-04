@@ -1,5 +1,9 @@
 # Andamento da implantação — 04/11/2026
 
+## Exportação XLS no CAD — 0.1.78
+
+A captura da tela oficial mostrou "Arquivo gerado com sucesso" e o botão "Baixar" visível, enquanto o assistente local informava que não o encontrara. O fluxo anterior verificava apenas os controles da página principal e passava a observar downloads depois dessa busca. A automação agora observa o download antes de selecionar XLS e procura "Baixar" também em abas e quadros do CAD, aceitando tanto o download iniciado diretamente quanto o iniciado pelo botão. Testes sintéticos cobrem os dois caminhos; a confirmação com uma consulta real ainda depende da próxima execução pelo usuário. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.
+
 ## Data inválida na importação CAD — 0.1.77
 
 A captura da falha mostrou o período de 01/01/2025 a 31/06/2025. O último dia informado não existe em junho; o campo de data não gerava valor válido, e o botão "Consultar e importar" permanecia desativado sem explicar o motivo. A tela agora mantém o botão disponível quando não há consulta em andamento e exibe uma mensagem específica para data inexistente, data ausente ou intervalo invertido. O CPF e a senha digitados não são apagados quando a data precisa ser corrigida. Implementação funcional: 100% concluída; validação operacional: 90% concluída, 10% restante para conferência oficial das bases.

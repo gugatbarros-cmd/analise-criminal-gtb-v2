@@ -136,3 +136,72 @@ def test_cad_cannot_cancel_started_database_write(tmp_path):
     manager._set("importing", "Gravando", progress=95)
     with pytest.raises(ValueError, match="gravação do lote já começou"):
         manager.cancel()
+
+
+def test_cad_captures_xls_download_started_by_xls_click(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    class Events:
+        def __init__(self):
+            self.handlers = {}
+        def on(self, name, callback):
+            self.handlers.setdefault(name, []).append(callback)
+        def remove_listener(self, name, callback):
+            self.handlers[name].remove(callback)
+        def emit(self, name, value):
+            for callback in self.handlers.get(name, []):
+                callback(value)
+    class Page(Events):
+        def __init__(self):
+            super().__init__()
+            self.context = Events()
+            self.context.pages = [self]
+        def wait_for_timeout(self, _milliseconds):
+            pass
+    page = Page()
+    download = object()
+    monkeypatch.setattr(manager, "_action", lambda *_args, **_kwargs: page.emit("download", download))
+    assert manager._request_xls_download(page) is download
+    assert manager.status()["phase"] == "downloading"
+
+
+def test_cad_clicks_baixar_inside_export_frame(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    download = object()
+    class Events:
+        def __init__(self):
+            self.handlers = {}
+        def on(self, name, callback):
+            self.handlers.setdefault(name, []).append(callback)
+        def remove_listener(self, name, callback):
+            self.handlers[name].remove(callback)
+        def emit(self, name, value):
+            for callback in self.handlers.get(name, []):
+                callback(value)
+    class Locator:
+        @property
+        def first(self):
+            return self
+        def is_visible(self):
+            return True
+        def click(self, **_kwargs):
+            page.emit("download", download)
+    class Frame:
+        url = "https://analisacad.seguranca.al.gov.br/exportacao/"
+        def get_by_role(self, role, **_kwargs):
+            return Locator() if role == "button" else None
+        def get_by_text(self, *_args, **_kwargs):
+            return None
+    class Page(Events):
+        url = "https://analisacad.seguranca.al.gov.br/consulta/"
+        frames = [Frame()]
+        def __init__(self):
+            super().__init__()
+            self.context = Events()
+            self.context.pages = [self]
+        def is_closed(self):
+            return False
+        def wait_for_timeout(self, _milliseconds):
+            pass
+    page = Page()
+    monkeypatch.setattr(manager, "_action", lambda *_args, **_kwargs: None)
+    assert manager._request_xls_download(page) is download

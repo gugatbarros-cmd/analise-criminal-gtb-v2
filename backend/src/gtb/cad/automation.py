@@ -329,6 +329,68 @@ class CadImportManager:
                       progress=40 + (30 * selected // initial_count))
         raise ValueError("A lista de colunas excedeu o limite esperado.")
 
+    def _request_xls_download(self, page):
+        """Observa o download antes de selecionar XLS; o CAD pode dispensar Baixar."""
+        downloads = []
+        watched = []
+
+        def received_download(download):
+            downloads.append(download)
+
+        def watch_page(candidate):
+            candidate.on("download", received_download)
+            watched.append(candidate)
+
+        context = page.context
+        for candidate in context.pages:
+            watch_page(candidate)
+        context.on("page", watch_page)
+        try:
+            self._action(page, "xls", "Gerando a planilha XLS.", progress=78)
+            deadline = time.monotonic() + 120
+            clicked_download = False
+            download_label = re.compile(r"\bBaixar\b", re.IGNORECASE)
+            while not downloads and time.monotonic() < deadline:
+                self._check_stop()
+                if not clicked_download:
+                    for candidate in context.pages:
+                        if candidate.is_closed() or not candidate.url.startswith(CAD_ORIGIN + "/"):
+                            continue
+                        for frame in candidate.frames:
+                            if not (frame.url.startswith(CAD_ORIGIN + "/") or frame.url == "about:blank"):
+                                continue
+                            controls = (frame.get_by_role("button", name=download_label),
+                                        frame.get_by_role("link", name=download_label),
+                                        frame.get_by_text("Baixar", exact=True))
+                            for control in controls:
+                                try:
+                                    if not control.first.is_visible():
+                                        continue
+                                    self._set("downloading", "Baixando o XLS do CAD…", progress=80)
+                                    control.first.click(timeout=10000)
+                                    clicked_download = True
+                                    break
+                                except PlaywrightError:
+                                    continue
+                            if clicked_download:
+                                break
+                        if clicked_download:
+                            break
+                if not downloads:
+                    active_page = next((candidate for candidate in context.pages if not candidate.is_closed()), None)
+                    if active_page is None:
+                        raise ValueError("A janela do CAD foi fechada durante a exportação.")
+                    active_page.wait_for_timeout(500)
+            self._check_stop()
+            if not downloads:
+                raise TimeoutError("O CAD não apresentou o download do XLS após a exportação.")
+            self._set("downloading", "Recebendo o XLS do CAD…", progress=80)
+            return downloads[0]
+        finally:
+            context.remove_listener("page", watch_page)
+            for candidate in watched:
+                candidate.remove_listener("download", received_download)
+
     def _download_and_import(self, page, start_date: str, end_date: str) -> None:
         page.goto(OCCURRENCES_URL, wait_until="load", timeout=45000)
         if not page.url.startswith(OCCURRENCES_URL):
@@ -350,25 +412,7 @@ class CadImportManager:
         self._wait_control(page, "Exportação", 120000)
         self._action(page, "exportMenu", "Abrindo as opções de exportação.", progress=75)
         page.wait_for_timeout(300)
-        self._action(page, "xls", "Gerando a planilha XLS.", progress=78)
-        self._wait_control(page, "Baixar", 120000)
-        self._set("downloading", "Baixando o XLS do CAD…", progress=80)
-        downloads = []
-        def received_download(download):
-            downloads.append(download)
-        page.on("download", received_download)
-        try:
-            page.get_by_text("Baixar", exact=True).click(timeout=10000)
-            deadline = time.monotonic() + 120
-            while not downloads and time.monotonic() < deadline:
-                self._check_stop()
-                page.wait_for_timeout(500)
-            self._check_stop()
-            if not downloads:
-                raise TimeoutError("O CAD não iniciou o download do XLS.")
-            download = downloads[0]
-        finally:
-            page.remove_listener("download", received_download)
+        download = self._request_xls_download(page)
         if download.failure():
             raise ValueError("O CAD não concluiu o download do XLS.")
         filename = Path(download.suggested_filename).name
