@@ -1,5 +1,9 @@
 # Andamento da implantação — 05/11/2026
 
+## Envio em lotes menores — 0.1.85
+
+Um envio da base processada maior que 8 MB expirou durante a escrita de um lote de 12 blocos. O envio agora usa no máximo três blocos de 400 KB por requisição e até 90 segundos para a operação de gravação; o manifesto online continua sendo trocado apenas após todos os blocos. O limite total de 20 MB e o plano Firebase Spark permanecem. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Sincronização de bases maiores — 0.1.84
 
 A base CAD local ultrapassou o limite operacional anterior de 8 MB na cópia processada. O envio agora grava blocos de até 400 KB em lotes menores que o limite de requisição do Firestore e só troca o manifesto online após todos estarem salvos. Se houver falha, a versão online anterior permanece consultável e os blocos novos são removidos quando possível. O limite operacional total é de 20 MB, com até 50 blocos, sem ativar cobrança ou alterar o plano Spark. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.

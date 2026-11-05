@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-05",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.84 acrescenta MVI CAD ao mapa criminal com endereços e coordenadas declaradas, além de envio em lotes para cópias autenticadas maiores que 8 MB no plano gratuito. Registros CAD sem coordenadas ficam no centro municipal; as fontes seguem separadas. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.85 acrescenta MVI CAD ao mapa criminal com endereços e coordenadas declaradas e reduz o tamanho dos lotes enviados à consulta online autenticada para evitar expiração de conexão. Registros CAD sem coordenadas ficam no centro municipal; as fontes seguem separadas. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

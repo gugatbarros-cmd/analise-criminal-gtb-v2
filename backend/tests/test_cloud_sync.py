@@ -77,8 +77,8 @@ def test_large_snapshot_stages_chunks_before_switching_manifest(tmp_path, monkey
     monkeypatch.setattr(cloud.gzip, 'compress', lambda *args, **kwargs: b'x' * 6_000_001)
     sync.sync_once()
     commits = [call[1]['writes'] for call in calls if call[0].endswith(':commit')]
-    assert len(commits) == 3
-    assert all(len(batch) <= 12 for batch in commits[:-1])
+    assert len(commits) == 8
+    assert all(len(batch) <= 3 for batch in commits[:-1])
     assert all('update' in write and '/chunks/' in write['update']['name'] for batch in commits[:-1] for write in batch), [
         (index, offset, write.get('update', {}).get('name', list(write)))
         for index, batch in enumerate(commits[:-1]) for offset, write in enumerate(batch)

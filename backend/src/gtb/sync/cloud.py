@@ -32,7 +32,7 @@ def request_json(url, payload=None, token=None, method=None):
     request = Request(url, body,
                       headers, method=method)
     try:
-        with urlopen(request, timeout=45) as response:
+        with urlopen(request, timeout=90 if url.endswith('/documents:commit') else 45) as response:
             return json.load(response)
     except HTTPError as error:
         if error.code == 429:
@@ -201,8 +201,8 @@ class CloudSync:
                 else:
                     staged = []
                     try:
-                        for start in range(0, len(chunks), 12):
-                            batch = writes[start:min(start + 12, len(chunks))]
+                        for start in range(0, len(chunks), 3):
+                            batch = writes[start:min(start + 3, len(chunks))]
                             request_json(commit_url, {'writes': batch}, token)
                             staged.extend(entry['update']['name'] for entry in batch)
                         request_json(commit_url, {'writes': writes[len(chunks):]}, token)
