@@ -124,6 +124,12 @@ try {
   }
   await send('Page.reload');
   await until(() => evaluate(`!!document.querySelector('#guarnicoes [data-chart-target]') && !!document.querySelector('.chart canvas')`), 'gráficos das seis fontes');
+  await evaluate(`document.querySelector('a[href="#mapa-criminal"]').click()`);
+  await until(() => evaluate(`!!document.querySelector('.crime-map .leaflet-container') && Number(document.querySelector('.crime-map-kpis strong')?.textContent) > 0`), 'mapa criminal com dados');
+  assert.equal(await evaluate(`document.querySelectorAll('.crime-map-layerbar button[aria-pressed=true]').length`), 5);
+  await evaluate(`document.querySelector('.crime-map-layerbar .heat-toggle').click()`);
+  assert.equal(await evaluate(`document.querySelector('.crime-map-layerbar .heat-toggle').getAttribute('aria-pressed')`), 'true');
+  assert.ok(await evaluate(`Array.from(document.querySelectorAll('.crime-map-ranking button')).some(button => button.textContent.includes('Igaci'))`));
   await until(() => evaluate(`!!document.querySelector('[data-indicator-target="cvp"] .indicator-variation-bad')`), 'variação criminal no cartão');
   assert.equal(await evaluate(`document.querySelector('[aria-label="Filtros de indicadores"] input[type=number]').value`), '2026');
   assert.equal(await evaluate(`document.querySelector('[data-comparison-indicator="cvp"] [aria-pressed=true]')?.textContent`), 'Entre períodos');
@@ -202,6 +208,29 @@ try {
   assert.ok(await evaluate(`document.documentElement.scrollWidth <= innerWidth + 1`), 'Layout não pode exigir rolagem horizontal no celular');
   await evaluate(`document.querySelector('#cvp .analysis-ranking').scrollIntoView({block:'center',behavior:'instant'})`);
   fs.writeFileSync(path.join(directory, 'chart-mobile.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 950, deviceScaleFactor: 1, mobile: false });
+  await send('Page.reload');
+  await until(() => evaluate(`!!document.querySelector('a[href="#mapa-criminal"]')`), 'painel para captura do mapa');
+  await evaluate(`document.querySelector('a[href="#mapa-criminal"]').click()`);
+  await until(() => evaluate(`!!document.querySelector('.crime-map')`), 'seção do mapa para captura');
+  await evaluate(`document.querySelector('.crime-map').scrollIntoView({block:'start',behavior:'instant'})`);
+  await until(() => evaluate(`!!document.querySelector('.crime-map .leaflet-container') && Number(document.querySelector('.crime-map-kpis strong')?.textContent) > 0`), 'mapa para captura');
+  await until(() => evaluate(`!document.querySelector('.crime-map-loading') && document.querySelector('.crime-map-live')?.textContent.includes('05/11/2026')`), 'mapa atualizado para captura');
+  await evaluate(`document.querySelector('.crime-map').scrollIntoView({block:'start',behavior:'instant'})`);
+  fs.writeFileSync(path.join(directory, 'crime-map-desktop.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 900, screenWidth: 390, screenHeight: 900, deviceScaleFactor: 1, mobile: false });
+  await send('Page.reload');
+  await until(() => evaluate(`!!document.querySelector('a[href="#mapa-criminal"]')`), 'painel em 390px');
+  await evaluate(`document.querySelector('a[href="#mapa-criminal"]').click()`);
+  await until(() => evaluate(`!!document.querySelector('.crime-map')`), 'seção do mapa em 390px');
+  await evaluate(`document.querySelector('.crime-map').scrollIntoView({block:'start',behavior:'instant'})`);
+  await until(() => evaluate(`!!document.querySelector('.crime-map .leaflet-container')`), 'mapa em 390px');
+  await until(() => evaluate(`!document.querySelector('.crime-map-loading') && document.querySelector('.crime-map-live')?.textContent.includes('05/11/2026')`), 'mapa atualizado em 390px');
+  await evaluate(`document.querySelector('.crime-map').scrollIntoView({block:'start',behavior:'instant'})`);
+  await until(() => evaluate(`Math.abs(document.querySelector('.crime-map').getBoundingClientRect().top) < 140`), 'mapa visível em 390px');
+  assert.equal(await evaluate(`window.innerWidth`), 390);
+  assert.ok(await evaluate(`document.querySelector('.crime-map').getBoundingClientRect().width <= window.innerWidth`));
+  fs.writeFileSync(path.join(directory, 'crime-map-mobile.png'), Buffer.from((await send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
   assert.deepEqual(errors, []);
   console.log(`Executável ${health.version}: importação, quadros e gráficos dos 13 destinos, barra CAD por clique real, teclado, filtros e responsividade em 320/390/768/1440px aprovados.`);
 } finally {

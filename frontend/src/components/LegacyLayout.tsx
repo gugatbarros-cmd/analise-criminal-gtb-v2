@@ -31,6 +31,7 @@ const menuGroups: MenuGroup[] = [
     { label: 'Municípios do 10º BPM', target: 'municipios' },
   ] },
   { label: 'Inteligência', items: [
+    { label: 'Mapa criminal', target: 'mapa-criminal', icon: 'compass' },
     { label: 'Análise avançada', target: 'tabela-geral' },
     { label: 'Inteligência estatística', target: 'indicadores', icon: 'chart' },
     { label: 'Soluções IA', target: 'assistente-local' },

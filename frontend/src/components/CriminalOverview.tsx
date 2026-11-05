@@ -22,7 +22,7 @@ export function CriminalOverview({ summary, year, municipality, loading, service
       <div className="criminal-overview-kicker"><span className="criminal-overview-pulse" aria-hidden="true" /> Inteligência territorial · 10º BPM</div>
       <h1 id="criminal-overview-title">Dashboard criminal <span>Dados gerais</span></h1>
       <p>Indicadores do período para acompanhar o território e abrir cada análise com um clique.</p>
-      <div className="criminal-overview-actions"><a className="criminal-overview-primary" href="#indicadores">Explorar indicadores <span aria-hidden="true">↗</span></a><a href="#ocorrencias">Analisar ocorrências <span aria-hidden="true">↓</span></a></div>
+      <div className="criminal-overview-actions"><a className="criminal-overview-primary" href="#mapa-criminal">Abrir mapa criminal <span aria-hidden="true">↗</span></a><a href="#indicadores">Explorar indicadores <span aria-hidden="true">↓</span></a><a href="#ocorrencias">Analisar ocorrências <span aria-hidden="true">↓</span></a></div>
     </div>
     <div className="criminal-overview-data" aria-label="Resumo criminal do período">
       <div className="criminal-overview-data-head"><span>{source}</span><strong className={serviceAvailable ? 'is-online' : ''}><i aria-hidden="true" />{loading ? 'Atualizando' : serviceAvailable ? 'Sistema conectado' : 'Serviço indisponível'}</strong></div>
