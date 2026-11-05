@@ -163,8 +163,8 @@ class CloudSync:
             payload = gzip.compress(json.dumps(snapshot, ensure_ascii=False, default=str,
                                     separators=(',', ':')).encode(), mtime=0)
             content = base64.b64encode(payload).decode()
-            if len(content) > 8_000_000:
-                raise ValueError('Sincronização indisponível: cópia acima de 8 MB. Bases locais preservadas; nenhum upgrade pago será feito.')
+            if len(content) > 20_000_000:
+                raise ValueError('Sincronização indisponível: cópia acima de 20 MB. Bases locais preservadas; nenhum upgrade pago será feito.')
             chunks = [content[i:i+400000] for i in range(0, len(content), 400000)]
             previous = request_json(ROOT, token=token)
             generation = 'gtb2-' + uuid.uuid4().hex
@@ -186,16 +186,35 @@ class CloudSync:
                 old = previous['fields']
                 old_generation = old['generation']['stringValue']
                 old_count = int(old['chunkCount']['integerValue'])
-                if old_count > 20:
+                if old_count > 50:
                     raise ValueError('Cópia remota fora do limite esperado. Conferência manual necessária.')
                 writes.extend({'delete': DOCUMENT + '/chunks/' + old_generation + '-' + str(i)} for i in range(old_count))
-            # Uma transação atômica publica metadados e blocos e remove a geração
-            # anterior. Falhas não expõem cópia parcial nem acumulam blocos órfãos.
+            commit_url = f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents:commit'
+            # Até 8 MB, preservar a publicação em uma única transação. Acima disso,
+            # gravar blocos invisíveis em lotes menores que o limite da API e trocar
+            # o manifesto apenas depois de todos os blocos estarem íntegros.
             with self.lock:
                 if epoch != self.epoch or not self.credential.exists():
                     return
-                request_json(f'https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents:commit',
-                             {'writes': writes}, token)
+                if len(content) <= 8_000_000:
+                    request_json(commit_url, {'writes': writes}, token)
+                else:
+                    staged = []
+                    try:
+                        for start in range(0, len(chunks), 12):
+                            batch = writes[start:min(start + 12, len(chunks))]
+                            request_json(commit_url, {'writes': batch}, token)
+                            staged.extend(entry['update']['name'] for entry in batch)
+                        request_json(commit_url, {'writes': writes[len(chunks):]}, token)
+                    except Exception:
+                        # A geração anterior segue visível; retirar os blocos novos
+                        # caso um envio parcial ou a troca do manifesto falhe.
+                        for start in range(0, len(staged), 100):
+                            try:
+                                request_json(commit_url, {'writes': [{'delete': name} for name in staged[start:start + 100]]}, token)
+                            except Exception:
+                                pass
+                        raise
                 # Persistir o refresh token rotacionado, nunca a senha.
                 self.credential.write_bytes(protect(session['refresh_token'].encode()))
                 self.save_state(status='synced', signature=signature, lastSyncedAt=timestamp,

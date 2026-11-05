@@ -94,7 +94,7 @@ export async function refreshCloud(): Promise<Snapshot> {
   if (data && nextGeneration === generation) return data
   const count = Number(fields.chunkCount?.integerValue)
   const hashes = fields.chunkHashes?.arrayValue?.values || []
-  if (!/^gtb2-[a-f0-9]{32}$/.test(nextGeneration) || !Number.isInteger(count) || count < 1 || count > 20 || hashes.length !== count)
+  if (!/^gtb2-[a-f0-9]{32}$/.test(nextGeneration) || !Number.isInteger(count) || count < 1 || count > 50 || hashes.length !== count)
     throw Error('Cópia online inválida. A última consulta não foi substituída.')
   // Limitar paralelismo reduz picos de leitura no plano gratuito.
   const chunks: string[] = []

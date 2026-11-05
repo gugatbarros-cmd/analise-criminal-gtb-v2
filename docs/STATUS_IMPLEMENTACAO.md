@@ -1,5 +1,9 @@
 # Andamento da implantação — 05/11/2026
 
+## Sincronização de bases maiores — 0.1.84
+
+A base CAD local ultrapassou o limite operacional anterior de 8 MB na cópia processada. O envio agora grava blocos de até 400 KB em lotes menores que o limite de requisição do Firestore e só troca o manifesto online após todos estarem salvos. Se houver falha, a versão online anterior permanece consultável e os blocos novos são removidos quando possível. O limite operacional total é de 20 MB, com até 50 blocos, sem ativar cobrança ou alterar o plano Spark. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.
+
 ## MVI CAD no mapa criminal — 0.1.83
 
 O mapa ganhou camada independente de MVI CAD. A projeção autenticada inclui endereço, bairro e coordenadas fornecidos na importação, sem nome da vítima ou número da ocorrência. Coordenadas válidas em Alagoas aparecem em pontos dourados, na lista de locais e no calor; os demais registros exibem o endereço disponível e posição aproximada no centro do município. O sistema não consulta geocodificadores externos e não inventa pontos precisos. Os filtros de ano, município, natureza e camada também se aplicam aos registros CAD. MVI CAD e MVI NEAC continuam fontes separadas e podem descrever o mesmo fato. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.

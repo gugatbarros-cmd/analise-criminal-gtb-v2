@@ -72,6 +72,22 @@ def test_sync_is_atomic_authenticated_and_repeated_only_after_change(tmp_path, m
     assert len([call for call in calls if call[0].endswith(':commit')]) == 2
 
 
+def test_large_snapshot_stages_chunks_before_switching_manifest(tmp_path, monkeypatch):
+    sync, calls = configured(tmp_path, monkeypatch)
+    monkeypatch.setattr(cloud.gzip, 'compress', lambda *args, **kwargs: b'x' * 6_000_001)
+    sync.sync_once()
+    commits = [call[1]['writes'] for call in calls if call[0].endswith(':commit')]
+    assert len(commits) == 3
+    assert all(len(batch) <= 12 for batch in commits[:-1])
+    assert all('update' in write and '/chunks/' in write['update']['name'] for batch in commits[:-1] for write in batch), [
+        (index, offset, write.get('update', {}).get('name', list(write)))
+        for index, batch in enumerate(commits[:-1]) for offset, write in enumerate(batch)
+        if 'update' not in write or '/chunks/' not in write['update']['name']]
+    assert commits[-1][0]['update']['name'] == cloud.DOCUMENT
+    assert commits[-1][0]['update']['fields']['chunkCount']['integerValue'] == '21'
+    assert sync.state['status'] == 'synced'
+
+
 def test_failure_preserves_pending_data_and_disconnect_stops_remote_calls(tmp_path, monkeypatch):
     sync, calls = configured(tmp_path, monkeypatch)
     normal = cloud.request_json
