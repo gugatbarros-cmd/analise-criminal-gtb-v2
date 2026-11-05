@@ -5,7 +5,7 @@ from functools import lru_cache
 
 from gtb.indicators.arms import arm_field, arm_identity
 from gtb.indicators.drugs import drug_identity, drug_type
-from gtb.indicators.mvi_narrative import infer_narrative_instrument
+from gtb.indicators.mvi_narrative import infer_consumed_cad_homicide, infer_narrative_instrument
 from gtb.indicators.rules import (
     cvp_class,
     death_confirmed,
@@ -151,9 +151,18 @@ def normalize(source: str, row: dict[str, str]) -> Record:
         eligible = bool(category)
         reason = "" if eligible else "Natureza fora da regra MVI"
         if source == "mvi_cad":
+            death_value = pick(row, "death")
+            inferred = infer_consumed_cad_homicide(row) if not death_value or not category else None
+            if inferred and not category and not any(term in key(nature) for term in
+                    ("tentativa", "tentado", "tentada", "culposo", "transito", "intervencao", "resistencia")):
+                category = inferred
+                eligible = True
+                reason = "Morte violenta consumada indicada no relato; revisar classificação"
+            elif inferred and category and not death_value:
+                reason = "Óbito confirmado pelo relato; revisar classificação"
             if not victim_role(pick(row, "role")):
                 eligible, reason = False, "Envolvimento não é vítima"
-            elif not death_confirmed(pick(row, "death")):
+            elif not death_confirmed(death_value) and not (not death_value and inferred):
                 eligible, reason = False, "Óbito da vítima não confirmado"
     elif source == "armas":
         natural_key = arm_identity(row, occurrence, when.year)

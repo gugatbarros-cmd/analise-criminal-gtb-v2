@@ -90,6 +90,47 @@ def test_sources_independent_and_idempotent(tmp_path):
     assert not list((tmp_path / "data" / "raw").glob("stage-*"))
 
 
+def test_cad_narrative_recovers_confirmed_homicide_without_structured_death(tmp_path):
+    store = Store(tmp_path / 'data' / 'gtb.duckdb')
+    cases = [
+        cad(**{'Número da ocorrência': 'CAD-N1', 'Tipificação no despacho': 'Averiguação', 'Óbito?': '',
+               'Relato': 'A vítima foi baleada e morreu no local.'}),
+        cad(**{'Número da ocorrência': 'CAD-N2', 'Óbito?': '',
+               'Relato': 'A vítima foi esfaqueada e evoluiu a óbito.'}),
+        cad(**{'Número da ocorrência': 'CAD-N3', 'Tipificação no despacho': 'Averiguação', 'Óbito?': 'N',
+               'Relato': 'A vítima foi baleada e morreu no local.'}),
+        cad(**{'Número da ocorrência': 'CAD-N4', 'Tipificação no despacho': 'Tentativa de homicídio', 'Óbito?': '',
+               'Relato': 'A vítima foi baleada e morreu no local.'}),
+        cad(**{'Número da ocorrência': 'CAD-N5', 'Tipificação no despacho': 'Averiguação', 'Óbito?': '',
+               'Relato': 'Possível homicídio; óbito a confirmar.'}),
+        cad(**{'Número da ocorrência': 'CAD-N6', 'Tipificação no despacho': 'Averiguação', 'Óbito?': '',
+               'Relato': 'Vítima baleada e morreu em acidente de trânsito.'}),
+    ]
+    store.import_file('mvi_cad', 'casos.csv', csv_bytes(cases))
+    actual = {row['occurrence']: row for row in store.records('mvi_cad')['items']}
+    assert actual['CAD-N1']['eligible'] is True
+    assert actual['CAD-N2']['eligible'] is True
+    assert all(actual[f'CAD-N{index}']['eligible'] is False for index in (3, 4, 5, 6))
+
+
+def test_cad_adapter_upgrade_preserves_raw_and_backs_up_changes(tmp_path):
+    path = tmp_path / 'data' / 'gtb.duckdb'
+    store = Store(path)
+    case = cad(**{'Tipificação no despacho': 'Averiguação', 'Óbito?': '',
+                  'Relato': 'A vítima foi baleada e morreu no local.'})
+    store.import_file('mvi_cad', 'caso.csv', csv_bytes([case]))
+    with store._connect() as db:
+        original = db.execute("SELECT raw_json FROM record_versions WHERE source = 'mvi_cad'").fetchone()[0]
+        db.execute("UPDATE record_versions SET category = '', eligible = false, reason = 'Antigo' WHERE source = 'mvi_cad'")
+        db.execute("UPDATE source_types SET adapter_version = '0.1.18' WHERE code = 'mvi_cad'")
+    Store(path)
+    with store._connect() as db:
+        raw, category, eligible = db.execute("SELECT raw_json, category, eligible FROM record_versions WHERE source = 'mvi_cad'").fetchone()
+    assert raw == original
+    assert category == 'Homicídio doloso' and eligible is True
+    assert len(list((path.parent / 'backups').glob('before-cad-adapter-*.duckdb'))) == 1
+
+
 def test_summary_reports_latest_import_date_per_source_independent_of_filters(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     assert all(value is None for value in store.summary()["last_imported_at"].values())

@@ -27,6 +27,12 @@ from gtb.sync.outbox import enqueue_import
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 ADAPTER_VERSION = "0.1.18"
+CAD_ADAPTER_VERSION = "0.1.86-cad1"
+
+
+def source_adapter_version(source: str) -> str:
+    return (NEAC_ADAPTER_VERSION if source == "mvi_neac" else
+            CAD_ADAPTER_VERSION if source == "mvi_cad" else ADAPTER_VERSION)
 
 
 def indicator_evidence(raw_json: str, source: str, indicator: str | None) -> str:
@@ -50,6 +56,7 @@ class Store:
         with self._connect() as db:
             self._schema(db)
         self._upgrade_occurrences()
+        self._upgrade_cad()
         upgrade_neac(self)
 
     def _connect(self) -> duckdb.DuckDBPyConnection:
@@ -60,7 +67,7 @@ class Store:
         db.execute("""CREATE TABLE IF NOT EXISTS source_types (
             code VARCHAR PRIMARY KEY, label VARCHAR NOT NULL, adapter_version VARCHAR NOT NULL)""")
         db.executemany("INSERT OR IGNORE INTO source_types VALUES (?, ?, ?)",
-                       [(source, source.replace("_", " ").upper(), ADAPTER_VERSION)
+                       [(source, source.replace("_", " ").upper(), source_adapter_version(source))
                         for source in SOURCES])
         db.execute("""CREATE TABLE IF NOT EXISTS import_batches (
             id VARCHAR PRIMARY KEY, source VARCHAR NOT NULL, filename VARCHAR NOT NULL,
@@ -132,6 +139,37 @@ class Store:
                 db.execute("ROLLBACK")
                 raise
 
+    def _upgrade_cad(self) -> None:
+        """Reavalia apenas os campos derivados do CAD; mantém originais e versões."""
+        with self._connect() as db:
+            previous = db.execute("SELECT adapter_version FROM source_types WHERE code = 'mvi_cad'").fetchone()
+            if not previous or previous[0] == CAD_ADAPTER_VERSION:
+                return
+            rows = db.execute("""SELECT natural_key, version, raw_json, nature, category, eligible, reason
+                FROM record_versions WHERE source = 'mvi_cad'""").fetchall()
+            changes = []
+            for natural_key, version, raw, nature, category, eligible, reason in rows:
+                record = normalize('mvi_cad', json.loads(raw))
+                if (nature, category, eligible, reason) != (record.nature, record.category, record.eligible, record.reason):
+                    changes.append((record.nature, record.category, record.eligible, record.reason,
+                                    natural_key, version))
+        if changes:
+            backup_dir = self.path.parent / 'backups'
+            backup_dir.mkdir(exist_ok=True)
+            shutil.copy2(self.path, backup_dir / f'before-cad-adapter-{uuid.uuid4()}.duckdb')
+        with self._connect() as db:
+            db.execute('BEGIN TRANSACTION')
+            try:
+                if changes:
+                    db.executemany("""UPDATE record_versions SET nature = ?, category = ?, eligible = ?, reason = ?
+                        WHERE source = 'mvi_cad' AND natural_key = ? AND version = ?""", changes)
+                db.execute("UPDATE source_types SET adapter_version = ? WHERE code = 'mvi_cad'",
+                           [CAD_ADAPTER_VERSION])
+                db.execute('COMMIT')
+            except Exception:
+                db.execute('ROLLBACK')
+                raise
+
     def import_file(self, source: str, filename: str, content: bytes,
                     scope: str = "partial") -> dict:
         if source not in SOURCES:
@@ -169,7 +207,7 @@ class Store:
                 existing = db.execute("""SELECT id, row_count, inserted, updated, unchanged,
                     quarantined, status FROM import_batches WHERE source = ? AND sha256 = ?
                     AND adapter_version = ? AND status IN ('completed', 'completed_with_quarantine')
-                    ORDER BY imported_at DESC LIMIT 1""", [source, digest, NEAC_ADAPTER_VERSION if source == 'mvi_neac' else ADAPTER_VERSION]).fetchone()
+                    ORDER BY imported_at DESC LIMIT 1""", [source, digest, source_adapter_version(source)]).fetchone()
                 if existing:
                     differences = db.execute("SELECT count(*) FROM import_divergences WHERE batch_id = ?",
                                              [existing[0]]).fetchone()[0]
@@ -276,7 +314,7 @@ class Store:
                     status = "completed_with_quarantine" if rejected else "completed"
                     db.execute("""INSERT INTO import_batches VALUES
                         (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                               [batch_id, source, filename, digest, stamp, scope, NEAC_ADAPTER_VERSION if source == 'mvi_neac' else ADAPTER_VERSION,
+                               [batch_id, source, filename, digest, stamp, scope, source_adapter_version(source),
                                 len(rows),
                                 inserted, updated, unchanged, len(rejected), status,
                                 str(backup_path) if backup_path else None, str(raw_path)])

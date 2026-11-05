@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getComparisonDataset } from '../services/api'
 import { hasExactCoordinates, mapFacts, mapLayers, mapSignal, mapTotals, municipalityPoints, type MapLayerId } from '../services/crime-map-model'
+import { cachedStreetPoint, locateStreet, publicStreet, type StreetPoint } from '../services/street-geocode'
 import '../crime-map.css'
 
 type Leaflet = any
@@ -35,6 +36,9 @@ export function CrimeMap({ year, municipality, cutoff }: { year: number; municip
   const [heat, setHeat] = useState(false)
   const [mapError, setMapError] = useState(false)
   const [mapReady, setMapReady] = useState(false)
+  const [streetPoints, setStreetPoints] = useState<Record<string, StreetPoint>>({})
+  const [locating, setLocating] = useState('')
+  const [locationError, setLocationError] = useState('')
   const section = useRef<HTMLElement>(null)
   const canvas = useRef<HTMLDivElement>(null)
   const map = useRef<any>(null)
@@ -76,12 +80,16 @@ export function CrimeMap({ year, municipality, cutoff }: { year: number; municip
   }, [city, mapReady])
 
   const facts = useMemo(() => mapFacts(query.data?.rows || []), [query.data])
+  const streetKey = (street: string, cityName: string) => `${publicStreet(street).toLocaleLowerCase('pt-BR')}|${cityName}`
+  const pointFor = (street: string, cityName: string) => streetPoints[streetKey(street, cityName)] || cachedStreetPoint(street, cityName)
   const choices = useMemo(() => [...new Set(facts.filter(item => layers.includes(item.layer) && (!city || item.city === city)).map(item => item.nature).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [facts, layers, city])
   const filtered = useMemo(() => facts.filter(item => layers.includes(item.layer) && (!city || item.city === city)
     && item.date >= start && item.date <= end && (!nature || item.nature === nature)), [facts, layers, city, start, end, nature])
   const totals = useMemo(() => mapTotals(filtered), [filtered])
   const exactCad = useMemo(() => filtered.filter(hasExactCoordinates), [filtered])
-  const municipalTotals = useMemo(() => mapTotals(filtered.filter(item => !hasExactCoordinates(item))), [filtered])
+  const streetCad = useMemo(() => filtered.filter(item => item.layer === 'cad' && !hasExactCoordinates(item) && item.street && pointFor(item.street, item.city))
+    .map(item => ({ ...item, point: pointFor(item.street!, item.city)! })), [filtered, streetPoints])
+  const municipalTotals = useMemo(() => mapTotals(filtered.filter(item => !hasExactCoordinates(item) && !(item.layer === 'cad' && item.street && pointFor(item.street, item.city)))), [filtered, streetPoints])
   const cadRows = useMemo(() => filtered.filter(item => item.layer === 'cad').sort((a, b) => b.date.localeCompare(a.date) || a.city.localeCompare(b.city)), [filtered])
   const selectedHistory = useMemo(() => facts.filter(item => layers.includes(item.layer) && (!city || item.city === city) && (!nature || item.nature === nature)), [facts, layers, city, nature])
   const signalEnd = cutoff && end > cutoff ? cutoff : end
@@ -89,6 +97,16 @@ export function CrimeMap({ year, municipality, cutoff }: { year: number; municip
   const total = filtered.reduce((sum, item) => sum + item.count, 0)
   const mvi = filtered.filter(item => item.layer === 'mvi').reduce((sum, item) => sum + item.count, 0)
   const cad = cadRows.reduce((sum, item) => sum + item.count, 0)
+  const locate = async (street: string, cityName: string) => {
+    const id = streetKey(street, cityName)
+    setLocating(id); setLocationError('')
+    try {
+      const point = await locateStreet(street, cityName)
+      setStreetPoints(value => ({ ...value, [id]: point }))
+      map.current?.flyTo([point.latitude, point.longitude], 15, { duration: .65 })
+    } catch (error) { setLocationError(error instanceof Error ? error.message : 'Rua não localizada') }
+    finally { setLocating('') }
+  }
 
   useEffect(() => {
     const L = lib.current, current = map.current
@@ -96,9 +114,10 @@ export function CrimeMap({ year, municipality, cutoff }: { year: number; municip
     overlay.current?.remove()
     const group = L.layerGroup()
     if (heat && filtered.length && L.heatLayer) {
-      const maximum = Math.max(1, ...municipalTotals.map(item => item.total), ...exactCad.map(item => item.count))
+      const maximum = Math.max(1, ...municipalTotals.map(item => item.total), ...exactCad.map(item => item.count), ...streetCad.map(item => item.count))
       L.heatLayer([...municipalTotals.map(item => [...municipalityPoints[item.city], item.total / maximum]),
-        ...exactCad.map(item => [item.latitude!, item.longitude!, item.count / maximum])], {
+        ...exactCad.map(item => [item.latitude!, item.longitude!, item.count / maximum]),
+        ...streetCad.map(item => [item.point.latitude, item.point.longitude, item.count / maximum])], {
         radius: 48, blur: 30, maxZoom: 12, minOpacity: .34,
         gradient: { .2: '#51b9d1', .48: '#f2ce64', .75: '#f38a52', 1: '#d84657' },
       }).addTo(group)
@@ -129,9 +148,20 @@ export function CrimeMap({ year, municipality, cutoff }: { year: number; municip
         color: '#3b2f1e', weight: 2, fillColor: '#e8bd69', fillOpacity: .95, className: 'crime-map-marker crime-map-cad-marker',
       }).bindPopup(popup).addTo(group)
     }
+    for (const item of streetCad) {
+      const popup = document.createElement('div')
+      const title = document.createElement('strong'); title.textContent = `MVI CAD · ${item.city}`; popup.append(title)
+      for (const value of [dateText(item.date), item.nature, item.address || 'Endereço não informado',
+        `${item.point.latitude.toFixed(5)}, ${item.point.longitude.toFixed(5)}`, 'Posição aproximada pela rua · OpenStreetMap']) {
+        const line = document.createElement('div'); line.textContent = value; popup.append(line)
+      }
+      L.circleMarker([item.point.latitude, item.point.longitude], { radius: Math.min(13, 6 + Math.sqrt(item.count) * 2),
+        color: '#fff', weight: 2, dashArray: '3 3', fillColor: '#6ad6d0', fillOpacity: .9, className: 'crime-map-marker crime-map-street-marker',
+      }).bindPopup(popup).addTo(group)
+    }
     group.addTo(current)
     overlay.current = group
-  }, [municipalTotals, exactCad, filtered, heat, mapReady])
+  }, [municipalTotals, exactCad, streetCad, filtered, heat, mapReady])
 
   const toggle = (id: MapLayerId) => { setLayers(value => value.includes(id) ? value.filter(item => item !== id) : [...value, id]); setNature('') }
   const reset = () => { setCity(municipality || ''); setStart(`${year}-01-01`); setEnd(cutoff || `${year}-12-31`); setLayers(allLayers); setNature(''); setHeat(false) }
@@ -146,13 +176,13 @@ export function CrimeMap({ year, municipality, cutoff }: { year: number; municip
       <button type="button" onClick={reset}>Restaurar recorte</button>
     </div>
     <div className="crime-map-layerbar" aria-label="Camadas do mapa">{mapLayers.map(layer => <button type="button" key={layer.id} aria-pressed={layers.includes(layer.id)} onClick={() => toggle(layer.id)} style={{ '--layer-color': layer.color } as CSSProperties}><span />{layer.label}</button>)}<button type="button" className="heat-toggle" aria-pressed={heat} onClick={() => setHeat(value => !value)}>✦ Mapa de calor</button></div>
-    <div className="crime-map-body"><div className="crime-map-stage"><div ref={canvas} className="crime-map-canvas" role="img" aria-label="Mapa de registros por município e pontos MVI CAD com coordenadas" />{!visible && <div className="crime-map-loading">Preparando mapa…</div>}{query.isPending && visible && <div className="crime-map-loading">Carregando indicadores…</div>}{mapError && <div className="crime-map-loading">Não foi possível abrir o mapa base. Confira a conexão.</div>}<div className="crime-map-mapnote">● Dourado: coordenada MVI CAD importada · círculos azuis/vermelhos: centro municipal aproximado.</div></div>
+    <div className="crime-map-body"><div className="crime-map-stage"><div ref={canvas} className="crime-map-canvas" role="img" aria-label="Mapa de registros por município e pontos MVI CAD com coordenadas" />{!visible && <div className="crime-map-loading">Preparando mapa…</div>}{query.isPending && visible && <div className="crime-map-loading">Carregando indicadores…</div>}{mapError && <div className="crime-map-loading">Não foi possível abrir o mapa base. Confira a conexão.</div>}<div className="crime-map-mapnote">● Dourado: coordenada importada · turquesa: rua aproximada · azul/vermelho: centro municipal.</div></div>
       <aside className="crime-map-insights"><div className="crime-map-kpis"><article><span>REGISTROS VISÍVEIS</span><strong>{total.toLocaleString('pt-BR')}</strong><small>{dateText(start)} a {dateText(end)}</small></article><article><span>MVI NEAC</span><strong>{mvi.toLocaleString('pt-BR')}</strong><small>Fonte separada das ocorrências</small></article><article><span>MVI CAD</span><strong>{cad.toLocaleString('pt-BR')}</strong><small>{exactCad.reduce((sum, item) => sum + item.count, 0)} com coordenadas</small></article></div>
         <div className="crime-map-signal"><span>LEITURA DE TENDÊNCIA</span><strong>{signal?.trend || 'Sem dados'}</strong><p>{signal?.estimate !== null && signal?.estimate !== undefined ? `≈ ${signal.estimate} registros nos 30 dias após ${dateText(signalEnd)}, se o ritmo recente persistir.` : 'Histórico insuficiente para projetar os 30 dias após o recorte.'}</p><small>Últimos 90 dias: {signal?.recent ?? 0} · 90 dias anteriores: {signal?.previous ?? 0}. Estimativa exploratória, não previsão de casos individuais.</small></div>
         <div className="crime-map-ranking"><div><span>CONCENTRAÇÃO POR MUNICÍPIO</span><strong>{city || 'Região inteira'}</strong></div>{totals.length ? totals.slice(0, 7).map(item => <button type="button" key={item.city} onClick={() => setCity(item.city)}><span>{item.city}</span><div><i style={{ width: `${item.total / totals[0].total * 100}%` }} /></div><b>{item.total}</b></button>) : <p>Sem registros nesse recorte.</p>}</div>
       </aside></div>
-    {layers.includes('cad') && <div className="crime-map-cad-list"><div className="crime-map-cad-title"><div><span>LOCALIZAÇÕES MVI CAD</span><strong>{cadRows.length ? `${cad} registro(s) no recorte` : 'Nenhum registro no recorte'}</strong></div><small>{exactCad.length} ponto(s) com coordenadas da importação</small></div>{cadRows.length > 0 && <div className="crime-map-cad-scroll">{cadRows.slice(0, 80).map((item, index) => <article key={`${item.date}-${item.city}-${index}`}><span className={hasExactCoordinates(item) ? 'exact' : ''}>{hasExactCoordinates(item) ? '● Ponto exato' : '○ Posição municipal'}</span><strong>{item.address || 'Endereço não informado'}</strong><small>{item.city} · {dateText(item.date)} · {item.nature} · {item.count} registro(s)</small><code>{hasExactCoordinates(item) ? `${item.latitude!.toFixed(5)}, ${item.longitude!.toFixed(5)}` : 'Coordenadas não fornecidas na base'}</code></article>)}</div>}{cadRows.length > 80 && <small className="crime-map-cad-more">Exibindo os 80 primeiros locais; refine os filtros para ver os demais.</small>}</div>}
+    {layers.includes('cad') && <div className="crime-map-cad-list"><div className="crime-map-cad-title"><div><span>LOCALIZAÇÕES MVI CAD</span><strong>{cadRows.length ? `${cad} registro(s) no recorte` : 'Nenhum registro no recorte'}</strong></div><small>{exactCad.length} ponto(s) com coordenadas importadas · {streetCad.length} por rua</small></div>{locationError && <p className="crime-map-location-error" role="alert">{locationError}</p>}{cadRows.length > 0 && <div className="crime-map-cad-scroll">{cadRows.slice(0, 80).map((item, index) => { const point = item.street ? pointFor(item.street, item.city) : undefined; return <article key={`${item.date}-${item.city}-${index}`}><span className={hasExactCoordinates(item) ? 'exact' : point ? 'street' : ''}>{hasExactCoordinates(item) ? '● Coordenada da base' : point ? '● Rua aproximada' : '○ Posição municipal'}</span><strong>{item.address || 'Endereço não informado'}</strong><small>{item.city} · {dateText(item.date)} · {item.nature} · {item.count} registro(s)</small><code>{hasExactCoordinates(item) ? `${item.latitude!.toFixed(5)}, ${item.longitude!.toFixed(5)}` : point ? `${point.latitude.toFixed(5)}, ${point.longitude.toFixed(5)} · aproximado` : 'Sem coordenadas válidas na base'}</code>{!hasExactCoordinates(item) && !point && item.street && <button type="button" disabled={!!locating} onClick={() => void locate(item.street!, item.city)}>{locating === streetKey(item.street, item.city) ? 'Buscando rua…' : 'Localizar pela rua'}</button>}</article> })}</div>}{cadRows.length > 80 && <small className="crime-map-cad-more">Exibindo os 80 primeiros locais; refine os filtros para ver os demais.</small>}</div>}
     {query.isError && <p className="error" role="alert">Não foi possível carregar os dados do mapa.</p>}
-    <p className="crime-map-footnote">MVI CAD e MVI NEAC são fontes independentes e podem descrever o mesmo fato. O calor combina pontos CAD com coordenadas e centros municipais dos demais registros. Endereços sem coordenadas aparecem na lista e no centro municipal; não são geocodificados. A tendência é exploratória e não prevê casos individuais.</p>
+    <p className="crime-map-footnote">MVI CAD e MVI NEAC são fontes independentes e podem descrever o mesmo fato. A localização usa primeiro a coordenada importada, após verificar sua proximidade com o município. Sem coordenada válida, é possível buscar a rua por ação do usuário; o número do imóvel e os dados do caso não são enviados. O ponto obtido representa a rua, não o local exato. Sem resultado, permanece o centro municipal. A tendência é exploratória e não prevê casos individuais. Busca de ruas: © OpenStreetMap contributors, Nominatim.</p>
   </section>
 }

@@ -56,6 +56,11 @@
 .crime-map-cad-scroll article{display:grid;align-content:start;gap:5px;min-width:0;padding:12px 14px;border:1px solid #486d7d;border-radius:10px;background:#194157}
 .crime-map-cad-scroll article span{color:#bed3da;font-size:.67rem;font-weight:800}
 .crime-map-cad-scroll article span.exact{color:#f2ca77}
+.crime-map-cad-scroll article span.street{color:#7be3d8}
+.crime-map-cad-scroll article button{justify-self:start;margin-top:5px;padding:6px 10px;border:1px solid #76d6d1;border-radius:7px;background:#145a69;color:#e6ffff;font:inherit;font-size:.72rem;font-weight:750;cursor:pointer;transition:background .2s,transform .2s}
+.crime-map-cad-scroll article button:hover{background:#227587;transform:translateY(-1px)}
+.crime-map-cad-scroll article button:disabled{opacity:.65;cursor:wait}
+.crime-map-location-error{margin:0 0 10px;color:#ffcfbf;font-size:.78rem}
 .crime-map-cad-scroll article strong{overflow-wrap:anywhere;font-size:.83rem;color:white}
 .crime-map-cad-scroll article small{color:#c1d6dc;font-size:.7rem;line-height:1.35}
 .crime-map-cad-scroll article code{color:#f0d89d;font-family:inherit;font-size:.7rem;overflow-wrap:anywhere}

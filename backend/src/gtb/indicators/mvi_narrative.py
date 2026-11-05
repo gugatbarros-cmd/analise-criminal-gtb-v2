@@ -75,3 +75,37 @@ def infer_narrative_instrument(row: dict[str, str]) -> str:
         if matches:
             return min(matches)[3]
     return "Não identificado"
+
+
+_CONSUMED = re.compile(r"\b(?:homicidio\s+consumad[oa]|assassinat[oa]|assassinad[oa]|latrocinio|feminicidio)\b")
+_DEATH = re.compile(r"\b(?:morreu|faleceu|veio\s+a\s+obito|evoluiu\s+(?:a|para)\s+obito|"
+                    r"obito\s+confirmado|morte\s+confirmada|sem\s+sinais\s+vitais|sem\s+vida|"
+                    r"corpo\s+(?:foi\s+)?encontrad[oa])\b")
+_VIOLENCE = re.compile(r"\b(?:homicidio|latrocinio|feminicidio|assassinat\w*|assassinad\w*|"
+                       r"dispar\w*|tiros?|balead\w*|alvejad\w*|arma\s+de\s+fogo|"
+                       r"esfaquead\w*|facad\w*|arma\s+branca|agress\w*|golpes?|"
+                       r"estrangul\w*|enforc\w*|espanc\w*)\b")
+_EXCLUDED_DEATH = re.compile(r"\b(?:nao\s+(?:morreu|faleceu|houve\s+obito)|sem\s+obito|"
+                             r"obito\s+nao\s+confirmado|morte\s+nao\s+confirmada|"
+                             r"sobreviveu|sem\s+confirmacao\s+(?:de\s+)?(?:morte|obito))\b")
+_EXCLUDED_CAUSE = re.compile(r"\b(?:suicidio|autoexterminio|morte\s+natural|doenca|"
+                             r"acidente|afogamento|transito|intervencao\s+policial|resistencia|"
+                             r"tentativa\s+de\s+(?:homicidio|feminicidio|latrocinio))\b")
+_UNCERTAIN_DEATH = re.compile(r"\b(?:possivel|supost[oa]|suspeita\s+de|a\s+confirmar|"
+                              r"aparentemente)\b.{0,35}\b(?:morte|obito|homicidio)\b")
+
+
+def infer_consumed_cad_homicide(row: dict[str, str]) -> str | None:
+    """Confirma morte violenta expressa no relato; nunca resolve contradição explícita."""
+    texts = [plain(value) for value in narrative_values(row)]
+    if any(_EXCLUDED_DEATH.search(text) or _EXCLUDED_CAUSE.search(text) or _UNCERTAIN_DEATH.search(text)
+           for text in texts):
+        return None
+    for text in texts:
+        if _CONSUMED.search(text) or (_DEATH.search(text) and _VIOLENCE.search(text)):
+            if 'latrocinio' in text:
+                return 'Latrocínio'
+            if 'feminicidio' in text:
+                return 'Feminicídio'
+            return 'Homicídio doloso'
+    return None

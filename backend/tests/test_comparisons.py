@@ -50,7 +50,7 @@ def test_comparisons_require_login_and_allow_viewer_without_reports_access(tmp_p
 
 def test_cad_map_location_uses_only_valid_imported_coordinates_and_address(tmp_path):
     assert cad_location({'Latitude': '-9,53690', 'Longitude': '-36,63380', 'Endereço': 'Rua Sintética, 100', 'Bairro': 'Centro'}) == {
-        'address': 'Rua Sintética, 100, Centro', 'latitude': -9.5369, 'longitude': -36.6338}
+        'address': 'Rua Sintética, 100, Centro', 'street': 'Rua Sintética', 'latitude': -9.5369, 'longitude': -36.6338}
     assert cad_location({'Coordenadas': '-9.53690, -36.63380'})['latitude'] == -9.5369
     assert cad_location({'Latitude': '-1', 'Longitude': '-1'})['latitude'] is None
     assert cad_location({'Endereço Ocorrência': 'Rua Sintética', 'Nº do Endereço': '100',

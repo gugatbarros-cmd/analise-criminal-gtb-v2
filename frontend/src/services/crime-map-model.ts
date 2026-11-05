@@ -25,8 +25,17 @@ export const mapLayers = [
   { id: 'outros', label: 'Outras ocorrências', color: '#48b8a8' },
 ] as const
 export type MapLayerId = typeof mapLayers[number]['id']
-export type MapFact = { date: string; city: string; layer: MapLayerId; count: number; nature: string; address?: string; latitude?: number; longitude?: number }
-export const hasExactCoordinates = (fact: MapFact) => fact.layer === 'cad' && Number.isFinite(fact.latitude) && Number.isFinite(fact.longitude)
+export type MapFact = { date: string; city: string; layer: MapLayerId; count: number; nature: string; address?: string; street?: string; latitude?: number; longitude?: number }
+export function nearMunicipality(latitude: number, longitude: number, city: string): boolean {
+  const center = municipalityPoints[city]
+  if (!center || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return false
+  const radians = Math.PI / 180
+  const deltaLat = (latitude - center[0]) * radians
+  const deltaLon = (longitude - center[1]) * radians
+  const arc = Math.sin(deltaLat / 2) ** 2 + Math.cos(center[0] * radians) * Math.cos(latitude * radians) * Math.sin(deltaLon / 2) ** 2
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(arc))) <= 35
+}
+export const hasExactCoordinates = (fact: MapFact) => fact.layer === 'cad' && nearMunicipality(fact.latitude!, fact.longitude!, fact.city)
 
 export function mapFacts(rows: ComparisonFact[]): MapFact[] {
   return rows.flatMap<MapFact>(row => {
@@ -34,7 +43,7 @@ export function mapFacts(rows: ComparisonFact[]): MapFact[] {
     if (!city || !row.eligible || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) return []
     if (row.source === 'mvi_neac') return [{ date: row.date, city, layer: 'mvi' as const, count: row.records, nature: row.category || row.nature }]
     if (row.source === 'mvi_cad') return [{ date: row.date, city, layer: 'cad' as const, count: row.records, nature: row.category || row.nature,
-      address: row.address || undefined, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }]
+      address: row.address || undefined, street: row.street || undefined, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }]
     if (row.source !== 'ocorrencias' || (fold(row.nature).includes('apoioaojudiciario') && fold(row.nature).includes('fiscalizacaodemedidaprotetiva'))) return []
     const layer: MapLayerId = row.indicators.includes('CVP') ? 'cvp'
       : row.indicators.includes('Tentativa de homicídio') ? 'tentativas'

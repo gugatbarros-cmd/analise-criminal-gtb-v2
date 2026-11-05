@@ -4,7 +4,7 @@ import { bpmCities, fold } from './report-model'
 export type ComparisonFact = {
   source: Source; date: string; city: string; nature: string; category: string; eligible: boolean
   indicators: string[]; teamGroup: string; records: number; units: number; grams: number; weighted: number; points: number
-  address?: string; latitude?: number | null; longitude?: number | null
+  address?: string; street?: string; latitude?: number | null; longitude?: number | null
 }
 export type ComparisonDataset = { rows: ComparisonFact[]; updatedAt: string | null }
 export type ComparisonMetric = 'records' | 'units' | 'kg' | 'points'

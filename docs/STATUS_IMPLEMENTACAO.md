@@ -1,5 +1,9 @@
 # Andamento da implantação — 05/11/2026
 
+## Relato MVI CAD e busca pela rua — 0.1.86
+
+O CAD pode classificar um homicídio consumado quando o despacho ou o campo de óbito está vazio ou genérico e o relato traz morte violenta afirmativa da vítima. Óbito explicitamente negado, envolvimento que não seja vítima, tentativa, morte incerta, acidente, suicídio e intervenção policial continuam excluídos. A reavaliação das versões CAD já importadas preserva o conteúdo original, cria backup antes de qualquer alteração derivada e identifica a classificação por relato para revisão. No mapa, coordenadas importadas só viram pontos quando ficam até 35 km do centro do município; sem ponto válido, o operador pode pedir busca da rua. O geocodificador recebe apenas rua sem número e município, respeita intervalo entre requisições e guarda o resultado aproximado no navegador. Quando não localiza a rua, permanece o centro municipal. Dados processados seguem exclusivamente na área autenticada. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Envio em lotes menores — 0.1.85
 
 Um envio da base processada maior que 8 MB expirou durante a escrita de um lote de 12 blocos. O envio agora usa no máximo três blocos de 400 KB por requisição e até 90 segundos para a operação de gravação; o manifesto online continua sendo trocado apenas após todos os blocos. O limite total de 20 MB e o plano Firebase Spark permanecem. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.

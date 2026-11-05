@@ -38,9 +38,12 @@ def cad_location(row: dict) -> dict:
     if not _in_alagoas(latitude, longitude):
         latitude = longitude = None
     street = str(first(('endereco ocorrencia', 'endereco da ocorrencia', 'endereco', 'logradouro')))[:180].strip()
+    public_street = re.sub(r'(?:,\s*|\s+n[ºo.]?\s+)\d{1,6}\b.*$', '', street, flags=re.I).strip(' ,')
     number = str(first(('no do endereco', 'n do endereco', 'numero do endereco')))[:20].strip()
+    if number and number.isdigit():
+        public_street = re.sub(rf'\s+{re.escape(number)}$', '', public_street).strip(' ,')
     if number and number.lower() not in {'s/n', 'sn'} and not re.search(rf'\b{re.escape(number)}\b', street):
         street = f'{street}, {number}' if street else number
     neighborhood = str(first(('bairro ocorrencia', 'bairro da ocorrencia', 'bairro', 'comunidade ocorrencia')))[:100].strip()
     address = ', '.join(part for part in (street, neighborhood) if part)
-    return {'address': address, 'latitude': latitude, 'longitude': longitude}
+    return {'address': address, 'street': public_street, 'latitude': latitude, 'longitude': longitude}

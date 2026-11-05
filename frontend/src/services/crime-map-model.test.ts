@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { mapFacts, mapSignal, mapTotals } from './crime-map-model'
+import { hasExactCoordinates, mapFacts, mapSignal, mapTotals } from './crime-map-model'
+import { publicStreet } from './street-geocode'
 import type { ComparisonFact } from './comparison-model'
 
 const fact = (values: Partial<ComparisonFact>): ComparisonFact => ({
@@ -27,5 +28,15 @@ describe('mapa criminal', () => {
     expect(mapSignal(scarce, '2026-06-01').estimate).toBeNull()
     const history = mapFacts([fact({ date: '2026-01-01', records: 8 }), fact({ date: '2026-05-01', records: 12 })])
     expect(mapSignal(history, '2026-06-01')).toMatchObject({ recent: 12, previous: 8, estimate: 4, trend: 'Em alta' })
+  })
+
+  it('valida coordenadas na região e retira o número antes da busca pela rua', () => {
+    const facts = mapFacts([
+      fact({ source: 'mvi_cad', latitude: -9.5369, longitude: -36.6338, street: 'Rua 15 de Novembro' }),
+      fact({ source: 'mvi_cad', latitude: -9.4057, longitude: -35.6328, street: 'Rua Exemplo, 123' }),
+    ])
+    expect(hasExactCoordinates(facts[0])).toBe(true)
+    expect(hasExactCoordinates(facts[1])).toBe(false)
+    expect(publicStreet('Rua 15 de Novembro, 123')).toBe('Rua 15 de Novembro')
   })
 })
