@@ -9,7 +9,7 @@ type MenuGroup = { label: string; items: MenuItem[] }
 
 const menuGroups: MenuGroup[] = [
   { label: 'Visão geral', items: [
-    { label: 'Visão Executiva', target: 'indicadores' },
+    { label: 'Dashboard criminal', target: 'dashboard', icon: 'chart' },
     { label: 'MVI CAD', target: 'mvi-cad' },
     { label: 'MVI NEAC', target: 'mvi-neac' },
   ] },
@@ -59,7 +59,7 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
 }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [active, setActive] = useState('Visão Executiva')
+  const [active, setActive] = useState('Dashboard criminal')
   const [search, setSearch] = useState('')
   const { greeting, date } = useGreeting()
   const filtered = useMemo(() => menuGroups.map(group => ({
@@ -120,7 +120,7 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
       <header className="legacy-header">
         <button className="legacy-mobile-menu" type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">☰</button>
         <img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="" />
-        <div className="legacy-title"><span>Polícia Militar de Alagoas · 10º Batalhão</span><h1>{current?.label || 'Visão Executiva'}</h1><p>{current?.planned ? 'Módulo identificado no legado e programado para migração.' : 'Indicadores operacionais e criminais com rastreabilidade local.'}</p></div>
+        <div className="legacy-title"><span>Polícia Militar de Alagoas · 10º Batalhão</span><h1>{current?.label || 'Dashboard criminal'}</h1><p>{current?.planned ? 'Módulo identificado no legado e programado para migração.' : 'Indicadores operacionais e criminais com rastreabilidade local.'}</p></div>
         <div className="legacy-header-state"><span>{isCloud ? 'Ambiente online' : demo ? 'Demonstração pública' : 'Ambiente local'}</span><strong>v{version}</strong></div>
         {username && <div className="legacy-user"><span className="legacy-avatar">10</span><div><small>{greeting}</small><strong>{username}</strong></div><button type="button" onClick={onLogout}>Sair</button></div>}
       </header>

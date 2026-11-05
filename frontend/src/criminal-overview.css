@@ -1,0 +1,34 @@
+.legacy-workspace .criminal-overview{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(420px,.9fr);gap:clamp(24px,3vw,56px);align-items:center;overflow:hidden;margin:4px 0 20px;padding:clamp(26px,3vw,48px);border:1px solid #1b5273;border-radius:24px;background:radial-gradient(circle at 88% 0,rgba(77,190,199,.23),transparent 34%),linear-gradient(120deg,#071c35,#0d3d5b 72%,#125665);box-shadow:0 18px 44px rgba(11,42,72,.16);color:#fff}
+.legacy-workspace .criminal-overview::before{content:"";position:absolute;right:-130px;top:-250px;width:550px;height:550px;border:1px solid rgba(164,228,225,.14);border-radius:50%;pointer-events:none}
+.criminal-overview-main,.criminal-overview-data{position:relative;z-index:1;min-width:0}
+.criminal-overview-kicker{display:flex;align-items:center;gap:10px;color:#a6e9df;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+.criminal-overview-pulse{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#80e4bf;box-shadow:0 0 0 5px rgba(128,228,191,.12)}
+.legacy-workspace .criminal-overview h1{max-width:620px;margin:19px 0 13px;color:#fff;font-size:clamp(32px,3.4vw,54px);line-height:1.06;letter-spacing:-.045em}
+.legacy-workspace .criminal-overview h1 span{display:block;color:#9be6db}
+.legacy-workspace .criminal-overview-main p{max-width:53ch;margin:0;color:#c7dce7;font-size:14px;line-height:1.6}
+.criminal-overview-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.criminal-overview-actions a{display:inline-flex;min-height:42px;align-items:center;justify-content:center;gap:12px;padding:10px 16px;border:1px solid rgba(255,255,255,.26);border-radius:10px;background:rgba(255,255,255,.07);color:#fff;font-size:12px;font-weight:750;text-decoration:none;transition:transform .18s ease,background .18s ease}
+.criminal-overview-actions a:hover{transform:translateY(-2px);background:rgba(255,255,255,.15)}
+.criminal-overview-actions a:focus-visible,.criminal-overview-numbers a:focus-visible{outline:3px solid #a6e9df;outline-offset:3px}
+.criminal-overview-actions .criminal-overview-primary{border-color:#d5f4e9;background:#d5f4e9;color:#10404b}
+.criminal-overview-actions .criminal-overview-primary:hover{background:#fff}
+.criminal-overview-data{overflow:hidden;border:1px solid rgba(255,255,255,.2);border-radius:16px;background:rgba(5,28,46,.45);backdrop-filter:blur(8px)}
+.criminal-overview-data-head,.criminal-overview-scope,.criminal-overview-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px}
+.criminal-overview-data-head{border-bottom:1px solid rgba(255,255,255,.13)}
+.criminal-overview-data-head>span{color:#bcd7e4;font-size:11px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.criminal-overview-data-head strong{display:flex;align-items:center;gap:7px;color:#f2caa2;font-size:11px;white-space:nowrap}
+.criminal-overview-data-head strong.is-online{color:#a3ebcb}
+.criminal-overview-data-head i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.criminal-overview-scope{align-items:flex-start;flex-direction:column;gap:5px}
+.criminal-overview-scope span,.criminal-overview-numbers span{color:#b9d0de;font-size:10px;font-weight:750;letter-spacing:.07em;text-transform:uppercase}
+.criminal-overview-scope strong{color:#fff;font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.criminal-overview-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid rgba(255,255,255,.13);border-bottom:1px solid rgba(255,255,255,.13)}
+.criminal-overview-numbers a{display:grid;align-content:start;gap:8px;min-width:0;padding:20px 13px;color:inherit;text-decoration:none;transition:background .18s ease}
+.criminal-overview-numbers a+a{border-left:1px solid rgba(255,255,255,.13)}
+.criminal-overview-numbers a:hover{background:rgba(255,255,255,.08)}
+.criminal-overview-numbers strong{overflow:hidden;color:#fff;font-size:clamp(25px,2.2vw,36px);line-height:1;letter-spacing:-.04em;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.criminal-overview-numbers small{color:#a4becd;font-size:10px;line-height:1.35}
+.criminal-overview-bottom{flex-wrap:wrap;color:#a8c3d0;font-size:10px;line-height:1.4}
+@media(max-width:1100px){.legacy-workspace .criminal-overview{grid-template-columns:1fr}}
+@media(max-width:520px){.legacy-workspace .criminal-overview{padding:24px 18px;border-radius:17px}.criminal-overview-data-head,.criminal-overview-scope,.criminal-overview-bottom{padding:13px}.criminal-overview-numbers a{padding:16px 9px}.criminal-overview-numbers strong{font-size:26px}.criminal-overview-numbers span,.criminal-overview-numbers small{font-size:9px}}
+@media(prefers-reduced-motion:no-preference){.legacy-auth-shell .legacy-auth-brand{animation:authReveal .55s cubic-bezier(.2,.7,.2,1) both}.legacy-auth-shell .auth-panel{animation:authReveal .65s cubic-bezier(.2,.7,.2,1) .08s both}.legacy-workspace>.shell{animation:authReveal .55s cubic-bezier(.2,.7,.2,1) both}@keyframes authReveal{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}}

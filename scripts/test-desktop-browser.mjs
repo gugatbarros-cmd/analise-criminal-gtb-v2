@@ -75,12 +75,12 @@ try {
   await send('Page.navigate', { url: address });
   await until(() => evaluate(`document.querySelectorAll('form input').length === 3`), 'cadastro');
   await until(() => evaluate(`document.querySelector('img')?.naturalWidth > 0`), 'logomarca');
-  await input(0, 'synthetic-admin'); await input(1, 'synthetic-password-123'); await input(2, 'synthetic-password-123');
+  await input(0, 'synthetic-admin'); await input(1, 'Synthetic-password-123!'); await input(2, 'Synthetic-password-123!');
   await evaluate(`document.querySelector('form').requestSubmit()`);
   await until(() => evaluate(`!!document.querySelector('.legacy-user')`), 'entrada após cadastro');
   await evaluate(`document.querySelector('.legacy-user button').click()`);
   await until(() => evaluate(`document.querySelectorAll('form input').length === 2`), 'saída');
-  await input(0, 'synthetic-admin'); await input(1, 'synthetic-password-123');
+  await input(0, 'synthetic-admin'); await input(1, 'Synthetic-password-123!');
   await evaluate(`document.querySelector('form').requestSubmit()`);
   await until(() => evaluate(`!!document.querySelector('.legacy-user')`), 'login');
   await evaluate(`const form=document.querySelector('input[type=file]').form;form.querySelector('select').value='ocorrencias';form.querySelector('select').dispatchEvent(new Event('change',{bubbles:true}));`);

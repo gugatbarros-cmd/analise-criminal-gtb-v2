@@ -1,4 +1,8 @@
-# Andamento da implantação — 04/11/2026
+# Andamento da implantação — 05/11/2026
+
+## Dashboard criminal e entrada do sistema — 0.1.80
+
+A área inicial indicada na captura foi substituída por um dashboard criminal com recorte selecionado, ocorrências e MVI CAD/NEAC em cartões separados, além de atalhos para indicadores e análises. Os números vêm do resumo já calculado pelo sistema; ausência de base aparece como valor indisponível. A ressalva sobre a validação oficial permanece visível no painel. A tela de login e a abertura do sistema receberam animação discreta, respeitando a preferência por movimento reduzido. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.
 
 ## Espera de arquivos grandes do CAD — 0.1.79
 
