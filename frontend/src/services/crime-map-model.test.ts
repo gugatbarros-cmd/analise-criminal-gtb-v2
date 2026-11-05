@@ -11,13 +11,15 @@ describe('mapa criminal', () => {
   it('separa MVI NEAC de crimes, descarta município externo e não duplica um registro em camadas', () => {
     const facts = mapFacts([
       fact({ source: 'mvi_neac', records: 2 }),
+      fact({ source: 'mvi_cad', records: 1, address: 'Rua Sintética, Centro', latitude: -9.5369, longitude: -36.6338 }),
       fact({ indicators: ['CVP', 'Doméstica'], records: 3 }),
       fact({ indicators: ['Tentativa de homicídio'] }),
       fact({ city: 'Maceió', records: 9 }),
       fact({ eligible: false, records: 8 }),
     ])
-    expect(facts.map(item => item.layer)).toEqual(['mvi', 'cvp', 'tentativas'])
-    expect(mapTotals(facts)[0]).toMatchObject({ city: 'Igaci', total: 6, byLayer: { mvi: 2, cvp: 3, tentativas: 1 } })
+    expect(facts.map(item => item.layer)).toEqual(['mvi', 'cad', 'cvp', 'tentativas'])
+    expect(facts[1]).toMatchObject({ address: 'Rua Sintética, Centro', latitude: -9.5369, longitude: -36.6338 })
+    expect(mapTotals(facts)[0]).toMatchObject({ city: 'Igaci', total: 7, byLayer: { mvi: 2, cad: 1, cvp: 3, tentativas: 1 } })
   })
 
   it('só projeta uma tendência quando há histórico e volume mínimos', () => {

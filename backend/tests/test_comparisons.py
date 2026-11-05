@@ -6,6 +6,7 @@ from test_imports import cad, csv_bytes
 
 from gtb.api import main
 from gtb.comparisons import comparison_dataset
+from gtb.map_location import cad_location
 from gtb.db.store import Store
 from gtb.security.local_auth import AuthManager
 
@@ -45,3 +46,20 @@ def test_comparisons_require_login_and_allow_viewer_without_reports_access(tmp_p
     headers = {'Authorization': 'Bearer ' + token}
     assert client.get('/comparisons/dataset', headers=headers).json()['rows'] == []
     assert client.get('/reports/dataset', headers=headers).status_code == 403
+
+
+def test_cad_map_location_uses_only_valid_imported_coordinates_and_address(tmp_path):
+    assert cad_location({'Latitude': '-9,53690', 'Longitude': '-36,63380', 'Endereço': 'Rua Sintética, 100', 'Bairro': 'Centro'}) == {
+        'address': 'Rua Sintética, 100, Centro', 'latitude': -9.5369, 'longitude': -36.6338}
+    assert cad_location({'Coordenadas': '-9.53690, -36.63380'})['latitude'] == -9.5369
+    assert cad_location({'Latitude': '-1', 'Longitude': '-1'})['latitude'] is None
+    assert cad_location({'Endereço Ocorrência': 'Rua Sintética', 'Nº do Endereço': '100',
+                         'Bairro Ocorrência': 'Centro', 'Endereço do Envolvido': 'Não usar'})['address'] == 'Rua Sintética, 100, Centro'
+    store = Store(tmp_path / 'gtb.duckdb')
+    row = cad(**{'Latitude': '-9,53690', 'Longitude': '-36,63380', 'Endereço': 'Rua Sintética, 100', 'Bairro': 'Centro'})
+    store.import_file('mvi_cad', 'cad-geografico.csv', csv_bytes([row]))
+    facts = [item for item in comparison_dataset(store)['rows'] if item['source'] == 'mvi_cad']
+    assert len(facts) == 1
+    assert facts[0]['address'] == 'Rua Sintética, 100, Centro'
+    assert (facts[0]['latitude'], facts[0]['longitude']) == (-9.5369, -36.6338)
+    assert 'Nome da vítima' not in json.dumps(facts)

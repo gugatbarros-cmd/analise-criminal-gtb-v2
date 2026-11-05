@@ -1,5 +1,9 @@
 # Andamento da implantação — 05/11/2026
 
+## MVI CAD no mapa criminal — 0.1.83
+
+O mapa ganhou camada independente de MVI CAD. A projeção autenticada inclui endereço, bairro e coordenadas fornecidos na importação, sem nome da vítima ou número da ocorrência. Coordenadas válidas em Alagoas aparecem em pontos dourados, na lista de locais e no calor; os demais registros exibem o endereço disponível e posição aproximada no centro do município. O sistema não consulta geocodificadores externos e não inventa pontos precisos. Os filtros de ano, município, natureza e camada também se aplicam aos registros CAD. MVI CAD e MVI NEAC continuam fontes separadas e podem descrever o mesmo fato. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Mapa criminal municipal — 0.1.82
 
 Um novo mapa na área MVI NEAC, com atalho no dashboard e item no menu, mostra os registros processados por município. Camadas independentes distinguem MVI NEAC, CVP, tentativas de homicídio, violência doméstica e demais ocorrências; filtros de data, município e natureza, mapa de calor e ranking territorial atualizam a leitura. O recorte começa no ano atual até a última importação. Uma projeção exploratória de 30 dias usa a taxa observada nos últimos 90 dias somente quando existem pelo menos 12 registros em 180 dias e histórico no período anterior; a tendência compara os dois blocos de 90 dias. A tela informa o cálculo e não afirma prever casos individuais. Os círculos e o calor usam os centros dos municípios, porque a projeção autenticada não contém coordenadas dos fatos; bairros e endereços não são enviados a serviços externos. O mapa usa os arquivos locais Leaflet e Leaflet.heat já presentes no sistema e mostra crédito OpenStreetMap nas ruas quando há conexão. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.

@@ -11,7 +11,7 @@ from gtb.reports import report_dataset
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "frontend" / "public" / "demo-data.json"
-VERSION = "0.1.82"
+VERSION = "0.1.83"
 
 
 def export() -> dict:
@@ -97,6 +97,6 @@ if __name__ == "__main__":
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     snapshot = export()
     OUTPUT.write_text(json.dumps(snapshot, ensure_ascii=False, default=str, separators=(",", ":"))
-                      + "\n", encoding="utf-8")
+                      + "\n", encoding="utf-8", newline="\n")
     print(f"Prévia {VERSION}: {sum(len(items) for items in snapshot['records'].values())} "
           f"registros sintéticos em {OUTPUT}")

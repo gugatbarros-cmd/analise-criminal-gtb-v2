@@ -126,7 +126,9 @@ try {
   await until(() => evaluate(`!!document.querySelector('#guarnicoes [data-chart-target]') && !!document.querySelector('.chart canvas')`), 'gráficos das seis fontes');
   await evaluate(`document.querySelector('a[href="#mapa-criminal"]').click()`);
   await until(() => evaluate(`!!document.querySelector('.crime-map .leaflet-container') && Number(document.querySelector('.crime-map-kpis strong')?.textContent) > 0`), 'mapa criminal com dados');
-  assert.equal(await evaluate(`document.querySelectorAll('.crime-map-layerbar button[aria-pressed=true]').length`), 5);
+    assert.equal(await evaluate(`document.querySelectorAll('.crime-map-layerbar button[aria-pressed=true]').length`), 6);
+    assert.ok(await evaluate(`document.querySelector('.crime-map-cad-list')?.textContent.includes('Rua Exemplo, 100')`));
+    assert.ok(await evaluate(`document.querySelectorAll('.crime-map-cad-scroll .exact').length > 0`));
   await evaluate(`document.querySelector('.crime-map-layerbar .heat-toggle').click()`);
   assert.equal(await evaluate(`document.querySelector('.crime-map-layerbar .heat-toggle').getAttribute('aria-pressed')`), 'true');
   assert.ok(await evaluate(`Array.from(document.querySelectorAll('.crime-map-ranking button')).some(button => button.textContent.includes('Igaci'))`));

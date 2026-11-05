@@ -18,19 +18,23 @@ const cityNames = new Map(Object.keys(municipalityPoints).map(city => [fold(city
 
 export const mapLayers = [
   { id: 'mvi', label: 'MVI NEAC', color: '#dc4251' },
+  { id: 'cad', label: 'MVI CAD', color: '#e8bd69' },
   { id: 'cvp', label: 'CVP', color: '#e59445' },
   { id: 'tentativas', label: 'Tentativas', color: '#bd73d8' },
   { id: 'domestica', label: 'Violência doméstica', color: '#667ee7' },
   { id: 'outros', label: 'Outras ocorrências', color: '#48b8a8' },
 ] as const
 export type MapLayerId = typeof mapLayers[number]['id']
-export type MapFact = { date: string; city: string; layer: MapLayerId; count: number; nature: string }
+export type MapFact = { date: string; city: string; layer: MapLayerId; count: number; nature: string; address?: string; latitude?: number; longitude?: number }
+export const hasExactCoordinates = (fact: MapFact) => fact.layer === 'cad' && Number.isFinite(fact.latitude) && Number.isFinite(fact.longitude)
 
 export function mapFacts(rows: ComparisonFact[]): MapFact[] {
   return rows.flatMap<MapFact>(row => {
     const city = cityNames.get(fold(row.city))
     if (!city || !row.eligible || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) return []
     if (row.source === 'mvi_neac') return [{ date: row.date, city, layer: 'mvi' as const, count: row.records, nature: row.category || row.nature }]
+    if (row.source === 'mvi_cad') return [{ date: row.date, city, layer: 'cad' as const, count: row.records, nature: row.category || row.nature,
+      address: row.address || undefined, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }]
     if (row.source !== 'ocorrencias' || (fold(row.nature).includes('apoioaojudiciario') && fold(row.nature).includes('fiscalizacaodemedidaprotetiva'))) return []
     const layer: MapLayerId = row.indicators.includes('CVP') ? 'cvp'
       : row.indicators.includes('Tentativa de homicídio') ? 'tentativas'
@@ -42,7 +46,7 @@ export function mapFacts(rows: ComparisonFact[]): MapFact[] {
 export function mapTotals(facts: MapFact[]) {
   const totals = new Map<string, { city: string; total: number; byLayer: Record<MapLayerId, number> }>()
   for (const fact of facts) {
-    const item = totals.get(fact.city) || { city: fact.city, total: 0, byLayer: { mvi: 0, cvp: 0, tentativas: 0, domestica: 0, outros: 0 } }
+    const item = totals.get(fact.city) || { city: fact.city, total: 0, byLayer: { mvi: 0, cad: 0, cvp: 0, tentativas: 0, domestica: 0, outros: 0 } }
     item.total += fact.count
     item.byLayer[fact.layer] += fact.count
     totals.set(fact.city, item)
