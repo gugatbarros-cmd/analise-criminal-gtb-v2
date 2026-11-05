@@ -1,8 +1,9 @@
 import { useId, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getComparisonDataset } from '../services/api'
-import { comparisonCsv, comparisonLabels, indicatorFacts, monthRange, previousYearDay, rangeDays, rangeTotal, sourceFacts, validRange, variation, yearRange, type ComparisonMetric, type ComparisonValue } from '../services/comparison-model'
+import { comparisonCsv, comparisonLabels, comparisonSource, indicatorFacts, monthRange, previousYearDay, rangeDays, rangeTotal, sourceFacts, validRange, variation, yearRange, type ComparisonMetric, type ComparisonValue } from '../services/comparison-model'
 import { AnalysisChart } from './AnalysisChart'
+import type { Source } from '../services/api'
 
 const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const format = (value: number | null) => value === null ? '—' : value.toLocaleString('pt-BR', { maximumFractionDigits: 6 })
@@ -13,13 +14,13 @@ const percent = (base: number | null, compared: number | null) => {
 }
 const dateLabel = (day: string) => day.split('-').reverse().join('/')
 const colors = ['#315f9c', '#c1121f']
-type Props = { id: string; year?: number; municipality?: string }
+type Props = { id: string; year?: number; municipality?: string; lastImportedAt?: Partial<Record<Source, string | null>> }
 
 export function IndicatorComparisons(props: Props) {
   // Trocar fonte ou ano do painel reinicia os seletores sem carregar estado de outra fonte.
   return <Comparisons key={`${props.id}:${props.year || ''}:${props.municipality || ''}`} {...props} />
 }
-function Comparisons({ id, year, municipality }: Props) {
+function Comparisons({ id, year, municipality, lastImportedAt }: Props) {
   const uid = useId()
   const query = useQuery({ queryKey: ['comparison-dataset'], queryFn: getComparisonDataset, staleTime: 60000 })
   const source = useMemo(() => sourceFacts(query.data?.rows || [], id, municipality), [query.data, id, municipality])
@@ -28,13 +29,14 @@ function Comparisons({ id, year, municipality }: Props) {
   const [baseYear, setBaseYear] = useState<number | null>(null)
   const [targetYear, setTargetYear] = useState<number | null>(null)
   const aYear = baseYear ?? referenceYear - 1, bYear = targetYear ?? referenceYear
-  const [mode, setMode] = useState<'years' | 'periods' | 'months'>('years')
+  const [mode, setMode] = useState<'years' | 'periods' | 'months'>('periods')
   const [category, setCategory] = useState('')
   const [teamGroup, setTeamGroup] = useState('roster')
   const [metric, setMetric] = useState<ComparisonMetric>(id === 'armas' ? 'units' : 'records')
   const [custom, setCustom] = useState<string[] | null>(null)
   const latest = source.filter(row => row.date.startsWith(`${bYear}-`)).map(row => row.date).sort().at(-1)
-  const end = latest || `${bYear}-12-31`
+  const importDay = lastImportedAt?.[comparisonSource(id)]?.slice(0, 10)
+  const end = importDay?.startsWith(`${bYear}-`) ? importDay : latest || `${bYear}-12-31`
   const dates = custom || [`${aYear}-01-01`, previousYearDay(`${aYear + 1}${end.slice(4)}`), `${bYear}-01-01`, end]
   const setDate = (index: number, value: string) => setCustom(dates.map((day, i) => i === index ? value : day))
   const selected = useMemo(() => indicatorFacts(source, id, category, teamGroup), [source, id, category, teamGroup])

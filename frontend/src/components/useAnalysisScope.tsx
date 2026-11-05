@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { currentYear } from '../services/period-default'
 
 export function useAnalysisScope(year?: number, municipality?: string) {
   const [independent, setIndependent] = useState(false)
-  const [localYear, setLocalYear] = useState('')
+  const [localYear, setLocalYear] = useState(() => String(currentYear()))
   const [localMunicipality, setLocalMunicipality] = useState('')
   const scopeYear = independent && localYear ? Number(localYear) : independent ? undefined : year
   const scopeMunicipality = independent ? localMunicipality.trim() || undefined : municipality

@@ -426,8 +426,17 @@ class Store:
             clauses.append("NOT (source = 'ocorrencias' AND "
                            "contains(strip_accents(lower(nature)), 'apoio ao judiciario') AND "
                            "contains(strip_accents(lower(nature)), 'fiscalizacao de medida protetiva'))")
-        where = " AND ".join(clauses)
         with self.lock, self._connect() as db:
+            latest_imports = dict(db.execute("SELECT source, max(imported_at) FROM import_batches "
+                                             "GROUP BY source").fetchall())
+            last_import_day = max((str(value)[:10] for value in latest_imports.values() if value),
+                                  default=None)
+            period_end = (last_import_day if year == calendar_date.today().year and
+                          last_import_day and last_import_day.startswith(f"{year}-") else None)
+            if period_end:
+                clauses.append("event_date <= ?")
+                params.append(period_end)
+            where = " AND ".join(clauses)
             rows = db.execute(f"""SELECT source, category, indicators, year,
                 month(event_date) AS month,
                 count(*) AS total FROM record_versions WHERE {where}
@@ -442,8 +451,6 @@ class Store:
                 WHERE {where} AND source IN ('armas', 'drogas')""", params).fetchall()
             coverage = dict(db.execute("SELECT source, count(*) FROM record_versions "
                                        "WHERE is_current GROUP BY source").fetchall())
-            latest_imports = dict(db.execute("SELECT source, max(imported_at) FROM import_batches "
-                                             "GROUP BY source").fetchall())
             general_raw = db.execute(f"SELECT raw_json FROM record_versions WHERE {where} "
                                      "AND source = 'ocorrencias'", params).fetchall()
         general_arms, general_drugs = 0, 0
@@ -484,6 +491,7 @@ class Store:
             if category:
                 categories.setdefault(source, {})[category] = categories.setdefault(source, {}).get(category, 0) + total
         return {"by_source": by_source, "monthly": monthly, "categories": categories,
+                "period_end": period_end,
                 "occurrences": by_source["ocorrencias"], "seized_arms": seized_units,
                 "general_arm_occurrences": general_arms, "general_drug_occurrences": general_drugs,
                 "drug_weight_grams": drug_grams, "weighted_drug_records": weighted_records,

@@ -1,5 +1,9 @@
 # Andamento da implantação — 05/11/2026
 
+## Período padrão e variação dos indicadores — 0.1.81
+
+O painel abre no ano atual e limita seus totais à data da última importação concluída quando ela pertence a esse ano. O recorte aparece no dashboard. Os comparativos abrem com dois períodos equivalentes, de 1º de janeiro à data da última importação da fonte no ano selecionado, e o mesmo intervalo do ano anterior. Filtros próprios de ano também começam no ano atual. Sob cada indicador, a variação usa esse intervalo equivalente e mostra verde para movimento favorável, vermelho para desfavorável e tom neutro quando falta base comparável. Queda de indicadores criminais é favorável; aumento de apreensões e ações operacionais é favorável. Fontes permanecem separadas. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.
+
 ## Dashboard criminal e entrada do sistema — 0.1.80
 
 A área inicial indicada na captura foi substituída por um dashboard criminal com recorte selecionado, ocorrências e MVI CAD/NEAC em cartões separados, além de atalhos para indicadores e análises. Os números vêm do resumo já calculado pelo sistema; ausência de base aparece como valor indisponível. A ressalva sobre a validação oficial permanece visível no painel. A tela de login e a abertura do sistema receberam animação discreta, respeitando a preferência por movimento reduzido. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases.

@@ -1,4 +1,5 @@
 import type { Summary } from '../services/api'
+import { periodEndForYear } from '../services/period-default'
 
 type Props = {
   summary?: Summary
@@ -14,6 +15,7 @@ const number = (value: number | undefined) => value === undefined ? '—' : valu
 
 export function CriminalOverview({ summary, year, municipality, loading, serviceAvailable, demo, cloud }: Props) {
   const scope = `${year || 'Todos os anos'} · ${municipality || 'Todos os municípios'}`
+  const cutoff = periodEndForYear(summary, year)
   const source = demo ? 'Demonstração sintética' : cloud ? 'Consulta online protegida' : 'Dados locais do 10º BPM'
   return <section id="dashboard" className="criminal-overview" aria-labelledby="criminal-overview-title">
     <div className="criminal-overview-main">
@@ -24,7 +26,7 @@ export function CriminalOverview({ summary, year, municipality, loading, service
     </div>
     <div className="criminal-overview-data" aria-label="Resumo criminal do período">
       <div className="criminal-overview-data-head"><span>{source}</span><strong className={serviceAvailable ? 'is-online' : ''}><i aria-hidden="true" />{loading ? 'Atualizando' : serviceAvailable ? 'Sistema conectado' : 'Serviço indisponível'}</strong></div>
-      <div className="criminal-overview-scope"><span>Recorte selecionado</span><strong>{scope}</strong></div>
+      <div className="criminal-overview-scope"><span>Recorte selecionado</span><strong>{scope}{cutoff && ` · até ${cutoff.split('-').reverse().join('/')}`}</strong></div>
       <div className="criminal-overview-numbers"><a href="#ocorrencias"><span>Ocorrências</span><strong>{number(summary?.occurrences)}</strong><small>Base geral</small></a><a href="#mvi"><span>MVI CAD</span><strong>{number(summary?.mvi_cad)}</strong><small>Vítimas · fonte CAD</small></a><a href="#mvi"><span>MVI NEAC</span><strong>{number(summary?.mvi_neac)}</strong><small>Vítimas · fonte NEAC</small></a></div>
       <div className="criminal-overview-bottom"><span>Fontes CAD e NEAC independentes</span><span>Indicadores provisórios sujeitos à conferência oficial</span></div>
     </div>

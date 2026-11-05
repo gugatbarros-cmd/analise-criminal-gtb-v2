@@ -1,9 +1,12 @@
 """Mesmo recorte e unidades do painel legado, usando registros sintéticos."""
+from datetime import date
+
 from fastapi.testclient import TestClient
 from test_arms import arm
 from test_drugs import drug
 from test_imports import csv_bytes
 
+import gtb.db.store as store_module
 from gtb.api import main
 from gtb.db.store import Store
 from gtb.indicators.rules import domestic_triage
@@ -47,6 +50,26 @@ def test_dashboard_scope_counts_graphs_and_source_units(tmp_path, monkeypatch):
     assert store.summary(2026)["occurrences"] == 4  # auditoria preservada
     assert client.get("/indicators/crimes/analysis?kind=CVP&year=2026&municipality=Igaci").json()["total"] == 1
     assert client.get("/indicators/crimes/analysis?kind=invalid").status_code == 422
+
+
+def test_current_year_stops_at_last_import_without_changing_past_year(tmp_path, monkeypatch):
+    store = Store(tmp_path / "period.duckdb")
+    store.import_file("ocorrencias", "synthetic.csv", csv_bytes([
+        {"Número da ocorrência": "SYN-PAST", "Data": "05/01/2025", "Cidade": "Igaci", "Natureza": "Roubo consumado"},
+        {"Número da ocorrência": "SYN-NOW", "Data": "05/05/2026", "Cidade": "Igaci", "Natureza": "Roubo consumado"},
+        {"Número da ocorrência": "SYN-FUTURE", "Data": "05/12/2026", "Cidade": "Igaci", "Natureza": "Roubo consumado"},
+    ]))
+    with store._connect() as db:
+        db.execute("UPDATE import_batches SET imported_at = '2026-11-05 09:00:00'")
+    class FrozenDate(date):
+        @classmethod
+        def today(cls):
+            return cls(2026, 11, 5)
+    monkeypatch.setattr(store_module, "calendar_date", FrozenDate)
+    current = store.summary(2026, bpm_only=True)
+    assert current["period_end"] == "2026-11-05"
+    assert current["occurrences"] == 1
+    assert store.summary(2025, bpm_only=True)["occurrences"] == 1
 
 
 def test_cad_and_neac_graphs_never_change_each_other(tmp_path):

@@ -124,6 +124,10 @@ try {
   }
   await send('Page.reload');
   await until(() => evaluate(`!!document.querySelector('#guarnicoes [data-chart-target]') && !!document.querySelector('.chart canvas')`), 'gráficos das seis fontes');
+  await until(() => evaluate(`!!document.querySelector('[data-indicator-target="cvp"] .indicator-variation-bad')`), 'variação criminal no cartão');
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Filtros de indicadores"] input[type=number]').value`), '2026');
+  assert.equal(await evaluate(`document.querySelector('[data-comparison-indicator="cvp"] [aria-pressed=true]')?.textContent`), 'Entre períodos');
+  assert.equal(await evaluate(`document.querySelectorAll('[data-comparison-indicator="cvp"] input[type=date]')[3]?.value`), await evaluate(`fetch('/indicators/summary?year=2026&bpm_only=true',{headers:{Authorization:'Bearer '+sessionStorage.getItem('gtb-v2-session')}}).then(r=>r.json()).then(d=>d.period_end)`));
   for (const target of ['ocorrencias', 'cvp', 'tentativas', 'tco', 'mandados', 'visitas', 'sossego', 'domestica', 'armas', 'drogas', 'guarnicoes', 'mvi-cad', 'mvi-neac']) {
     await evaluate(`document.querySelector('[data-indicator-target="${target}"]')?.click()`);
     const panel = `[data-comparison-indicator="${target}"]`;

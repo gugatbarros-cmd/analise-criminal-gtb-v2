@@ -5,3 +5,8 @@
 .legacy-workspace .indicator-card-button:focus-visible{outline:3px solid #dda928;outline-offset:-3px;background:#edf4fc}
 .indicator-card-button>span,.indicator-card-button>small{padding-right:16px}
 .legacy-workspace .indicator-card-button .indicator-update{display:block;margin-top:auto;padding-top:12px;font-size:.72rem;font-weight:600;color:#526a82;line-height:1.35}
+.legacy-workspace .indicator-card-button .indicator-variation{display:block;margin-top:8px;padding:4px 7px;border-radius:6px;font-size:.72rem;font-weight:750;line-height:1.35;white-space:normal}
+.legacy-workspace .indicator-card-button .indicator-variation-good{background:#e7f7ed;color:#12663a}
+.legacy-workspace .indicator-card-button .indicator-variation-bad{background:#fff0ee;color:#b42318}
+.legacy-workspace .indicator-card-button .indicator-variation-neutral{background:#f0f4f8;color:#5b6e80}
+.legacy-workspace .period-cutoff{align-self:end;max-width:260px;padding:11px 13px;border:1px solid #cfe1d7;border-radius:9px;background:#f0faf3;color:#286343;font-size:.77rem;font-weight:700;line-height:1.35}

@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getRecords, type MviSource } from '../services/api'
+import { currentYear } from '../services/period-default'
 import { MviRecordDetail } from './MviRecordDetail'
 
 export function SourceTable({ source, active }: { source: MviSource; active: boolean }) {
-  const [year, setYear] = useState('')
+  const [year, setYear] = useState(() => String(currentYear()))
   const [municipality, setMunicipality] = useState('')
   const [victim, setVictim] = useState('')
   const [startDate, setStartDate] = useState('')
