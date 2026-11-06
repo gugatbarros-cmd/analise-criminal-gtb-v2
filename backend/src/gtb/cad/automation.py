@@ -368,7 +368,9 @@ class CadImportManager:
                     raise ValueError("Uma coluna está fora da janela do CAD.")
             page.mouse.move(start["x"], start["y"])
             page.mouse.down()
-            page.mouse.move(end["x"], end["y"], steps=6)
+            page.wait_for_timeout(150)
+            page.mouse.move(end["x"], end["y"], steps=24)
+            page.wait_for_timeout(100)
             page.mouse.up()
             page.wait_for_timeout(350)
             after = self._action(page, "columnInventory", "Conferindo as colunas selecionadas.",

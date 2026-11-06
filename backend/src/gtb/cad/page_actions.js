@@ -156,6 +156,28 @@ function cadPageAction(action, options = {}) {
     return radio.checked ? { ok: true } : { ok: false, reason: 'O CAD não confirmou Titular.' };
   }
   if (action === 'columnInventory' || action === 'columns') {
+    if (options.grade === 'drugs') {
+      const available = [...document.querySelectorAll('ul.sc_ui_fldsel_available')].find(visible);
+      const selected = [...document.querySelectorAll('ul.sc_ui_fldsel_selected')].find(visible);
+      if (!available || !selected) {
+        return { ok: false, reason: 'As listas de colunas de Drogas não apareceram no CAD.' };
+      }
+      const outside = [...available.querySelectorAll('li')].filter(visible);
+      if (action === 'columns') {
+        if (outside.length) return { ok: false, reason: `${outside.length} coluna(s) de Drogas ainda estão à esquerda.` };
+        return click('Aplicar');
+      }
+      if (!outside.length) return { ok: true, count: 0 };
+      const target = [...selected.querySelectorAll('li')].find(visible);
+      if (!target) return { ok: false, reason: 'A lista de colunas selecionadas de Drogas está vazia.' };
+      const source = outside[0];
+      source.scrollIntoView({ block: 'center', inline: 'nearest' });
+      const from = source.getBoundingClientRect();
+      const to = target.getBoundingClientRect();
+      return { ok: true, count: outside.length,
+        from: { x: from.left + from.width / 2, y: from.top + from.height / 2 },
+        to: { x: to.left + to.width / 2, y: from.top + from.height / 2 } };
+    }
     const required = [
       ['Data da Ocorrência', 'Data / Hora da Ocorrência'],
       ['Nº Ocorrência'], ['Cidade'], ['Natureza Geral'], ['Tipificação Geral'], ['Unidade']

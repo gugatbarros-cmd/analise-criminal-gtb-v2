@@ -72,8 +72,11 @@ def test_cad_column_progress_uses_confirmed_selection(tmp_path, monkeypatch):
     monkeypatch.setattr(manager, "_action", lambda *_args: inventory())
 
     class Mouse:
-        def move(self, *_args, **_kwargs):
-            pass
+        def __init__(self):
+            self.moves = []
+
+        def move(self, *_args, **kwargs):
+            self.moves.append(kwargs)
 
         def down(self):
             pass
@@ -82,17 +85,22 @@ def test_cad_column_progress_uses_confirmed_selection(tmp_path, monkeypatch):
             pass
 
     class Page:
-        mouse = Mouse()
+        def __init__(self):
+            self.mouse = Mouse()
+            self.waits = []
 
         def evaluate(self, _script):
             return {"width": 10, "height": 10}
 
-        def wait_for_timeout(self, _milliseconds):
-            pass
+        def wait_for_timeout(self, milliseconds):
+            self.waits.append(milliseconds)
 
-    manager._select_all_columns(Page())
+    page = Page()
+    manager._select_all_columns(page)
     assert manager.status()["progress"] == 70
     assert manager.status()["message"] == "Todas as colunas foram selecionadas."
+    assert page.waits[:3] == [150, 100, 350]
+    assert any(move.get("steps") == 24 for move in page.mouse.moves)
 
 
 def test_cad_cancel_releases_query_and_keeps_authenticated_session(tmp_path, monkeypatch):

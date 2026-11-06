@@ -1,5 +1,9 @@
 # Andamento da implantação — 06/11/2026
 
+## Colunas da consulta de Drogas — 0.1.88
+
+A grade oficial de Drogas usa as listas `sc_ui_fldsel_available` e `sc_ui_fldsel_selected`. A automação agora move cada coluna entre essas listas com tempo suficiente para o CAD confirmar o arraste. Na sessão oficial, a busca chegou aos resultados, as 11 colunas restantes foram movidas, Aplicar funcionou e o CAD gerou o XLS. Uma planilha de Drogas já baixada foi validada e importada em banco local de teste, com 748 linhas aceitas e nenhuma em quarentena. Os testes automatizados usam uma grade sintética com a mesma estrutura e verificam a seleção e a confirmação. A execução automática completa na sessão oficial ainda depende de novo acesso do operador. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
+
 ## Seleção das bases CAD e retomada da sessão — 0.1.87
 
 A alternativa de importação local permite marcar Ocorrências, Drogas ou ambas. Cada grade consulta o intervalo escolhido, aplica os filtros do 10º BPM, seleciona todas as colunas e importa seu XLS na base correspondente. O perfil local do navegador CAD preserva a sessão entre aberturas; quando o CAD exige novo token ou login, o operador o informa novamente. A última conta fica preenchida, enquanto senhas não são gravadas pelo GTB. A consulta online mostra onde a importação está disponível, mas não acessa o CAD do computador. Testes sintéticos cobrem a seleção, a sequência e o roteamento das bases; a execução oficial ainda depende de acesso do operador. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
