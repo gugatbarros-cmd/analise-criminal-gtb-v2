@@ -41,6 +41,26 @@ export type MviAnalysis = { source: MviSource; total: number; yearly: { year: nu
 export type MviComparison = { cad_total: number; neac_total: number; candidate_pairs: number; cad_only: number; neac_only: number; ambiguous: number; examples: { cad: { natural_key: string; occurrence: string; victim: string; date: string; municipality: string; category: string }; neac: { natural_key: string; occurrence: string; victim: string; date: string; municipality: string; category: string }; same_date: boolean; same_municipality: boolean }[] }
 export type MviRecordDetail = { source: MviSource; natural_key: string; occurrence: string; victim: string; event_date: string; municipality: string; category: string; eligible: boolean; reason: string; version: number; batch_id: string; is_current: boolean; fields: Record<string, string> }
 export type MviRecordVersion = { version: number; is_current: boolean; valid_from: string; valid_to: string | null; batch_id: string; eligible: boolean; category: string }
+export type MviCadReviewCase = { natural_key: string; row_hash: string; occurrence: string; victim: string; event_date: string; municipality: string; nature: string; category: string; eligible: boolean; reason: string; decision: string | null; reviewer: string | null; reviewed_at: string | null; narratives: string[] }
+export type MapLocationReviewCase = { source: 'mvi_cad' | 'mvi_neac' | 'ocorrencias'; natural_key: string; row_hash: string; occurrence: string; event_date: string; municipality: string; nature: string; street: string; latitude: number | null; longitude: number | null; reviewer: string | null; reviewed_at: string | null }
+export async function getMapLocationReviews(page = 1, status = 'pending'): Promise<AuditPage<MapLocationReviewCase>> {
+  return json(await apiFetch(`${baseUrl}/map/location-reviews?page=${page}&status=${status}`))
+}
+export async function saveMapLocationReview(item: MapLocationReviewCase, latitude: number | null, longitude: number | null): Promise<void> {
+  await json(await apiFetch(`${baseUrl}/map/location-reviews/${item.source}/${encodeURIComponent(item.natural_key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ row_hash: item.row_hash, latitude, longitude }),
+  }))
+}
+export async function getMviCadReviewCases(page = 1, status = 'pending'): Promise<AuditPage<MviCadReviewCase>> {
+  return json(await apiFetch(`${baseUrl}/mvi/cad/reviews?page=${page}&status=${status}`))
+}
+export async function reviewMviCad(naturalKey: string, rowHash: string, decision: 'confirmed' | 'rejected' | 'pending', category?: string): Promise<void> {
+  await json(await apiFetch(`${baseUrl}/mvi/cad/reviews/${encodeURIComponent(naturalKey)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ row_hash: rowHash, decision, category }),
+  }))
+}
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 export async function getReportDataset(): Promise<import('./report-model').ReportDataset> {
   return json(await apiFetch(`${baseUrl}/reports/dataset`))

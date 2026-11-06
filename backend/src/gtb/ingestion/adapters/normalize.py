@@ -154,16 +154,15 @@ def normalize(source: str, row: dict[str, str]) -> Record:
             death_value = pick(row, "death")
             inferred = infer_consumed_cad_homicide(row) if not death_value or not category else None
             if inferred and not category and not any(term in key(nature) for term in
-                    ("tentativa", "tentado", "tentada", "culposo", "transito", "intervencao", "resistencia")):
+                    ("culposo", "transito", "intervencao", "resistencia")):
                 category = inferred
-                eligible = True
-                reason = "Morte violenta consumada indicada no relato; revisar classificação"
-            elif inferred and category and not death_value:
-                reason = "Óbito confirmado pelo relato; revisar classificação"
             if not victim_role(pick(row, "role")):
                 eligible, reason = False, "Envolvimento não é vítima"
-            elif not death_confirmed(death_value) and not (not death_value and inferred):
-                eligible, reason = False, "Óbito da vítima não confirmado"
+            elif not death_confirmed(death_value):
+                eligible = False
+                reason = ("Relato sugere morte violenta; confirmação humana pendente" if inferred
+                          else "Óbito da vítima não confirmado; revisar relato" if category
+                          else "Natureza e óbito não confirmados; revisar relato")
     elif source == "armas":
         natural_key = arm_identity(row, occurrence, when.year)
         category = arm_field(row, "type") or "Não informado"

@@ -25,9 +25,13 @@ def test_snapshot_keeps_all_pages_and_exact_indicator_totals(tmp_path):
 class SyntheticStore:
     def __init__(self):
         self.batch = 'synthetic-batch-1'
+        self.revision = 'synthetic-no-reviews'
 
     def batches(self):
         return [{'id': self.batch, 'imported_at': '2026-10-29'}]
+
+    def processed_revision_signature(self):
+        return self.revision
 
 
 def configured(tmp_path, monkeypatch):
@@ -70,6 +74,9 @@ def test_sync_is_atomic_authenticated_and_repeated_only_after_change(tmp_path, m
     sync.store.batch = 'synthetic-batch-2'
     sync.sync_once()
     assert len([call for call in calls if call[0].endswith(':commit')]) == 2
+    sync.store.revision = 'synthetic-confirmed-review'
+    sync.sync_once()
+    assert len([call for call in calls if call[0].endswith(':commit')]) == 3
 
 
 def test_large_snapshot_stages_chunks_before_switching_manifest(tmp_path, monkeypatch):

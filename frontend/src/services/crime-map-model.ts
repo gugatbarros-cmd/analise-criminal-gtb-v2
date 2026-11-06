@@ -35,20 +35,22 @@ export function nearMunicipality(latitude: number, longitude: number, city: stri
   const arc = Math.sin(deltaLat / 2) ** 2 + Math.cos(center[0] * radians) * Math.cos(latitude * radians) * Math.sin(deltaLon / 2) ** 2
   return 12742 * Math.asin(Math.min(1, Math.sqrt(arc))) <= 35
 }
-export const hasExactCoordinates = (fact: MapFact) => fact.layer === 'cad' && nearMunicipality(fact.latitude!, fact.longitude!, fact.city)
+export const hasExactCoordinates = (fact: MapFact) => nearMunicipality(fact.latitude!, fact.longitude!, fact.city)
 
 export function mapFacts(rows: ComparisonFact[]): MapFact[] {
   return rows.flatMap<MapFact>(row => {
     const city = cityNames.get(fold(row.city))
     if (!city || !row.eligible || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) return []
-    if (row.source === 'mvi_neac') return [{ date: row.date, city, layer: 'mvi' as const, count: row.records, nature: row.category || row.nature }]
+    const location = { address: row.address || undefined, street: row.street || undefined,
+      latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }
+    if (row.source === 'mvi_neac') return [{ date: row.date, city, layer: 'mvi' as const, count: row.records, nature: row.category || row.nature, ...location }]
     if (row.source === 'mvi_cad') return [{ date: row.date, city, layer: 'cad' as const, count: row.records, nature: row.category || row.nature,
-      address: row.address || undefined, street: row.street || undefined, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }]
+      ...location }]
     if (row.source !== 'ocorrencias' || (fold(row.nature).includes('apoioaojudiciario') && fold(row.nature).includes('fiscalizacaodemedidaprotetiva'))) return []
     const layer: MapLayerId = row.indicators.includes('CVP') ? 'cvp'
       : row.indicators.includes('Tentativa de homicídio') ? 'tentativas'
         : row.indicators.includes('Doméstica') ? 'domestica' : 'outros'
-    return [{ date: row.date, city, layer, count: row.records, nature: row.nature || row.category }]
+    return [{ date: row.date, city, layer, count: row.records, nature: row.nature || row.category, ...location }]
   })
 }
 

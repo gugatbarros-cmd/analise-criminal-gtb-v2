@@ -1,13 +1,14 @@
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
-from test_imports import cad, csv_bytes
+from test_imports import cad, csv_bytes, neac
 
 from gtb.api import main
 from gtb.comparisons import comparison_dataset
-from gtb.map_location import cad_location
 from gtb.db.store import Store
+from gtb.map_location import cad_location
 from gtb.security.local_auth import AuthManager
 
 
@@ -53,13 +54,64 @@ def test_cad_map_location_uses_only_valid_imported_coordinates_and_address(tmp_p
         'address': 'Rua Sintética, 100, Centro', 'street': 'Rua Sintética', 'latitude': -9.5369, 'longitude': -36.6338}
     assert cad_location({'Coordenadas': '-9.53690, -36.63380'})['latitude'] == -9.5369
     assert cad_location({'Latitude': '-1', 'Longitude': '-1'})['latitude'] is None
+    assert cad_location({'Endereço': 'Rua Sintética 123-A'})['street'] == 'Rua Sintética'
     assert cad_location({'Endereço Ocorrência': 'Rua Sintética', 'Nº do Endereço': '100',
                          'Bairro Ocorrência': 'Centro', 'Endereço do Envolvido': 'Não usar'})['address'] == 'Rua Sintética, 100, Centro'
     store = Store(tmp_path / 'gtb.duckdb')
-    row = cad(**{'Latitude': '-9,53690', 'Longitude': '-36,63380', 'Endereço': 'Rua Sintética, 100', 'Bairro': 'Centro'})
+    row = cad(Latitude='-9,53690', Longitude='-36,63380', Endereço='Rua Sintética, 100', Bairro='Centro')
     store.import_file('mvi_cad', 'cad-geografico.csv', csv_bytes([row]))
     facts = [item for item in comparison_dataset(store)['rows'] if item['source'] == 'mvi_cad']
     assert len(facts) == 1
-    assert facts[0]['address'] == 'Rua Sintética, 100, Centro'
+    assert facts[0]['address'] == 'Rua Sintética'
     assert (facts[0]['latitude'], facts[0]['longitude']) == (-9.5369, -36.6338)
     assert 'Nome da vítima' not in json.dumps(facts)
+
+
+def test_cvp_comparison_keeps_incident_point_without_house_number(tmp_path):
+    store = Store(tmp_path / 'gtb.duckdb')
+    root = Path(__file__).resolve().parents[2] / 'fixtures/synthetic'
+    store.import_file('ocorrencias', 'ocorrencias-demo.csv', (root / 'ocorrencias-demo.csv').read_bytes())
+    with store._connect() as db:
+        raw = db.execute("SELECT raw_json FROM record_versions WHERE source = 'ocorrencias' LIMIT 1").fetchone()[0]
+    row = json.loads(raw) | {'Latitude': '-9,53690', 'Longitude': '-36,63380',
+                             'Endereço Ocorrência': 'Rua Exemplo, 42'}
+    store.import_file('ocorrencias', 'local.csv', csv_bytes([row]))
+    facts = [item for item in comparison_dataset(store)['rows'] if item['source'] == 'ocorrencias'
+             and item.get('street') == 'Rua Exemplo']
+    assert len(facts) == 1
+    assert (facts[0]['latitude'], facts[0]['longitude']) == (-9.5369, -36.6338)
+    assert '42' not in json.dumps(facts)
+
+
+def test_neac_map_does_not_publish_victim_home_as_crime_location(tmp_path):
+    store = Store(tmp_path / 'gtb.duckdb')
+    row = neac(**{'Endereço': 'Rua Residencial, 77',
+                  'Endereço da Ocorrência': 'Rua do Fato, 11',
+                  'Latitude da Ocorrência': '-9,53690',
+                  'Longitude da Ocorrência': '-36,63380'})
+    store.import_file('mvi_neac', 'neac.csv', csv_bytes([row]))
+    facts = [item for item in comparison_dataset(store)['rows'] if item['source'] == 'mvi_neac']
+    assert len(facts) == 1
+    assert facts[0]['street'] == 'Rua do Fato'
+    assert 'Residencial' not in json.dumps(facts)
+    assert (facts[0]['latitude'], facts[0]['longitude']) == (-9.5369, -36.6338)
+
+
+def test_manual_address_review_places_point_and_stale_hash_cannot_override(tmp_path):
+    store = Store(tmp_path / 'gtb.duckdb')
+    row = cad(**{'Endereço Ocorrência': 'Rua Fictícia, 25', 'Latitude': '', 'Longitude': ''})
+    store.import_file('mvi_cad', 'cad.csv', csv_bytes([row]))
+    pending = store.map_location_review_cases()['items']
+    assert len(pending) == 1
+    case = pending[0]
+    assert case['street'] == 'Rua Fictícia'
+    with pytest.raises(ValueError, match='fora da região'):
+        store.review_map_location('mvi_cad', case['natural_key'], case['row_hash'], -1, -1, 'admin')
+    store.review_map_location('mvi_cad', case['natural_key'], case['row_hash'], -9.4057, -36.6328, 'admin')
+    point = next(item for item in comparison_dataset(store)['rows'] if item['source'] == 'mvi_cad')
+    assert (point['latitude'], point['longitude']) == (-9.4057, -36.6328)
+    assert store.map_location_review_cases()['total'] == 0
+    with pytest.raises(ValueError, match='alterado'):
+        store.review_map_location('mvi_cad', case['natural_key'], 'stale', -9.4057, -36.6328, 'admin')
+    store.review_map_location('mvi_cad', case['natural_key'], case['row_hash'], None, None, 'admin')
+    assert store.map_location_review_cases()['total'] == 1

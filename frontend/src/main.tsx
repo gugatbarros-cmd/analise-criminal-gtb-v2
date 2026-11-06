@@ -11,6 +11,9 @@ import { AttemptAnalysis } from './components/AttemptAnalysis'
 import { TcoAnalysis } from './components/TcoAnalysis'
 import { MviAnalysis } from './components/MviAnalysis'
 import { MviComparison } from './components/MviComparison'
+import { CadNarrativeReview } from './components/CadNarrativeReview'
+import { LocationReview } from './components/LocationReview'
+import { VersionUpdateIndicator } from './components/VersionUpdateIndicator'
 import { OperationalAnalysis } from './components/OperationalAnalysis'
 import { DomesticAnalysis } from './components/DomesticAnalysis'
 import type { SpecializedReportRequest } from './components/SpecializedReport'
@@ -38,11 +41,13 @@ import { getBatches, getComparisonDataset, getSummary, upload, validateUpload, t
 import { currentYear, periodEndForYear } from './services/period-default'
 import { clearSession, getMe, getSessionToken, logout, saveSession } from './services/auth'
 import { getHealth } from './services/health'
+import { APP_VERSION } from './services/version-update'
 import './style.css'
 import './source-table.css'
 import './progress.css'
 import './legacy-charts.css'
 import './indicator-navigation.css'
+import './version-update.css'
 import './criminal-overview.css'
 
 const labels: Record<Source, string> = {
@@ -129,7 +134,7 @@ function App() {
   if (['local', 'online'].includes(health.data?.mode || '') && auth.isPending)
     return <main className="shell"><p className="empty">Validando sessão local…</p></main>
 
-  return <LegacyLayout onNavigate={navigateToIndicator} version={health.data?.version || '0.1.92'} demo={demo} username={auth.data?.username} onLogout={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }) }}><main className="shell">
+  return <LegacyLayout onNavigate={navigateToIndicator} version={health.data?.version || APP_VERSION} demo={demo} username={auth.data?.username} onLogout={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }) }}><main className="shell">
     <CriminalOverview summary={summary.data} year={year} municipality={municipality} loading={summary.isFetching} serviceAvailable={health.isSuccess && !summary.isError} demo={!!demo} cloud={isCloud} />
     {isCloud && <section className="notice" aria-label="Atualização online"><p>Última sincronização: {cloudInfo().syncedAt ? new Date(cloudInfo().syncedAt!).toLocaleString('pt-BR') : 'aguardando dados'} · Versão dos dados: {cloudInfo().version || '—'}</p><button type="button" onClick={() => { void refreshCloud().then(() => { setCloudError(''); void queryClient.invalidateQueries() }).catch(error => setCloudError(error instanceof Error ? error.message : 'Falha ao atualizar.')) }}>Atualizar consulta</button>{(cloudError || summary.isError) && <p className="error" role="alert">{cloudError || summary.error?.message}</p>}</section>}
     {demo && <nav className="quick-nav" aria-label="Explorar demonstração"><a href="#andamento">Andamento</a><a href="#indicadores">Indicadores</a><a href="#mvi">MVI por fonte</a><a href="#operacoes">Outros indicadores</a><a href="#importacoes">Importações sintéticas</a></nav>}
@@ -146,8 +151,9 @@ function App() {
     <section className="panel"><div className="section-head"><div><p className="eyebrow">Evolução mensal</p><h2>MVI por fonte</h2></div><span>CAD e NEAC permanecem independentes</span></div><Suspense fallback={<p className="empty">Carregando gráfico…</p>}><MonthlyChart monthly={summary.data?.monthly || {}} /></Suspense></section>
     <div id="mvi" className="section-anchor" /><IndicatorSection id={activeSource === 'mvi_cad' ? 'mvi-cad' : 'mvi-neac'}><IndicatorComparisons id={activeSource === 'mvi_cad' ? 'mvi-cad' : 'mvi-neac'} year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><section className="panel"><div className="section-head"><div><p className="eyebrow">Relação individual</p><h2>Vítimas elegíveis</h2></div></div><div className="tabs" role="tablist" aria-label="Fonte MVI"><button type="button" role="tab" aria-selected={activeSource === 'mvi_cad'} onClick={() => setActiveSource('mvi_cad')}>MVI CAD</button><button type="button" role="tab" aria-selected={activeSource === 'mvi_neac'} onClick={() => setActiveSource('mvi_neac')}>MVI NEAC</button></div><SourceTable source="mvi_cad" active={activeSource === 'mvi_cad'} /><SourceTable source="mvi_neac" active={activeSource === 'mvi_neac'} /></section>
     <MviAnalysis source={activeSource} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+    {activeSource === 'mvi_cad' && !isCloud && !demo && auth.data?.role === 'admin' && <CadNarrativeReview />}
     <MviComparison year={year ? Number(year) : undefined} municipality={municipality || undefined} /></IndicatorSection>
-    <div id="mapa-criminal"><Suspense fallback={<section className="panel" role="status">Preparando mapa criminal…</section>}><CrimeMap year={Number(year) || currentYear()} municipality={municipality || undefined} cutoff={periodEndForYear(summary.data, year)} /></Suspense></div>
+    <div id="mapa-criminal"><Suspense fallback={<section className="panel" role="status">Preparando mapa criminal…</section>}><CrimeMap year={Number(year) || currentYear()} municipality={municipality || undefined} cutoff={periodEndForYear(summary.data, year)} /></Suspense>{!isCloud && !demo && auth.data?.role === 'admin' && <LocationReview />}</div>
     <IndicatorSection id="cvp"><IndicatorComparisons id="cvp" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><CvpAnalysis summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} /></IndicatorSection>
     <IndicatorSection id="tentativas"><IndicatorComparisons id="tentativas" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><AttemptAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} /></IndicatorSection>
     <IndicatorSection id="tco"><IndicatorComparisons id="tco" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><TcoAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} /></IndicatorSection>
@@ -159,7 +165,7 @@ function App() {
     <IndicatorSection id="armas"><IndicatorComparisons id="armas" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><ArmsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
     <IndicatorSection id="drogas"><IndicatorComparisons id="drogas" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><DrugsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
     <IndicatorSection id="guarnicoes"><IndicatorComparisons id="guarnicoes" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><TeamsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
-    <div id="relatorios">{reportCenterOpen ? <Suspense fallback={<section className="panel" role="status">Carregando a Central de Relatórios…</section>}><ReportCenter year={year ? Number(year) : undefined} municipality={municipality || undefined} version={health.data?.version || '0.1.92'} allowed={!!demo || auth.data?.role === 'admin'} /></Suspense> : <section className="panel"><div className="section-head"><div><p className="eyebrow">Documentos e apresentações</p><h2>Central de Relatórios</h2></div></div><p className="muted">Os dados serão carregados somente quando você escolher um relatório para gerar.</p><button type="button" onClick={() => setReportCenterOpen(true)}>Abrir relatórios</button></section>}</div>
+    <div id="relatorios">{reportCenterOpen ? <Suspense fallback={<section className="panel" role="status">Carregando a Central de Relatórios…</section>}><ReportCenter year={year ? Number(year) : undefined} municipality={municipality || undefined} version={health.data?.version || APP_VERSION} allowed={!!demo || auth.data?.role === 'admin'} /></Suspense> : <section className="panel"><div className="section-head"><div><p className="eyebrow">Documentos e apresentações</p><h2>Central de Relatórios</h2></div></div><p className="muted">Os dados serão carregados somente quando você escolher um relatório para gerar.</p><button type="button" onClick={() => setReportCenterOpen(true)}>Abrir relatórios</button></section>}</div>
     <div id="municipios"><MunicipalityOverview year={year ? Number(year) : undefined} /></div>
     <div id="tabela-geral"><ConsolidatedTable year={year ? Number(year) : undefined} municipality={municipality || undefined} /></div>
     <div id="assistente-local"><LocalAssistant summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} /></div>
@@ -177,4 +183,4 @@ function App() {
   </main></LegacyLayout>
 }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={queryClient}><App /></QueryClientProvider></React.StrictMode>)
+createRoot(document.getElementById('root')!).render(<React.StrictMode><QueryClientProvider client={queryClient}><App /><VersionUpdateIndicator /></QueryClientProvider></React.StrictMode>)

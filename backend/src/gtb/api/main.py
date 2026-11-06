@@ -17,7 +17,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.92"
+APP_VERSION = "0.1.94"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -66,6 +66,18 @@ class CadTokenRequest(BaseModel):
     token: str
 
 
+class MviCadReviewRequest(BaseModel):
+    row_hash: str
+    decision: str
+    category: str | None = None
+
+
+class MapLocationReviewRequest(BaseModel):
+    row_hash: str
+    latitude: float | None = None
+    longitude: float | None = None
+
+
 app = FastAPI(title="Análise Criminal GTB 2.0", version=APP_VERSION)
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
 app.add_middleware(
@@ -90,7 +102,7 @@ async def authorize(request: Request, call_next):
                               or path.startswith("/assets/"))):
         response = await call_next(request)
     elif demo_mode():
-        if request.method != "GET" or path.startswith("/auth/"):
+        if request.method != "GET" or path.startswith(("/auth/", "/mvi/cad/reviews", "/map/location-reviews")):
             return JSONResponse({"detail": "Demonstração somente para consulta"}, status_code=403)
         response = await call_next(request)
     elif path in {"/auth/login", "/auth/setup"}:
@@ -104,7 +116,7 @@ async def authorize(request: Request, call_next):
         user = auth_manager.user_for_token(token)
         if not user:
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
-        if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints"))
+        if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints", "/mvi/cad/reviews", "/map/location-reviews"))
                 and user["role"] != "admin"):
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
         if request.method == "POST" and path.startswith(("/imports/", "/cad/")) and user["role"] == "viewer":
@@ -426,6 +438,50 @@ def mvi_analysis(source: str, year: int | None = None,
 @app.get("/indicators/mvi/comparison")
 def mvi_comparison(year: int | None = None, municipality: str | None = None) -> dict:
     return store.mvi_comparison(year, municipality)
+
+
+@app.get('/mvi/cad/reviews')
+def mvi_cad_reviews(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100),
+                    status: str = 'pending') -> dict:
+    try:
+        return store.mvi_cad_review_cases(page, size, status)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post('/mvi/cad/reviews/{natural_key}')
+def review_mvi_cad(natural_key: str, body: MviCadReviewRequest, request: Request) -> dict:
+    try:
+        result = store.review_mvi_cad(natural_key, body.row_hash, body.decision,
+                                      body.category, request.state.user['username'])
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+    cloud_sync.start()
+    cloud_sync.wake.set()
+    return result
+
+
+@app.get('/map/location-reviews')
+def map_location_reviews(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100),
+                         status: str = 'pending') -> dict:
+    try:
+        return store.map_location_review_cases(page, size, status)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post('/map/location-reviews/{source}/{natural_key}')
+def review_map_location(source: str, natural_key: str, body: MapLocationReviewRequest,
+                        request: Request) -> dict:
+    try:
+        result = store.review_map_location(source, natural_key, body.row_hash,
+                                           body.latitude, body.longitude,
+                                           request.state.user['username'])
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+    cloud_sync.start()
+    cloud_sync.wake.set()
+    return result
 
 
 @app.get("/records/{source}")

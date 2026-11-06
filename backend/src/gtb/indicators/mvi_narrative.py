@@ -93,6 +93,13 @@ _EXCLUDED_CAUSE = re.compile(r"\b(?:suicidio|autoexterminio|morte\s+natural|doen
                              r"tentativa\s+de\s+(?:homicidio|feminicidio|latrocinio))\b")
 _UNCERTAIN_DEATH = re.compile(r"\b(?:possivel|supost[oa]|suspeita\s+de|a\s+confirmar|"
                               r"aparentemente)\b.{0,35}\b(?:morte|obito|homicidio)\b")
+_REVIEW_TERMS = re.compile(r"\b(?:homicidio|feminicidio|latrocinio|obito|morte|morreu|"
+                           r"faleceu|assassinat\w*|assassinad\w*)\b")
+
+
+def cad_narrative_reviewable(row: dict[str, str]) -> bool:
+    """Inclui relatos com sinal de morte, inclusive incerto ou evolução posterior."""
+    return any(_REVIEW_TERMS.search(plain(value)) for value in narrative_values(row))
 
 
 def infer_consumed_cad_homicide(row: dict[str, str]) -> str | None:

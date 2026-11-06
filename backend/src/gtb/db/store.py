@@ -17,17 +17,19 @@ import duckdb
 from gtb.db.neac_upgrade import upgrade_neac
 from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
 from gtb.indicators.drugs import drug_field, drug_quantity, drug_weight_grams
+from gtb.indicators.mvi_narrative import cad_narrative_reviewable, narrative_values
 from gtb.indicators.mvi_time import mvi_hour, time_band
-from gtb.indicators.rules import domestic_triage, key, operational_action, plain
+from gtb.indicators.rules import domestic_triage, key, operational_action, plain, victim_role
 from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
 from gtb.ingestion.adapters.neac_model import NEAC_ADAPTER_VERSION
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
+from gtb.map_location import incident_location, near_municipality
 from gtb.sync.outbox import enqueue_import
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 ADAPTER_VERSION = "0.1.18"
-CAD_ADAPTER_VERSION = "0.1.86-cad1"
+CAD_ADAPTER_VERSION = "0.1.93-cad2"
 
 
 def source_adapter_version(source: str) -> str:
@@ -93,6 +95,15 @@ class Store:
         db.execute("""CREATE TABLE IF NOT EXISTS restore_points (
             id VARCHAR PRIMARY KEY, source VARCHAR NOT NULL, created_at TIMESTAMP NOT NULL,
             label VARCHAR NOT NULL, backup_path VARCHAR NOT NULL)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS mvi_cad_reviews (
+            natural_key VARCHAR NOT NULL, row_hash VARCHAR NOT NULL,
+            decision VARCHAR NOT NULL, category VARCHAR, reviewer VARCHAR NOT NULL,
+            reviewed_at TIMESTAMP NOT NULL, PRIMARY KEY (natural_key, row_hash))""")
+        db.execute("""CREATE TABLE IF NOT EXISTS map_location_overrides (
+            source VARCHAR NOT NULL, natural_key VARCHAR NOT NULL, row_hash VARCHAR NOT NULL,
+            latitude DOUBLE NOT NULL, longitude DOUBLE NOT NULL,
+            reviewer VARCHAR NOT NULL, reviewed_at TIMESTAMP NOT NULL,
+            PRIMARY KEY (source, natural_key, row_hash))""")
         db.execute("""CREATE TABLE IF NOT EXISTS sync_outbox (
             id VARCHAR PRIMARY KEY, event_type VARCHAR NOT NULL,
             schema_version INTEGER NOT NULL, payload_json VARCHAR NOT NULL,
@@ -148,10 +159,13 @@ class Store:
             previous = db.execute("SELECT adapter_version FROM source_types WHERE code = 'mvi_cad'").fetchone()
             if not previous or previous[0] == CAD_ADAPTER_VERSION:
                 return
-            rows = db.execute("""SELECT natural_key, version, raw_json, nature, category, eligible, reason
+            rows = db.execute("""SELECT natural_key, version, raw_json, nature, category, eligible, reason, row_hash
                 FROM record_versions WHERE source = 'mvi_cad'""").fetchall()
             changes = []
-            for natural_key, version, raw, nature, category, eligible, reason in rows:
+            for natural_key, version, raw, nature, category, eligible, reason, row_hash in rows:
+                if db.execute("SELECT 1 FROM mvi_cad_reviews WHERE natural_key = ? AND row_hash = ?",
+                              [natural_key, row_hash]).fetchone():
+                    continue
                 record = normalize('mvi_cad', json.loads(raw))
                 if (nature, category, eligible, reason) != (record.nature, record.category, record.eligible, record.reason):
                     changes.append((record.nature, record.category, record.eligible, record.reason,
@@ -172,6 +186,151 @@ class Store:
             except Exception:
                 db.execute('ROLLBACK')
                 raise
+
+    def mvi_cad_review_cases(self, page: int = 1, size: int = 20,
+                             status: str = 'pending') -> dict:
+        if page < 1 or not 1 <= size <= 100 or status not in {'pending', 'all', 'reviewed'}:
+            raise ValueError('Filtro de revisão inválido')
+        with self.lock, self._connect() as db:
+            rows = db.execute("""SELECT v.natural_key, v.row_hash, v.occurrence, v.victim,
+                v.event_date, v.municipality, v.nature, v.category, v.eligible,
+                v.reason, v.raw_json, r.decision, r.reviewer, r.reviewed_at
+                FROM record_versions v LEFT JOIN mvi_cad_reviews r
+                  ON v.natural_key = r.natural_key AND v.row_hash = r.row_hash
+                WHERE v.source = 'mvi_cad' AND v.is_current
+                ORDER BY v.event_date DESC, v.natural_key""").fetchall()
+        items = []
+        for natural_key, row_hash, occurrence, victim, day, city, nature, category, eligible, reason, raw, decision, reviewer, reviewed_at in rows:
+            fields = json.loads(raw)
+            if not cad_narrative_reviewable(fields) or not narrative_values(fields):
+                continue
+            if status == 'pending' and (decision or eligible):
+                continue
+            if status == 'reviewed' and not decision:
+                continue
+            items.append({'natural_key': natural_key, 'row_hash': row_hash,
+                          'occurrence': occurrence, 'victim': victim, 'event_date': str(day),
+                          'municipality': city, 'nature': nature, 'category': category,
+                          'eligible': eligible, 'reason': reason, 'decision': decision,
+                          'reviewer': reviewer, 'reviewed_at': str(reviewed_at) if reviewed_at else None,
+                          'narratives': [value[:20000] for value in narrative_values(fields)]})
+        return {'items': items[(page - 1) * size:page * size], 'total': len(items),
+                'page': page, 'size': size}
+
+    def processed_revision_signature(self) -> str:
+        with self.lock, self._connect() as db:
+            rows = db.execute("""SELECT natural_key, row_hash, eligible, category
+                FROM record_versions WHERE source = 'mvi_cad' AND is_current
+                ORDER BY natural_key""").fetchall()
+            locations = db.execute("""SELECT source, natural_key, row_hash, latitude, longitude
+                FROM map_location_overrides ORDER BY source, natural_key, row_hash""").fetchall()
+        return hashlib.sha256(json.dumps([rows, locations], ensure_ascii=False).encode()).hexdigest()
+
+    def review_mvi_cad(self, natural_key: str, row_hash: str, decision: str,
+                       category: str | None, reviewer: str) -> dict:
+        if decision not in {'confirmed', 'rejected', 'pending'}:
+            raise ValueError('Decisão desconhecida')
+        allowed = {'Homicídio doloso', 'Feminicídio', 'Latrocínio',
+                   'Lesão corporal seguida de morte'}
+        if decision == 'confirmed' and category not in allowed:
+            raise ValueError('Classificação MVI obrigatória')
+        with self.lock, self._connect() as db:
+            db.execute('BEGIN TRANSACTION')
+            try:
+                row = db.execute("""SELECT version, row_hash, raw_json FROM record_versions
+                    WHERE source = 'mvi_cad' AND natural_key = ? AND is_current""",
+                                 [natural_key]).fetchone()
+                if not row or row[1] != row_hash:
+                    raise ValueError('Caso alterado após a leitura; atualize a lista')
+                fields = json.loads(row[2])
+                if not cad_narrative_reviewable(fields):
+                    raise ValueError('Relato sem indício de MVI')
+                if not victim_role(pick(fields, 'role')):
+                    raise ValueError('Registro não identifica a pessoa como vítima')
+                original = normalize('mvi_cad', fields)
+                eligible = decision == 'confirmed' or (decision == 'pending' and original.eligible)
+                chosen = category if decision == 'confirmed' else original.category
+                reason = ('MVI confirmado por revisão humana do relato' if decision == 'confirmed'
+                          else 'MVI descartado por revisão humana do relato' if decision == 'rejected'
+                          else original.reason)
+                db.execute("""UPDATE record_versions SET eligible = ?, category = ?, reason = ?
+                    WHERE source = 'mvi_cad' AND natural_key = ? AND version = ?""",
+                           [eligible, chosen, reason, natural_key, row[0]])
+                db.execute('DELETE FROM mvi_cad_reviews WHERE natural_key = ? AND row_hash = ?',
+                           [natural_key, row_hash])
+                if decision != 'pending':
+                    db.execute('INSERT INTO mvi_cad_reviews VALUES (?, ?, ?, ?, ?, ?)',
+                               [natural_key, row_hash, decision, chosen, reviewer, datetime.now(UTC)])
+                db.execute('COMMIT')
+            except Exception:
+                db.execute('ROLLBACK')
+                raise
+        return {'natural_key': natural_key, 'decision': decision, 'eligible': eligible,
+                'category': chosen}
+
+    def map_location_review_cases(self, page: int = 1, size: int = 20,
+                                  status: str = 'pending') -> dict:
+        if page < 1 or not 1 <= size <= 100 or status not in {'pending', 'reviewed', 'all'}:
+            raise ValueError('Filtro de localização inválido')
+        with self.lock, self._connect() as db:
+            rows = db.execute("""SELECT v.source, v.natural_key, v.row_hash, v.occurrence,
+                v.event_date, v.municipality, v.nature, v.raw_json,
+                m.latitude, m.longitude, m.reviewer, m.reviewed_at
+                FROM record_versions v LEFT JOIN map_location_overrides m
+                  ON v.source = m.source AND v.natural_key = m.natural_key AND v.row_hash = m.row_hash
+                WHERE v.source IN ('mvi_cad', 'mvi_neac', 'ocorrencias')
+                  AND v.is_current AND v.eligible
+                ORDER BY v.event_date DESC, v.natural_key""").fetchall()
+        items = []
+        for source, natural_key, row_hash, occurrence, day, city, nature, raw, latitude, longitude, reviewer, reviewed_at in rows:
+            location = incident_location(source, json.loads(raw))
+            if not location['street'] or (location['latitude'] is not None and
+                                         near_municipality(location['latitude'], location['longitude'], city)):
+                continue
+            if status == 'pending' and latitude is not None:
+                continue
+            if status == 'reviewed' and latitude is None:
+                continue
+            items.append({'source': source, 'natural_key': natural_key, 'row_hash': row_hash,
+                          'occurrence': occurrence, 'event_date': str(day), 'municipality': city,
+                          'nature': nature, 'street': location['street'],
+                          'latitude': latitude, 'longitude': longitude,
+                          'reviewer': reviewer, 'reviewed_at': str(reviewed_at) if reviewed_at else None})
+        return {'items': items[(page - 1) * size:page * size], 'total': len(items),
+                'page': page, 'size': size}
+
+    def review_map_location(self, source: str, natural_key: str, row_hash: str,
+                            latitude: float | None, longitude: float | None,
+                            reviewer: str) -> dict:
+        if source not in {'mvi_cad', 'mvi_neac', 'ocorrencias'}:
+            raise ValueError('Fonte não disponível no mapa')
+        if (latitude is None) != (longitude is None):
+            raise ValueError('Informe as duas coordenadas ou limpe a localização')
+        with self.lock, self._connect() as db:
+            db.execute('BEGIN TRANSACTION')
+            try:
+                row = db.execute("""SELECT row_hash, raw_json, municipality, eligible
+                    FROM record_versions WHERE source = ? AND natural_key = ? AND is_current""",
+                                 [source, natural_key]).fetchone()
+                if not row or row[0] != row_hash:
+                    raise ValueError('Registro alterado após a leitura; atualize a lista')
+                location = incident_location(source, json.loads(row[1]))
+                if not row[3] or not location['street']:
+                    raise ValueError('Registro sem endereço de ocorrência revisável')
+                if latitude is not None and not near_municipality(latitude, longitude, row[2]):
+                    raise ValueError('Coordenadas fora da região do município')
+                db.execute('DELETE FROM map_location_overrides WHERE source = ? AND natural_key = ? AND row_hash = ?',
+                           [source, natural_key, row_hash])
+                if latitude is not None:
+                    db.execute('INSERT INTO map_location_overrides VALUES (?, ?, ?, ?, ?, ?, ?)',
+                               [source, natural_key, row_hash, latitude, longitude,
+                                reviewer, datetime.now(UTC)])
+                db.execute('COMMIT')
+            except Exception:
+                db.execute('ROLLBACK')
+                raise
+        return {'source': source, 'natural_key': natural_key, 'latitude': latitude,
+                'longitude': longitude}
 
     def import_file(self, source: str, filename: str, content: bytes,
                     scope: str = "partial") -> dict:
@@ -460,8 +619,20 @@ class Store:
                         db.execute("DELETE FROM import_divergences WHERE source = ?", [source])
                         db.execute("DELETE FROM import_batches WHERE source = ?", [source])
                         db.execute("DELETE FROM record_versions WHERE source = ?", [source])
+                        if source == 'mvi_cad':
+                            db.execute('DELETE FROM mvi_cad_reviews')
+                        db.execute('DELETE FROM map_location_overrides WHERE source = ?', [source])
                         db.execute("""INSERT INTO record_versions SELECT * FROM checkpoint.record_versions
                             WHERE source = ?""", [source])
+                        has_locations = db.execute("""SELECT count(*) FROM information_schema.tables
+                            WHERE table_catalog = 'checkpoint' AND table_name = 'map_location_overrides'""").fetchone()[0]
+                        if has_locations:
+                            db.execute('INSERT INTO map_location_overrides SELECT * FROM checkpoint.map_location_overrides WHERE source = ?', [source])
+                        if source == 'mvi_cad':
+                            has_reviews = db.execute("""SELECT count(*) FROM information_schema.tables
+                                WHERE table_catalog = 'checkpoint' AND table_name = 'mvi_cad_reviews'""").fetchone()[0]
+                            if has_reviews:
+                                db.execute('INSERT INTO mvi_cad_reviews SELECT * FROM checkpoint.mvi_cad_reviews')
                         db.execute("""INSERT INTO import_batches SELECT * FROM checkpoint.import_batches
                             WHERE source = ?""", [source])
                         db.execute("""INSERT INTO quarantine SELECT q.* FROM checkpoint.quarantine q

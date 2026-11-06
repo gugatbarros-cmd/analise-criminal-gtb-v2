@@ -9,4 +9,19 @@
 .legacy-workspace .indicator-card-button .indicator-variation-good{background:#e7f7ed;color:#12663a}
 .legacy-workspace .indicator-card-button .indicator-variation-bad{background:#fff0ee;color:#b42318}
 .legacy-workspace .indicator-card-button .indicator-variation-neutral{background:#f0f4f8;color:#5b6e80}
+.legacy-workspace .indicator-card-button .indicator-calculation{display:block;margin-top:6px;font-size:.71rem;line-height:1.35;color:#40576b}
+.legacy-workspace .indicator-card-button .indicator-action{display:block;padding:6px 8px;border-left:3px solid #ba6b16;background:#fff6e9;font-size:.71rem;line-height:1.4;color:#724409}
+.cad-review-case{margin:16px 0;padding:16px;border:1px solid #d5e0e9;border-radius:10px;background:#f8fbfd}
+.cad-review-case>div:first-child{display:flex;flex-direction:column;gap:4px}
+.cad-review-case small{color:#536a7e}
+.cad-review-case details{margin:12px 0}
+.cad-review-narrative{white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;padding:12px;background:#fff;border:1px solid #dbe4eb;border-radius:6px}
+.cad-review-actions{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
+.cad-review-actions label{display:flex;flex-direction:column;gap:4px}
+.location-review-case{margin:14px 0;padding:15px;border:1px solid #d5e0e9;border-radius:10px;background:#f8fbfd}
+.location-review-case>div:first-child{display:flex;flex-direction:column;gap:4px}
+.location-review-case small{color:#536a7e}
+.location-review-inputs{display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin-top:10px}
+.location-review-inputs label{display:flex;flex-direction:column;gap:4px}
+.location-review-inputs input{width:130px}
 .legacy-workspace .period-cutoff{align-self:end;max-width:260px;padding:11px 13px;border:1px solid #cfe1d7;border-radius:9px;background:#f0faf3;color:#286343;font-size:.77rem;font-weight:700;line-height:1.35}

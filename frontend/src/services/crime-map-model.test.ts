@@ -38,5 +38,15 @@ describe('mapa criminal', () => {
     expect(hasExactCoordinates(facts[0])).toBe(true)
     expect(hasExactCoordinates(facts[1])).toBe(false)
     expect(publicStreet('Rua 15 de Novembro, 123')).toBe('Rua 15 de Novembro')
+    expect(publicStreet('Rua Sintética 123-A')).toBe('Rua Sintética')
+  })
+
+  it('usa pontos individuais também para CVP e MVI NEAC', () => {
+    const facts = mapFacts([
+      fact({ indicators: ['CVP'], street: 'Rua Teste', latitude: -9.5369, longitude: -36.6338 }),
+      fact({ source: 'mvi_neac', street: 'Rua Exemplo', latitude: -9.5368, longitude: -36.6337 }),
+    ])
+    expect(facts.map(item => item.layer)).toEqual(['cvp', 'mvi'])
+    expect(facts.every(hasExactCoordinates)).toBe(true)
   })
 })

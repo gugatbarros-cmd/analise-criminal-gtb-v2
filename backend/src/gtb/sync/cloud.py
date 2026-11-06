@@ -149,7 +149,9 @@ class CloudSync:
             with self.lock:
                 self.save_state(status='pending', message='Nenhuma importação local para enviar. A base online existente foi preservada.')
             return
-        signature = hashlib.sha256(json.dumps([self.version, [(b['id'], str(b['imported_at'])) for b in batches]]).encode()).hexdigest()
+        signature = hashlib.sha256(json.dumps([self.version,
+            [(b['id'], str(b['imported_at'])) for b in batches],
+            self.store.processed_revision_signature()]).encode()).hexdigest()
         if signature == self.state.get('signature'):
             return
         self.busy = True
@@ -212,7 +214,7 @@ class CloudSync:
                         for start in range(0, len(staged), 100):
                             try:
                                 request_json(commit_url, {'writes': [{'delete': name} for name in staged[start:start + 100]]}, token)
-                            except Exception:
+                            except Exception:  # noqa: BLE001, S110 -- preserve the original sync error
                                 pass
                         raise
                 # Persistir o refresh token rotacionado, nunca a senha.

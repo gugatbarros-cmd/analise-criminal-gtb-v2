@@ -1,13 +1,43 @@
-"""Localização declarada no arquivo MVI CAD, sem geocodificação externa."""
+"""Localização declarada nas bases importadas, sem geocodificação externa."""
 
 import re
+from math import asin, cos, radians, sin, sqrt
 
 from gtb.indicators.rules import key
 
+LATITUDE_KEYS = ('latitude ocorrencia', 'latitude da ocorrencia', 'latitude do fato',
+                 'latitude local do fato', 'coordenada latitude', 'coord latitude', 'latitude', 'lat')
+LONGITUDE_KEYS = ('longitude ocorrencia', 'longitude da ocorrencia', 'longitude do fato',
+                  'longitude local do fato', 'coordenada longitude', 'coord longitude',
+                  'longitude', 'lon', 'lng', 'long')
+PAIR_KEYS = ('coordenadas ocorrencia', 'coordenadas do fato', 'coordenadas',
+             'coordenadas gps', 'lat long', 'latitude longitude')
+MUNICIPALITY_POINTS = {
+    'palmeiradosindios': (-9.4057, -36.6328), 'belem': (-9.5705, -36.4904),
+    'tanquedarca': (-9.5332, -36.4360), 'maribondo': (-9.5835, -36.3044),
+    'igaci': (-9.5369, -36.6338), 'quebrangulo': (-9.3185, -36.4722),
+    'paulojacinto': (-9.3672, -36.3672), 'marvermelho': (-9.4474, -36.3881),
+    'estreladealagoas': (-9.3909, -36.7644), 'minadordonegrao': (-9.3123, -36.8696),
+    'cacimbinhas': (-9.4012, -36.9911),
+}
 
-LATITUDE_KEYS = ('latitude', 'lat', 'coordenada latitude', 'coord latitude', 'latitude ocorrencia', 'latitude do fato')
-LONGITUDE_KEYS = ('longitude', 'lon', 'lng', 'long', 'coordenada longitude', 'coord longitude', 'longitude ocorrencia', 'longitude do fato')
-PAIR_KEYS = ('coordenadas', 'coordenadas gps', 'lat long', 'latitude longitude')
+
+def near_municipality(latitude: float, longitude: float, municipality: str) -> bool:
+    center = MUNICIPALITY_POINTS.get(key(municipality))
+    if not center or not _in_alagoas(latitude, longitude):
+        return False
+    a = sin(radians(latitude - center[0]) / 2) ** 2 + (
+        cos(radians(center[0])) * cos(radians(latitude)) *
+        sin(radians(longitude - center[1]) / 2) ** 2)
+    return 12742 * asin(min(1, sqrt(a))) <= 35
+
+
+def incident_location(source: str, row: dict) -> dict:
+    if source == 'mvi_neac':
+        # O endereço simples do NEAC pode ser o domicílio da vítima.
+        row = {name: value for name, value in row.items()
+               if any(part in key(name) for part in ('ocorrencia', 'fato'))}
+    return cad_location(row)
 
 
 def _number(value: object) -> float | None:
@@ -37,8 +67,11 @@ def cad_location(row: dict) -> dict:
             latitude, longitude = _number(match.group(1)), _number(match.group(2))
     if not _in_alagoas(latitude, longitude):
         latitude = longitude = None
-    street = str(first(('endereco ocorrencia', 'endereco da ocorrencia', 'endereco', 'logradouro')))[:180].strip()
-    public_street = re.sub(r'(?:,\s*|\s+n[ºo.]?\s+)\d{1,6}\b.*$', '', street, flags=re.I).strip(' ,')
+    street = str(first(('endereco ocorrencia', 'endereco da ocorrencia', 'endereco do fato',
+                        'local do fato', 'logradouro ocorrencia', 'logradouro do fato',
+                        'endereco', 'logradouro')))[:180].strip()
+    public_street = re.sub(r'(?:,\s*|\s+n[ºo.]?\s+)\d{1,6}\b.*$', '', street, flags=re.IGNORECASE).strip(' ,')
+    public_street = re.sub(r'\s+\d{1,6}(?:[-/]\w+)?$', '', public_street).strip(' ,')
     number = str(first(('no do endereco', 'n do endereco', 'numero do endereco')))[:20].strip()
     if number and number.isdigit():
         public_street = re.sub(rf'\s+{re.escape(number)}$', '', public_street).strip(' ,')

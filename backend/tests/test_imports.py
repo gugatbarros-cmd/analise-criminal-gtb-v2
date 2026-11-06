@@ -108,9 +108,17 @@ def test_cad_narrative_recovers_confirmed_homicide_without_structured_death(tmp_
     ]
     store.import_file('mvi_cad', 'casos.csv', csv_bytes(cases))
     actual = {row['occurrence']: row for row in store.records('mvi_cad')['items']}
-    assert actual['CAD-N1']['eligible'] is True
-    assert actual['CAD-N2']['eligible'] is True
+    assert actual['CAD-N1']['eligible'] is False
+    assert actual['CAD-N2']['eligible'] is False
     assert all(actual[f'CAD-N{index}']['eligible'] is False for index in (3, 4, 5, 6))
+    pending = store.mvi_cad_review_cases()['items']
+    assert {item['occurrence'] for item in pending} >= {'CAD-N1', 'CAD-N2', 'CAD-N3', 'CAD-N4', 'CAD-N5'}
+    first = next(item for item in pending if item['occurrence'] == 'CAD-N1')
+    store.review_mvi_cad(first['natural_key'], first['row_hash'], 'confirmed', 'Homicídio doloso', 'admin')
+    assert store.summary()['mvi_cad'] == 1
+    assert store.mvi_cad_review_cases(status='reviewed')['total'] == 1
+    store.review_mvi_cad(first['natural_key'], first['row_hash'], 'pending', None, 'admin')
+    assert store.summary()['mvi_cad'] == 0
 
 
 def test_cad_adapter_upgrade_preserves_raw_and_backs_up_changes(tmp_path):
@@ -127,7 +135,7 @@ def test_cad_adapter_upgrade_preserves_raw_and_backs_up_changes(tmp_path):
     with store._connect() as db:
         raw, category, eligible = db.execute("SELECT raw_json, category, eligible FROM record_versions WHERE source = 'mvi_cad'").fetchone()
     assert raw == original
-    assert category == 'Homicídio doloso' and eligible is True
+    assert category == 'Homicídio doloso' and eligible is False
     assert len(list((path.parent / 'backups').glob('before-cad-adapter-*.duckdb'))) == 1
 
 

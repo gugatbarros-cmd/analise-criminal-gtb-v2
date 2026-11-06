@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-06",
-  "implementationStatus": "Versão funcional finalizada no escopo implementado; entrega 0.1.92: recuperação de importações por base, com pontos automáticos anteriores aos lotes e cópia de segurança antes de cada restauração. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.94: mapa por coordenada para MVI CAD, MVI NEAC e ocorrências, revisão local de endereços sem geocodificação externa, revisão humana de relatos MVI CAD, legenda de cálculo e ação nos indicadores e verificação de nova versão a cada 30 segundos. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
