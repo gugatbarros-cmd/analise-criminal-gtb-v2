@@ -1,5 +1,9 @@
 # Andamento da implantação — 06/11/2026
 
+## Acesso online e gestão de contas — 0.1.91
+
+A entrada do GTB 2.0 ocupa toda a janela e adapta o conteúdo ao celular. O administrador pode entrar com e-mail ou com o login Tavares; os demais usuários entram com e-mail para preservar a privacidade do vínculo entre apelido e endereço. A Central de Acesso online lista contas autorizadas e permite alterar nome, posto e perfil ou revogar acesso. E-mail e senha continuam sob autenticação do Firebase. A interface usa as permissões já existentes no Firestore, sem ativar serviços pagos. Compilação e testes sintéticos validam o fluxo; a edição em uma conta administrativa real ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
+
 ## Unidade de Despacho na consulta de Drogas — 0.1.90
 
 A página oficial de Drogas chama o filtro de `Unidade Despacho`, sem a palavra `de`. A automação agora reconhece esse rótulo e usa o botão do CAD que move somente a opção selecionada. Na sessão oficial, a lista de destino ficou com apenas `10º BPM`. Um teste sintético verifica o rótulo, o botão e a exclusão das outras unidades. A execução automática completa da importação ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.

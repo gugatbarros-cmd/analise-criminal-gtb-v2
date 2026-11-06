@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-06",
-  "implementationStatus": "Versão funcional finalizada no escopo implementado; entrega 0.1.90 corrige a identificação do filtro Unidade Despacho e seleciona somente 10º BPM na consulta de Drogas do CAD. A seleção foi confirmada na página oficial; a execução automática completa da importação ainda requer conferência operacional. Validação operacional: 90% concluída e 10% restante; implementação funcional: 100% concluída.",
+  "implementationStatus": "Versão funcional finalizada no escopo implementado; entrega 0.1.91: acesso online em tela cheia, login administrativo Tavares e gestão de perfis online pelo administrador. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -54,8 +54,8 @@
       "weight": 10,
       "completed": 4,
       "total": 5,
-      "done": "Central de Acesso com criação de perfis e senha local de 8 caracteres com maiúscula, minúscula e especial; saudação por horário e data; backup integral verificável, restauração validada e executável Windows instalável no perfil do usuário, com inicializador supervisionado, atalhos, log de falhas e atualização que preserva os dados",
-      "remaining": "Backup dos dados operacionais do legado, operação paralela e aprovação do plano de troca"
+      "done": "Central de Acesso com criação de perfis e senha local de 8 caracteres com maiúscula, minúscula e especial; saudação por horário e data; backup integral verificável, restauração validada e executável Windows instalável no perfil do usuário, com inicializador supervisionado, atalhos, log de falhas e atualização que preserva os dados; acesso online em tela cheia e gestão administrativa de nome, posto, perfil e revogação das contas autorizadas",
+      "remaining": "Backup dos dados operacionais do legado, operação paralela e aprovação do plano de troca; confirmar gestão online em conta administrativa real"
     }
   ]
 }

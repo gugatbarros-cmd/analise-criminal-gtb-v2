@@ -60,10 +60,11 @@ async function getDocument(url: string): Promise<Document> {
 }
 
 export async function cloudLogin(email: string, password: string): Promise<LocalSession> {
+  const account = email.trim().toLocaleLowerCase('pt-BR') === 'tavares' ? 'gugatbarros@hotmail.com' : email.trim()
   const value = await read<{ idToken: string; refreshToken: string; email: string; localId: string; expiresIn: string }>(await fetch(
     'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + key, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), password, returnSecureToken: true }),
+      body: JSON.stringify({ email: account, password, returnSecureToken: true }),
     }))
   sessionStore().setItem(sessionKey, JSON.stringify({ token: value.idToken, refresh: value.refreshToken,
     email: value.email, uid: value.localId, expires: Date.now() + Number(value.expiresIn) * 1000 }))
@@ -75,11 +76,59 @@ export async function cloudLogin(email: string, password: string): Promise<Local
 
 export async function cloudUser(): Promise<LocalUser> {
   const current = await validSession()
-  if (current.email.toLowerCase() !== 'gugatbarros@hotmail.com') {
+  const admin = current.email.toLowerCase() === 'gugatbarros@hotmail.com'
+  if (!admin) {
     const profile = await getDocument(root + '/users/' + encodeURIComponent(current.uid))
     if (profile.fields.status?.stringValue !== 'active') throw Error('Conta ainda não autorizada no sistema antigo.')
   }
-  return { username: current.email, role: 'viewer', expires_at: new Date(current.expires).toISOString() }
+  return { username: current.email, role: admin ? 'admin' : 'viewer', expires_at: new Date(current.expires).toISOString() }
+}
+
+export type CloudAccount = { uid: string; email: string; rank: string; name: string; requestedName: string; role: 'analyst' | 'visitor'; updateTime: string }
+
+export async function listCloudAccounts(): Promise<CloudAccount[]> {
+  const accounts: CloudAccount[] = []
+  let page = ''
+  do {
+    const current = await validSession()
+    const url = root + '/users?pageSize=100' + (page ? '&pageToken=' + encodeURIComponent(page) : '')
+    const result = await read<{ documents?: (Document & { name: string; updateTime: string })[]; nextPageToken?: string }>(await fetch(url, {
+      headers: { Authorization: 'Bearer ' + current.token }, cache: 'no-store',
+    }))
+    for (const document of result.documents || []) {
+      const fields = document.fields
+      accounts.push({ uid: document.name.split('/').pop() || '', email: fields.email?.stringValue || '',
+        rank: fields.rank?.stringValue || '', name: fields.name?.stringValue || '',
+        requestedName: fields.requestedName?.stringValue || '',
+        role: fields.role?.stringValue === 'analyst' ? 'analyst' : 'visitor', updateTime: document.updateTime })
+    }
+    page = result.nextPageToken || ''
+  } while (page)
+  return accounts.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+}
+
+export async function saveCloudAccount(account: CloudAccount): Promise<void> {
+  const current = await validSession()
+  if (current.email.toLowerCase() !== 'gugatbarros@hotmail.com') throw Error('Acesso administrativo necessário.')
+  const stringValue = (value: string) => ({ stringValue: value })
+  const name = root + '/users/' + encodeURIComponent(account.uid)
+  await read(await fetch(root + ':commit', { method: 'POST', headers: {
+    Authorization: 'Bearer ' + current.token, 'Content-Type': 'application/json',
+  }, body: JSON.stringify({ writes: [{ update: { name, fields: {
+    rank: stringValue(account.rank), name: stringValue(account.name.trim()),
+    requestedName: stringValue(account.requestedName), email: stringValue(account.email),
+    role: stringValue(account.role), status: stringValue('active'),
+  } }, updateTransforms: [{ fieldPath: 'approvedAt', setToServerValue: 'REQUEST_TIME' }],
+  currentDocument: { updateTime: account.updateTime } }] }) }))
+}
+
+export async function revokeCloudAccount(account: CloudAccount): Promise<void> {
+  const current = await validSession()
+  if (current.email.toLowerCase() !== 'gugatbarros@hotmail.com') throw Error('Acesso administrativo necessário.')
+  const response = await fetch(root + '/users/' + encodeURIComponent(account.uid) + '?currentDocument.updateTime=' + encodeURIComponent(account.updateTime), {
+    method: 'DELETE', headers: { Authorization: 'Bearer ' + current.token },
+  })
+  if (!response.ok) throw Error('Não foi possível revogar o acesso. Recarregue a lista e tente novamente.')
 }
 
 export function cloudLogout(): void {

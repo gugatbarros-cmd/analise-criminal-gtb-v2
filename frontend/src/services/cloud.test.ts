@@ -2,6 +2,33 @@ import { afterEach, expect, it, vi } from 'vitest'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.resetModules() })
 
+it('aceita o login Tavares somente na conta administrativa e libera a central online', async () => {
+  storage()
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ idToken: 'synthetic-token', refreshToken: 'synthetic-refresh',
+    email: 'gugatbarros@hotmail.com', localId: 'synthetic-admin', expiresIn: '3600' }))
+  vi.stubGlobal('fetch', fetcher)
+  const cloud = await import('./cloud')
+  const user = await cloud.cloudLogin(' Tavares ', 'synthetic-only')
+  expect(user.role).toBe('admin')
+  expect(JSON.parse(fetcher.mock.calls[0][1].body).email).toBe('gugatbarros@hotmail.com')
+  expect(fetcher).toHaveBeenCalledTimes(1)
+})
+
+it('edita perfil online com a autorização do Firestore e preserva concorrência', async () => {
+  const values = storage()
+  values.set('gtb-online-session', JSON.stringify({ token: 'synthetic-token', refresh: 'synthetic-refresh',
+    email: 'gugatbarros@hotmail.com', uid: 'synthetic-admin', expires: Date.now() + 3600000 }))
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ writeResults: [{}] }))
+  vi.stubGlobal('fetch', fetcher)
+  const cloud = await import('./cloud')
+  await cloud.saveCloudAccount({ uid: 'synthetic-user', email: 'user@example.test', rank: 'Cb PM',
+    name: 'Pessoa Exemplo', requestedName: 'Pessoa Exemplo', role: 'visitor', updateTime: '2026-01-01T00:00:00Z' })
+  const body = JSON.parse(fetcher.mock.calls[0][1].body)
+  expect(body.writes[0].currentDocument.updateTime).toBe('2026-01-01T00:00:00Z')
+  expect(body.writes[0].updateTransforms).toEqual([{ fieldPath: 'approvedAt', setToServerValue: 'REQUEST_TIME' }])
+  expect(body.writes[0].update.fields.role.stringValue).toBe('visitor')
+})
+
 function storage() {
   const values = new Map<string, string>()
   vi.stubGlobal('sessionStorage', { getItem: (key: string) => values.get(key) || null,
