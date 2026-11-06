@@ -14,9 +14,12 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
   const [endDate, setEndDate] = useState('')
   const [localError, setLocalError] = useState('')
   const [dateError, setDateError] = useState('')
+  const [occurrences, setOccurrences] = useState(true)
+  const [drugs, setDrugs] = useState(false)
+  const [lastCpf, setLastCpf] = useState(() => { try { return localStorage.getItem('gtb-v2-last-cad-cpf') || '' } catch { return '' } })
   const status = useQuery({ queryKey: ['cad-status'], queryFn: getCadStatus, refetchInterval: 1500 })
-  const start = useMutation({ mutationFn: ({ cpf, password, first, last }: { cpf: string; password: string; first: string; last: string }) =>
-    startCadImport(cpf, password, first, last), onSuccess: () => { setLocalError(''); void status.refetch() },
+  const start = useMutation({ mutationFn: ({ cpf, password, first, last, sources }: { cpf: string; password: string; first: string; last: string; sources: ('ocorrencias' | 'drogas')[] }) =>
+    startCadImport(cpf, password, first, last, sources), onSuccess: () => { setLocalError(''); void status.refetch() },
     onError: error => setLocalError(error.message) })
   const verify = useMutation({ mutationFn: submitCadToken,
     onSuccess: () => { setLocalError(''); void status.refetch() },
@@ -40,8 +43,8 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
 
   return <section className="panel" aria-labelledby="cad-import-title">
     <div className="section-head"><div><p className="eyebrow">Alternativa de importação</p>
-      <h2 id="cad-import-title">Buscar ocorrências no CAD</h2></div></div>
-    <p className="muted">Escolha o intervalo. O sistema consulta Polícia Militar e 10º BPM, seleciona todas as colunas, baixa o XLS e importa na base local de ocorrências. A sessão do CAD fica aberta até expirar ou você encerrá-la; CPF, senha e token não são salvos.</p>
+      <h2 id="cad-import-title">Importar bases do CAD</h2></div></div>
+    <p className="muted">Escolha o intervalo e marque as bases. O sistema baixa cada XLS e importa na base local correspondente. A sessão do CAD é reutilizada enquanto estiver válida; senha e token não são salvos.</p>
     <form noValidate onSubmit={event => {
       event.preventDefault()
       const first = startInput.current?.value || ''
@@ -49,22 +52,33 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
       const invalid = cadPeriodError(first, last)
       setDateError(invalid)
       if (invalid) return
+      const sources: ('ocorrencias' | 'drogas')[] = []
+      if (occurrences) sources.push('ocorrencias')
+      if (drugs) sources.push('drogas')
+      if (!sources.length) { setLocalError('Marque pelo menos uma base do CAD.'); return }
       const value = password.current?.value || ''
       const documentId = (cpf.current?.value || '').replace(/\D/g, '')
-      if (!status.data?.session_active && (documentId.length !== 11 || !value)) {
-        setLocalError('Informe CPF e senha do CAD para iniciar a consulta.')
+      if (!status.data?.session_active && documentId.length !== 11) {
+        setLocalError('Informe o CPF da última conta do CAD. Se a sessão expirou, informe também a senha.')
         return
       }
+      if (documentId.length === 11) {
+        setLastCpf(documentId)
+        try { localStorage.setItem('gtb-v2-last-cad-cpf', documentId) } catch { /* armazenamento indisponível */ }
+      }
       if (password.current) password.current.value = ''
-      if (cpf.current) cpf.current.value = ''
       setLocalError('')
-      start.mutate({ cpf: documentId, password: value, first, last })
+      start.mutate({ cpf: documentId, password: value, first, last, sources })
     }}>
+      <fieldset className="cad-sources"><legend>Bases para baixar</legend>
+        <label><input type="checkbox" checked={occurrences} onChange={event => setOccurrences(event.target.checked)} /> Ocorrências</label>
+        <label><input type="checkbox" checked={drugs} onChange={event => setDrugs(event.target.checked)} /> Drogas</label>
+      </fieldset>
       <label>Data inicial<input ref={startInput} type="date" value={startDate} onChange={event => { setStartDate(event.target.value); setDateError('') }} onInput={event => { if (event.currentTarget.validity.badInput) setDateError('Confira a data inicial: o dia informado não existe neste mês.') }} aria-invalid={!!dateError} required /></label>
       <label>Data final<input ref={endInput} type="date" value={endDate} min={startDate} onChange={event => { setEndDate(event.target.value); setDateError('') }} onInput={event => { if (event.currentTarget.validity.badInput) setDateError('Confira a data final: o dia informado não existe neste mês.') }} aria-invalid={!!dateError} required /></label>
       {dateError && <p className="error" role="alert">{dateError}</p>}
-      {!status.data?.session_active && <><label>CPF do CAD<input ref={cpf} inputMode="numeric" autoComplete="off" maxLength={14} required /></label>
-      <label>Senha do CAD<input ref={password} type="password" autoComplete="off" required /></label></>}
+      {!status.data?.session_active && <><label>CPF do CAD<input ref={cpf} inputMode="numeric" autoComplete="off" maxLength={14} defaultValue={lastCpf} required /></label>
+      <label>Senha do CAD, se a sessão anterior expirou<input ref={password} type="password" autoComplete="off" /></label></>}
       <div className="import-actions"><button type="submit" className="primary" disabled={!!busy}>Consultar e importar</button></div>
     </form>
     {status.data?.session_active && <p className="success" role="status">Sessão do CAD ativa. Escolha outro período para reutilizar o acesso.</p>}

@@ -125,11 +125,37 @@ def test_cad_reuses_session_without_credentials_and_blocks_other_local_profile(t
         status = manager.start("", "", "2026-11-01", "2026-11-03", "operador-a")
         assert status["phase"] == "filtering"
         assert status["session_active"] is True
-        assert manager.commands.get_nowait() == ("import", ("2026-11-01", "2026-11-03"))
+        assert manager.commands.get_nowait() == ("import", ("2026-11-01", "2026-11-03", ["ocorrencias"]))
         assert manager.disconnect("operador-a")["phase"] == "disconnecting"
     finally:
         release.set()
         manager.worker.join(timeout=2)
+
+
+def test_cad_rejects_empty_or_unknown_sources_before_opening_browser(tmp_path):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    for sources in ([], ["armas"], ["drogas", "drogas"]):
+        with pytest.raises(ValueError, match="Marque ocorrências"):
+            manager.start("12345678901", "synthetic-only", "2026-11-01", "2026-11-03",
+                          "operador", sources)
+    assert manager.worker is None
+
+
+def test_cad_imports_both_selected_sources_in_order(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    imported = []
+    def fake_import(_page, _first, _last, source):
+        imported.append(source)
+        return {"row_count": 2, "inserted": 1, "updated": 0, "quarantined": 1,
+                "repeated": False}
+    monkeypatch.setattr(manager, "_download_and_import", fake_import)
+    assert manager._run_import(object(), "2026-11-01", "2026-11-03",
+                               ["ocorrencias", "drogas"]) is True
+    assert imported == ["ocorrencias", "drogas"]
+    result = manager.status()["result"]
+    assert result["sources"] == imported
+    assert result["row_count"] == 4
+    assert manager.status()["phase"] == "complete"
 
 
 def test_cad_cannot_cancel_started_database_write(tmp_path):

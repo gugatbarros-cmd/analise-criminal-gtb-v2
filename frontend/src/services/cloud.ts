@@ -7,6 +7,7 @@ const key = 'AIzaSyCh4pw9HsXVEz7RbIq_Ee5v7oGWxC66qnM'
 const root = 'https://firestore.googleapis.com/v1/projects/analisecriminalgtb/databases/(default)/documents'
 const documentUrl = root + '/sharedBases/gtb2-online'
 const sessionKey = 'gtb-online-session'
+const sessionStore = () => typeof localStorage === 'undefined' ? sessionStorage : localStorage
 type Session = { token: string; refresh: string; expires: number; email: string; uid: string }
 type Fields = Record<string, { stringValue?: string; integerValue?: string; arrayValue?: { values?: { stringValue: string }[] } }>
 type Document = { fields: Fields }
@@ -26,7 +27,7 @@ async function read<T>(response: Response): Promise<T> {
 }
 
 function session(): Session {
-  const stored = sessionStorage.getItem(sessionKey)
+  const stored = sessionStore().getItem(sessionKey)
   if (!stored) throw Error('Entre na sua conta online.')
   return JSON.parse(stored) as Session
 }
@@ -42,8 +43,8 @@ async function validSession(): Promise<Session> {
       }))
     const value = { ...current, token: next.id_token, refresh: next.refresh_token,
       expires: Date.now() + Number(next.expires_in) * 1000 }
-    if (sessionStorage.getItem(sessionKey) !== JSON.stringify(current)) throw Error('Sessão encerrada durante a atualização.')
-    sessionStorage.setItem(sessionKey, JSON.stringify(value))
+    if (sessionStore().getItem(sessionKey) !== JSON.stringify(current)) throw Error('Sessão encerrada durante a atualização.')
+    sessionStore().setItem(sessionKey, JSON.stringify(value))
     return value
   })().catch(error => {
     cloudLogout()
@@ -64,7 +65,7 @@ export async function cloudLogin(email: string, password: string): Promise<Local
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.trim(), password, returnSecureToken: true }),
     }))
-  sessionStorage.setItem(sessionKey, JSON.stringify({ token: value.idToken, refresh: value.refreshToken,
+  sessionStore().setItem(sessionKey, JSON.stringify({ token: value.idToken, refresh: value.refreshToken,
     email: value.email, uid: value.localId, expires: Date.now() + Number(value.expiresIn) * 1000 }))
   try {
     const user = await cloudUser()
@@ -82,7 +83,7 @@ export async function cloudUser(): Promise<LocalUser> {
 }
 
 export function cloudLogout(): void {
-  sessionStorage.removeItem(sessionKey)
+  sessionStore().removeItem(sessionKey)
   data = undefined; loading = undefined; generation = ''
 }
 

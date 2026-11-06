@@ -6,15 +6,17 @@ const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const STORAGE_KEY = 'gtb-v2-session'
 
 export function getSessionToken(): string {
-  try { return sessionStorage.getItem(STORAGE_KEY) || '' } catch { return '' }
+  try { return localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY) || '' } catch { return '' }
 }
 
 export function saveSession(token: string): void {
-  sessionStorage.setItem(STORAGE_KEY, token)
+  localStorage.setItem(STORAGE_KEY, token)
+  sessionStorage.removeItem(STORAGE_KEY)
 }
 
 export function clearSession(): void {
   if (isCloud) cloudLogout()
+  localStorage.removeItem(STORAGE_KEY)
   sessionStorage.removeItem(STORAGE_KEY)
 }
 

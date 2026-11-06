@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-05",
-  "implementationStatus": "Versão funcional finalizada; entrega 0.1.86 reavalia MVI CAD pelo relato quando falta confirmação estruturada de óbito, preserva casos incertos fora do indicador e localiza ruas sem coordenadas no mapa mediante ação do usuário, com posição aproximada. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
+  "updatedAt": "2026-11-06",
+  "implementationStatus": "Versão funcional finalizada; entrega 0.1.87 seleciona ocorrências e drogas na importação CAD local e preserva a última conta e a sessão válida entre aberturas. Validação operacional: 90% concluída e 10% restante; a conferência oficial das bases permanece pendente.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -27,7 +27,7 @@
       "weight": 20,
       "completed": 4,
       "total": 5,
-      "done": "CSV/XLS/XLSX, pré-validação obrigatória sem gravação, backup automático por lote, versões, histórico e auditoria paginados, restauração, ensaio de um milhão de linhas, quatro layouts fornecidos lidos localmente e comparador de seis fontes; alternativa CAD com pré-validação do XLS, barra de andamento por etapa, cancelamento da consulta, reutilização da sessão autenticada enquanto válida, aviso para datas inválidas e reconhecimento do download direto ou do botão Baixar; data da última importação por indicador; dados da Central de Relatórios consultados somente ao gerar um modelo ou exportar o resumo CSV",
+      "done": "CSV/XLS/XLSX, pré-validação obrigatória sem gravação, backup automático por lote, versões, histórico e auditoria paginados, restauração, ensaio de um milhão de linhas, quatro layouts fornecidos lidos localmente e comparador de seis fontes; alternativa CAD com seleção de ocorrências e drogas, pré-validação dos XLS, barra de andamento por etapa, cancelamento da consulta, reutilização da sessão autenticada e da última conta local, aviso para datas inválidas e reconhecimento do download direto ou do botão Baixar; data da última importação por indicador; dados da Central de Relatórios consultados somente ao gerar um modelo ou exportar o resumo CSV",
       "remaining": "Receber as duas fontes restantes, comparar totais oficiais e desempenho com o legado"
     },
     {

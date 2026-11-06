@@ -1,4 +1,8 @@
-# Andamento da implantação — 05/11/2026
+# Andamento da implantação — 06/11/2026
+
+## Seleção das bases CAD e retomada da sessão — 0.1.87
+
+A alternativa de importação local permite marcar Ocorrências, Drogas ou ambas. Cada grade consulta o intervalo escolhido, aplica os filtros do 10º BPM, seleciona todas as colunas e importa seu XLS na base correspondente. O perfil local do navegador CAD preserva a sessão entre aberturas; quando o CAD exige novo token ou login, o operador o informa novamente. A última conta fica preenchida, enquanto senhas não são gravadas pelo GTB. A consulta online mostra onde a importação está disponível, mas não acessa o CAD do computador. Testes sintéticos cobrem a seleção, a sequência e o roteamento das bases; a execução oficial ainda depende de acesso do operador. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
 
 ## Relato MVI CAD e busca pela rua — 0.1.86
 

@@ -17,7 +17,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.86"
+APP_VERSION = "0.1.87"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -59,6 +59,7 @@ class CadStartRequest(BaseModel):
     password: str = ""
     start_date: str
     end_date: str
+    sources: list[str] = ["ocorrencias"]
 
 
 class CadTokenRequest(BaseModel):
@@ -233,7 +234,7 @@ def cad_start(body: CadStartRequest, request: Request) -> dict:
         raise HTTPException(403, "Demonstração somente para consulta")
     try:
         return cad_import.start(body.cpf, body.password, body.start_date, body.end_date,
-                                request.state.user["username"])
+                                request.state.user["username"], body.sources)
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
 

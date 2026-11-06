@@ -107,6 +107,54 @@ function cadPageAction(action, options = {}) {
     }
     return { ok: true };
   }
+  if (action === 'dispatchUnit') {
+    const row = rowFor('Unidade de Despacho');
+    if (!row) return { ok: false, reason: 'O filtro Unidade de Despacho não foi identificado.' };
+    const lists = [...row.querySelectorAll('select')].filter(visible);
+    if (lists.length === 1 && !lists[0].multiple) {
+      const option = [...lists[0].options].find((item) => normalize(item.textContent) === '10º BPM');
+      if (!option) return { ok: false, reason: '10º BPM não aparece em Unidade de Despacho.' };
+      lists[0].value = option.value;
+      lists[0].dispatchEvent(new Event('change', { bubbles: true }));
+      return normalize(lists[0].selectedOptions?.[0]?.textContent || option.textContent) === '10º BPM'
+        ? { ok: true } : { ok: false, reason: 'O CAD não confirmou a Unidade de Despacho 10º BPM.' };
+    }
+    if (lists.length < 2) return { ok: false, reason: 'As listas de Unidade de Despacho não foram identificadas.' };
+    const source = lists[0], target = lists.at(-1);
+    if (![...target.options].some((item) => normalize(item.textContent) === '10º BPM')) {
+      const option = [...source.options].find((item) => normalize(item.textContent) === '10º BPM');
+      if (!option) return { ok: false, reason: '10º BPM não aparece em Unidade de Despacho.' };
+      for (const item of source.options) item.selected = false;
+      option.selected = true;
+      source.dispatchEvent(new Event('change', { bubbles: true }));
+      const left = source.getBoundingClientRect(), right = target.getBoundingClientRect();
+      const arrows = [...row.querySelectorAll('button,a,input[type="button"],input[type="image"],img')]
+        .filter((item) => visible(item) && item.getBoundingClientRect().left >= left.right && item.getBoundingClientRect().right <= right.left)
+        .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+      const arrow = arrows.find((item) => /^(>|▶|►)$/.test((item.textContent || item.alt || item.title || '').trim())) || (arrows.length === 4 ? arrows[1] : null);
+      if (!arrow) return { ok: false, reason: 'A seta de Unidade de Despacho não foi identificada.' };
+      arrow.click();
+    }
+    return target.options.length === 1 && normalize(target.options[0].textContent) === '10º BPM'
+      ? { ok: true } : { ok: false, reason: 'A Unidade de Despacho deve conter somente 10º BPM.' };
+  }
+  if (action === 'titular') {
+    const row = rowFor('Titular ou Apoio na ocorrência?');
+    if (!row) return { ok: false, reason: 'O filtro Titular ou Apoio na ocorrência? não foi identificado.' };
+    const select = [...row.querySelectorAll('select')].filter(visible);
+    if (select.length === 1) {
+      const option = [...select[0].options].find((item) => normalize(item.textContent) === 'TITULAR');
+      if (!option) return { ok: false, reason: 'A opção Titular não aparece no filtro.' };
+      select[0].value = option.value;
+      select[0].dispatchEvent(new Event('change', { bubbles: true }));
+      return { ok: true };
+    }
+    const radios = [...row.querySelectorAll('input[type="radio"]')].filter(visible);
+    const radio = radios.find((item) => normalize(item.value) === 'TITULAR' || normalize(item.closest('label')?.textContent) === 'TITULAR');
+    if (!radio) return { ok: false, reason: 'A opção Titular não foi identificada.' };
+    radio.click();
+    return radio.checked ? { ok: true } : { ok: false, reason: 'O CAD não confirmou Titular.' };
+  }
   if (action === 'columnInventory' || action === 'columns') {
     const required = [
       ['Data da Ocorrência', 'Data / Hora da Ocorrência'],
@@ -122,8 +170,8 @@ function cadPageAction(action, options = {}) {
     const left = panels[0]?.getBoundingClientRect();
     if (!left) return { ok: false, reason: 'Não foi possível identificar as áreas de seleção das colunas no CAD.' };
     const labels = [...document.querySelectorAll('li,td,div,span')].filter(visible);
-    const selected = labels.find((element) => required.some((names) => hasLabel(element, names))
-      && element.getBoundingClientRect().left >= left.right - 5);
+    const selected = labels.find((element) => (options.grade === 'drugs' || required.some((names) => hasLabel(element, names)))
+      && element.getBoundingClientRect().left >= left.right - 5 && !element.children.length && normalize(element.textContent));
     if (!selected) return { ok: false, reason: 'A lista de colunas selecionadas à direita não foi identificada.' };
     const outside = labels.filter((element) => !element.children.length && normalize(element.textContent)
       && element.getBoundingClientRect().left >= left.left && element.getBoundingClientRect().right <= left.right
@@ -138,7 +186,7 @@ function cadPageAction(action, options = {}) {
         from: { x: from.left + from.width / 2, y: from.top + from.height / 2 },
         to: { x: to.left + to.width / 2, y: from.top + from.height / 2 } };
     }
-    const missing = required.filter((names) => !labels.some((element) => hasLabel(element, names)
+    const missing = (options.grade === 'drugs' ? [] : required).filter((names) => !labels.some((element) => hasLabel(element, names)
       && element.getBoundingClientRect().left >= left.right - 5));
     if (missing.length) return { ok: false, reason: `Estas colunas ainda não estão selecionadas para exportação: ${missing.map((names) => names.join(' / ')).join(', ')}.` };
     if (outside.length) return { ok: false, reason: `${outside.length} coluna(s) ainda estão fora da exportação. Selecione-as no CAD antes de aplicar.` };
@@ -164,5 +212,5 @@ function cadPageAction(action, options = {}) {
     setTimeout(() => target.parentElement.dispatchEvent(new Event('change', { bubbles: true })), 0);
     return { ok: true };
   }
-  return click({ search: 'Pesquisar', columnMenu: 'Colunas', exportMenu: 'Exportação', download: 'Baixar' }[action] || '');
+  return click({ search: 'Pesquisar', advancedSearch: 'Pesquisa Avançada', columnMenu: 'Colunas', exportMenu: 'Exportação', download: 'Baixar' }[action] || '');
 }

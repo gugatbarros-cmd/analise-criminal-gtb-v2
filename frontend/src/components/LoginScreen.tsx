@@ -4,7 +4,7 @@ import { isCloud } from '../services/cloud'
 import { useGreeting } from '../services/greeting'
 
 export function LoginScreen({ setup, onLogin }: { setup: boolean; onLogin: (token: string) => void }) {
-  const [username, setUsername] = useState('')
+  const [username, setUsername] = useState(() => { try { return localStorage.getItem('gtb-v2-last-account') || '' } catch { return '' } })
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [busy, setBusy] = useState(false)
@@ -15,7 +15,7 @@ export function LoginScreen({ setup, onLogin }: { setup: boolean; onLogin: (toke
     <section className="panel auth-panel"><p className="eyebrow">{isCloud ? 'Acesso protegido às bases sincronizadas' : 'Ambiente protegido · dados neste computador'}</p><p className="access-greeting">{greeting}! <span>{date}</span></p><h1>{setup ? 'Criar a primeira conta' : 'Entrar no sistema'}</h1>
       {isCloud && <p>Entre com o e-mail e a senha do sistema antigo. As bases são enviadas pela opção de sincronização no sistema local.</p>}
       {setup && <p>Crie uma conta administradora para este computador. Use uma senha de pelo menos 8 caracteres, com letra maiúscula, letra minúscula e caractere especial.</p>}
-      <form onSubmit={async event => { event.preventDefault(); if (setup && password !== confirmation) { setError('As senhas não conferem.'); return } setBusy(true); setError(''); try { const session = setup ? await createFirstUser(username, password) : await login(username, password); onLogin(session.token) } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.') } finally { setBusy(false) } }}>
+      <form onSubmit={async event => { event.preventDefault(); if (setup && password !== confirmation) { setError('As senhas não conferem.'); return } setBusy(true); setError(''); try { const session = setup ? await createFirstUser(username, password) : await login(username, password); try { localStorage.setItem('gtb-v2-last-account', session.username) } catch { /* armazenamento indisponível */ } onLogin(session.token) } catch (cause) { setError(cause instanceof Error ? cause.message : 'Não foi possível entrar.') } finally { setBusy(false) } }}>
         <label>{isCloud ? 'E-mail' : 'Usuário'}<input type={isCloud ? 'email' : 'text'} value={username} autoComplete="username" required onChange={event => setUsername(event.target.value)} /></label>
         <label>Senha<input type="password" value={password} autoComplete={setup ? 'new-password' : 'current-password'} minLength={setup ? 8 : undefined} required onChange={event => setPassword(event.target.value)} /></label>
         {setup && <label>Confirme a senha<input type="password" value={confirmation} autoComplete="new-password" required onChange={event => setConfirmation(event.target.value)} /></label>}
