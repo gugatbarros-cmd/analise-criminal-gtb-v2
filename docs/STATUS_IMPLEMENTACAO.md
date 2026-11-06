@@ -1,5 +1,9 @@
 # Andamento da implantação — 06/11/2026
 
+## Unidade de Despacho na consulta de Drogas — 0.1.90
+
+A página oficial de Drogas chama o filtro de `Unidade Despacho`, sem a palavra `de`. A automação agora reconhece esse rótulo e usa o botão do CAD que move somente a opção selecionada. Na sessão oficial, a lista de destino ficou com apenas `10º BPM`. Um teste sintético verifica o rótulo, o botão e a exclusão das outras unidades. A execução automática completa da importação ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
+
 ## Intervalo de datas da consulta de Drogas — 0.1.89
 
 O filtro oficial de Data da Ocorrência na consulta de Drogas apresenta doze campos: dia, mês, ano, hora, minuto e segundo no início e no fim. O assistente aceitava somente dez campos e interrompia a busca antes de aplicar o período. Agora reconhece os dois formatos, confere os limites dos campos e preenche o intervalo completo de 00:00:00 a 23:59:59. A sessão oficial confirmou os valores no formulário; testes sintéticos cobrem ambos os formatos. A execução automática completa da importação ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.

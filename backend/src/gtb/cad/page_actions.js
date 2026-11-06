@@ -111,7 +111,7 @@ function cadPageAction(action, options = {}) {
     return { ok: true };
   }
   if (action === 'dispatchUnit') {
-    const row = rowFor('Unidade de Despacho');
+    const row = rowFor('Unidade Despacho') || rowFor('Unidade de Despacho');
     if (!row) return { ok: false, reason: 'O filtro Unidade de Despacho não foi identificado.' };
     const lists = [...row.querySelectorAll('select')].filter(visible);
     if (lists.length === 1 && !lists[0].multiple) {
@@ -134,7 +134,10 @@ function cadPageAction(action, options = {}) {
       const arrows = [...row.querySelectorAll('button,a,input[type="button"],input[type="image"],img')]
         .filter((item) => visible(item) && item.getBoundingClientRect().left >= left.right && item.getBoundingClientRect().right <= right.left)
         .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
-      const arrow = arrows.find((item) => /^(>|▶|►)$/.test((item.textContent || item.alt || item.title || '').trim())) || (arrows.length === 4 ? arrows[1] : null);
+      const arrow = row.querySelector('a#Bbpassfld_righ')
+        || arrows.find((item) => item.tagName === 'A' && normalize(item.title) === 'CAMPO MOVER PARA A DIREITA')
+        || arrows.find((item) => /^(>|▶|►)$/.test((item.textContent || item.alt || item.title || '').trim()))
+        || (arrows.length === 4 ? arrows[1] : null);
       if (!arrow) return { ok: false, reason: 'A seta de Unidade de Despacho não foi identificada.' };
       arrow.click();
     }

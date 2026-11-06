@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Versão local 0.1.89. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Versão local 0.1.90. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Em **Relatórios e apresentações → MVI NEAC · Informe para o Comando**, prepare a prévia com o período desejado. Use **Imprimir ou salvar PDF** para o documento completo e **Abrir no WhatsApp** para compartilhar o resumo sem dados pessoais.
 
@@ -10,7 +10,7 @@ Na prévia do WhatsApp, confira os emojis e use **Abrir WhatsApp com emojis** pa
 
 Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte o e-mail e a senha de administrador ou analista ativo do sistema antigo. O Firebase permanece no Spark, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases do legado. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
 
-- Instalação: baixe `GTB2-Instalador-0.1.89.exe` em [Releases](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v0.1.89).
+- Instalação: baixe `GTB2-Instalador-0.1.90.exe` em [Releases](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v0.1.90).
 - Sistema online: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/ — usa as contas já autorizadas no sistema antigo.
 - Demonstração fictícia: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/?demo=1 — sem importações reais.
 
@@ -35,7 +35,7 @@ Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar
 
 Para criar um executável independente do ambiente de desenvolvimento, siga [o empacotamento Windows](docs/EMPACOTAMENTO_WINDOWS.md). O `GTB2-Local.exe` abre a interface e a API na mesma porta local e oferece comandos de backup e restauração dos dados do projeto novo.
 
-O instalador pronto fica em **Releases**. Baixe e execute `GTB2-Instalador-0.1.89.exe`; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
+O instalador pronto fica em **Releases**. Baixe e execute `GTB2-Instalador-0.1.90.exe`; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
 
 ### Ver a demonstração
 

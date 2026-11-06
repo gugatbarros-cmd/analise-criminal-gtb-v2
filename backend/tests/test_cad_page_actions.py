@@ -7,6 +7,41 @@ from playwright.sync_api import sync_playwright
 from gtb.cad.automation import ACTIONS
 
 
+def test_drugs_dispatch_unit_moves_only_tenth_bpm():
+    with sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+        except PlaywrightError:
+            try:
+                browser = playwright.chromium.launch(channel="msedge", headless=True)
+            except PlaywrightError:
+                pytest.skip("Chrome ou Edge necessário para testar os controles CAD")
+        try:
+            page = browser.new_page()
+            page.set_content("""
+                <table><tr><td>Unidade Despacho</td><td>
+                  <select multiple id="source" style="display:inline-block;width:160px;height:100px">
+                    <option>9º BPM</option><option>10º BPM</option><option>11º BPM</option>
+                  </select>
+                  <a id="Bbpassfld_righ" title="Campo Mover para a direita"
+                     style="display:inline-block;width:30px;height:30px">&gt;</a>
+                  <select multiple id="target" style="display:inline-block;width:160px;height:100px"></select>
+                </td></tr></table>
+                <script>
+                  document.querySelector('#Bbpassfld_righ').onclick = () => {
+                    const source = document.querySelector('#source');
+                    const target = document.querySelector('#target');
+                    for (const option of [...source.selectedOptions]) target.add(option);
+                  };
+                </script>
+            """)
+            assert page.evaluate(f"({ACTIONS})('dispatchUnit', {{grade:'drugs'}})") == {"ok": True}
+            assert page.locator("#target option").all_text_contents() == ["10º BPM"]
+            assert page.locator("#source option").all_text_contents() == ["9º BPM", "11º BPM"]
+        finally:
+            browser.close()
+
+
 @pytest.mark.parametrize("with_seconds", [False, True])
 def test_date_range_accepts_cad_fields_with_optional_seconds(with_seconds):
     with sync_playwright() as playwright:
