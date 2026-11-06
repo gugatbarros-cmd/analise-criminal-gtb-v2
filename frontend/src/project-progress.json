@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-06",
-  "implementationStatus": "Versão funcional finalizada no escopo implementado; entrega 0.1.88 corrige a seleção das colunas da grade de Drogas no CAD e dá tempo para o movimento de arrastar ser confirmado. Validação operacional: 90% concluída e 10% restante; a conferência da execução automática completa na sessão oficial permanece pendente.",
+  "implementationStatus": "Versão funcional finalizada no escopo implementado; entrega 0.1.89 corrige o filtro de período da consulta de Drogas no CAD. Os campos de segundos foram conferidos na página oficial e preenchidos corretamente; a execução automática completa da importação ainda requer conferência operacional. Validação operacional: 90% concluída e 10% restante; implementação funcional: 100% concluída.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

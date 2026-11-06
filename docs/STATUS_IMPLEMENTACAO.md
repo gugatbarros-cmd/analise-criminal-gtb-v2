@@ -1,5 +1,9 @@
 # Andamento da implantação — 06/11/2026
 
+## Intervalo de datas da consulta de Drogas — 0.1.89
+
+O filtro oficial de Data da Ocorrência na consulta de Drogas apresenta doze campos: dia, mês, ano, hora, minuto e segundo no início e no fim. O assistente aceitava somente dez campos e interrompia a busca antes de aplicar o período. Agora reconhece os dois formatos, confere os limites dos campos e preenche o intervalo completo de 00:00:00 a 23:59:59. A sessão oficial confirmou os valores no formulário; testes sintéticos cobrem ambos os formatos. A execução automática completa da importação ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
+
 ## Colunas da consulta de Drogas — 0.1.88
 
 A grade oficial de Drogas usa as listas `sc_ui_fldsel_available` e `sc_ui_fldsel_selected`. A automação agora move cada coluna entre essas listas com tempo suficiente para o CAD confirmar o arraste. Na sessão oficial, a busca chegou aos resultados, as 11 colunas restantes foram movidas, Aplicar funcionou e o CAD gerou o XLS. Uma planilha de Drogas já baixada foi validada e importada em banco local de teste, com 748 linhas aceitas e nenhuma em quarentena. Os testes automatizados usam uma grade sintética com a mesma estrutura e verificam a seleção e a confirmação. A execução automática completa na sessão oficial ainda depende de novo acesso do operador. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.

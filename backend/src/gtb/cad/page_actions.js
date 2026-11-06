@@ -47,17 +47,20 @@ function cadPageAction(action, options = {}) {
       return { ok: false, reason: 'O CAD não confirmou a opção Intervalo.' };
     }
     const fields = [...row.querySelectorAll('input')].filter((item) => visible(item) && ['text', 'number', 'tel'].includes(item.type));
-    // A captura autorizada mostra dois grupos de cinco campos. O comprimento
-    // 2/2/4/2/2 confirma dia, mês, ano, hora e minuto antes de preencher.
-    const lengths = [2, 2, 4, 2, 2, 2, 2, 4, 2, 2];
-    if (fields.length !== 10 || fields.some((item, index) => item.maxLength !== lengths[index])) {
-      return { ok: false, reason: 'Os dez campos do intervalo não correspondem ao formato dia/mês/ano hora:minuto. Confira a tela do CAD antes de continuar.' };
+    // A grade de Drogas inclui segundos nos dois extremos; outras grades usam
+    // apenas dia, mês, ano, hora e minuto. Confere a estrutura antes de preencher.
+    const fieldsPerDate = fields.length / 2;
+    const lengths = fieldsPerDate === 6 ? [2, 2, 4, 2, 2, 2, 2, 2, 4, 2, 2, 2]
+      : [2, 2, 4, 2, 2, 2, 2, 4, 2, 2];
+    if (![5, 6].includes(fieldsPerDate) || fields.some((item, index) => item.maxLength !== lengths[index])) {
+      return { ok: false, reason: 'Os campos do intervalo não correspondem ao formato de data e hora do CAD. Confira a tela antes de continuar.' };
     }
     const values = [];
     for (const [date, hour, minute] of [[options.startDate, '00', '00'], [options.endDate, '23', '59']]) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return { ok: false, reason: 'Data do intervalo inválida.' };
       const [year, month, day] = date.split('-');
       values.push(day, month, year, hour, minute);
+      if (fieldsPerDate === 6) values.push(hour === '00' ? '00' : '59');
     }
     fields.forEach((field, index) => {
       field.value = values[index];

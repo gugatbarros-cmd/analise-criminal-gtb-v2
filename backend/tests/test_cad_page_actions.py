@@ -7,6 +7,39 @@ from playwright.sync_api import sync_playwright
 from gtb.cad.automation import ACTIONS
 
 
+@pytest.mark.parametrize("with_seconds", [False, True])
+def test_date_range_accepts_cad_fields_with_optional_seconds(with_seconds):
+    with sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+        except PlaywrightError:
+            try:
+                browser = playwright.chromium.launch(channel="msedge", headless=True)
+            except PlaywrightError:
+                pytest.skip("Chrome ou Edge necessário para testar os controles CAD")
+        try:
+            page = browser.new_page()
+            suffixes = ["dia", "mes", "ano", "hor", "min"] + (["seg"] if with_seconds else [])
+            inputs = "".join(
+                f'<input type="text" name="ocor_dt_ocor{end}_{suffix}" maxlength="{4 if suffix == "ano" else 2}">'
+                for end in ("", "_input_2") for suffix in suffixes
+            )
+            page.set_content(
+                '<table><tr><td>Data da Ocorrência</td><td>'
+                '<select><option selected>Intervalo</option></select>' + inputs + '</td></tr></table>'
+            )
+            result = page.evaluate(
+                f"({ACTIONS})('dateRangeValues', {{startDate:'2026-11-01',endDate:'2026-11-06'}})"
+            )
+            assert result == {"ok": True}
+            values = page.locator("input").evaluate_all("fields => fields.map(field => field.value)")
+            start = ["01", "11", "2026", "00", "00"] + (["00"] if with_seconds else [])
+            end = ["06", "11", "2026", "23", "59"] + (["59"] if with_seconds else [])
+            assert values == start + end
+        finally:
+            browser.close()
+
+
 def test_drugs_columns_target_the_official_available_and_selected_lists():
     with sync_playwright() as playwright:
         try:
