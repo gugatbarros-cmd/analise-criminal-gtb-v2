@@ -67,6 +67,37 @@ def test_import_batch_history_has_pages(tmp_path, monkeypatch):
     assert client.get("/imports?size=101").status_code == 422
 
 
+def test_restore_checkpoint_api_for_one_indicator(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
+    monkeypatch.setattr(main.cloud_sync, "start", lambda: None)
+    client = TestClient(main.app)
+    client.post("/imports/mvi_cad", content=csv_bytes([cad()]),
+                headers={"X-Filename": "correct.csv"})
+    wrong = client.post("/imports/mvi_cad", content=csv_bytes([
+        cad(**{"Tipificação no despacho": "Feminicídio"})
+    ]), headers={"X-Filename": "wrong.csv"}).json()
+    response = client.get("/imports/checkpoints/mvi_cad")
+    assert response.status_code == 200
+    point = next(item for item in response.json()["items"]
+                 if item["id"] == "batch:" + wrong["id"])
+    restored = client.post(f"/imports/checkpoints/mvi_cad/{point['id']}/restore")
+    assert restored.status_code == 200
+    assert restored.json()["restored_records"] == 1
+    assert client.get("/indicators/summary").json()["categories"]["mvi_cad"] == {
+        "Homicídio doloso": 1}
+
+    class ViewerAuth:
+        def has_users(self):
+            return True
+
+        def user_for_token(self, _token):
+            return {"username": "consulta", "role": "viewer"}
+
+    monkeypatch.setattr(main, "auth_manager", ViewerAuth())
+    assert client.get("/imports/checkpoints/mvi_cad").status_code == 403
+    assert client.post(f"/imports/checkpoints/mvi_cad/{point['id']}/restore").status_code == 403
+
+
 def test_arms_api_applies_the_same_filters_to_totals_and_records(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "store", Store(tmp_path / "gtb.duckdb"))
     client = TestClient(main.app)

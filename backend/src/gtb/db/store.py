@@ -90,6 +90,9 @@ class Store:
         db.execute("""CREATE TABLE IF NOT EXISTS import_divergences (
             batch_id VARCHAR NOT NULL, source VARCHAR NOT NULL, natural_key VARCHAR NOT NULL,
             reason VARCHAR NOT NULL)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS restore_points (
+            id VARCHAR PRIMARY KEY, source VARCHAR NOT NULL, created_at TIMESTAMP NOT NULL,
+            label VARCHAR NOT NULL, backup_path VARCHAR NOT NULL)""")
         db.execute("""CREATE TABLE IF NOT EXISTS sync_outbox (
             id VARCHAR PRIMARY KEY, event_type VARCHAR NOT NULL,
             schema_version INTEGER NOT NULL, payload_json VARCHAR NOT NULL,
@@ -394,6 +397,92 @@ class Store:
     def batch_count(self) -> int:
         with self.lock, self._connect() as db:
             return db.execute("SELECT count(*) FROM import_batches").fetchone()[0]
+
+    def restore_points_for_source(self, source: str) -> list[dict]:
+        """Lista pontos locais recuperáveis de uma fonte, sem expor caminhos internos."""
+        if source not in SOURCES:
+            raise ValueError("Fonte desconhecida")
+        with self.lock, self._connect() as db:
+            batches = db.execute("""SELECT id, imported_at, filename, backup_path
+                FROM import_batches WHERE source = ? AND backup_path IS NOT NULL""", [source]).fetchall()
+            safety = db.execute("""SELECT id, created_at, label, backup_path
+                FROM restore_points WHERE source = ?""", [source]).fetchall()
+        backup_dir = (self.path.parent / "backups").resolve()
+        result = []
+        for kind, rows in (("batch", batches), ("safety", safety)):
+            for point_id, created_at, label, path in rows:
+                target = Path(path).resolve()
+                if target.is_relative_to(backup_dir) and target.is_file():
+                    result.append({"id": f"{kind}:{point_id}", "source": source,
+                                   "created_at": created_at, "label": label,
+                                   "kind": kind})
+        return sorted(result, key=lambda point: (point["created_at"], point["id"]), reverse=True)
+
+    def restore_source_point(self, source: str, point_id: str) -> dict:
+        """Restaura só uma fonte e guarda a situação atual para desfazer a operação."""
+        if source not in SOURCES:
+            raise ValueError("Fonte desconhecida")
+        kind, separator, identifier = point_id.partition(":")
+        if not separator or kind not in {"batch", "safety"} or not identifier:
+            raise ValueError("Ponto de recuperação inválido")
+        with self.lock:
+            with self._connect() as db:
+                if kind == "batch":
+                    row = db.execute("""SELECT backup_path, filename FROM import_batches
+                        WHERE id = ? AND source = ?""", [identifier, source]).fetchone()
+                else:
+                    row = db.execute("""SELECT backup_path, label FROM restore_points
+                        WHERE id = ? AND source = ?""", [identifier, source]).fetchone()
+            if not row or not row[0]:
+                raise ValueError("Ponto de recuperação não encontrado para este indicador")
+            backup_dir = (self.path.parent / "backups").resolve()
+            target = Path(row[0]).resolve()
+            if not target.is_relative_to(backup_dir) or not target.is_file() or target.suffix != ".duckdb":
+                raise ValueError("Cópia de segurança indisponível")
+            safety_id = str(uuid.uuid4())
+            safety_path = backup_dir / f"before-source-restore-{safety_id}.duckdb"
+            shutil.copy2(self.path, safety_path)
+            try:
+                with self._connect() as db:
+                    escaped_path = str(target).replace("'", "''")
+                    db.execute(f"ATTACH '{escaped_path}' AS checkpoint (READ_ONLY)")
+                    for table in ("record_versions", "import_batches", "quarantine", "import_divergences"):
+                        current_columns = [row[1] for row in db.execute(f"PRAGMA table_info('{table}')").fetchall()]
+                        saved_columns = [row[1] for row in db.execute(f"PRAGMA table_info('checkpoint.{table}')").fetchall()]
+                        if current_columns != saved_columns:
+                            raise ValueError("Cópia incompatível com a versão atual do banco")
+                    restored_count = db.execute("""SELECT count(*) FROM checkpoint.record_versions
+                        WHERE source = ? AND is_current""", [source]).fetchone()[0]
+                    db.execute("BEGIN TRANSACTION")
+                    try:
+                        db.execute("""DELETE FROM quarantine WHERE batch_id IN
+                            (SELECT id FROM import_batches WHERE source = ?)""", [source])
+                        db.execute("DELETE FROM import_divergences WHERE source = ?", [source])
+                        db.execute("DELETE FROM import_batches WHERE source = ?", [source])
+                        db.execute("DELETE FROM record_versions WHERE source = ?", [source])
+                        db.execute("""INSERT INTO record_versions SELECT * FROM checkpoint.record_versions
+                            WHERE source = ?""", [source])
+                        db.execute("""INSERT INTO import_batches SELECT * FROM checkpoint.import_batches
+                            WHERE source = ?""", [source])
+                        db.execute("""INSERT INTO quarantine SELECT q.* FROM checkpoint.quarantine q
+                            JOIN checkpoint.import_batches b ON b.id = q.batch_id WHERE b.source = ?""", [source])
+                        db.execute("""INSERT INTO import_divergences SELECT * FROM checkpoint.import_divergences
+                            WHERE source = ?""", [source])
+                        db.execute("INSERT INTO restore_points VALUES (?, ?, ?, ?, ?)",
+                                   [safety_id, source, datetime.now(UTC),
+                                    f"Antes de restaurar {row[1]}", str(safety_path)])
+                        db.execute("COMMIT")
+                    except Exception:
+                        db.execute("ROLLBACK")
+                        raise
+            except duckdb.Error as error:
+                safety_path.unlink(missing_ok=True)
+                raise ValueError("Cópia de segurança inválida ou incompatível") from error
+            except Exception:
+                safety_path.unlink(missing_ok=True)
+                raise
+            return {"source": source, "restored_records": restored_count,
+                    "safety_point": f"safety:{safety_id}"}
 
     def divergences(self, batch_id: str, limit: int = 1000,
                     offset: int = 0) -> list[dict]:

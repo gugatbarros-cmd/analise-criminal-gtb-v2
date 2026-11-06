@@ -225,6 +225,29 @@ def test_retification_history_and_preimport_backup(tmp_path):
     assert store.summary()["categories"]["mvi_cad"] == {"Homicídio doloso": 1}
 
 
+def test_restore_point_changes_only_selected_source_and_can_be_undone(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    store.import_file("mvi_cad", "original.csv", csv_bytes([cad()]))
+    revised = store.import_file("mvi_cad", "wrong.csv", csv_bytes([
+        cad(**{"Tipificação no despacho": "Feminicídio"})
+    ]))
+    store.import_file("mvi_neac", "other.csv", csv_bytes([neac()]))
+    point = next(item for item in store.restore_points_for_source("mvi_cad")
+                 if item["id"] == "batch:" + revised["id"])
+    assert point["label"] == "wrong.csv"
+    result = store.restore_source_point("mvi_cad", point["id"])
+    assert result["restored_records"] == 1
+    assert store.summary()["categories"]["mvi_cad"] == {"Homicídio doloso": 1}
+    assert store.summary()["mvi_neac"] == 1
+    assert store.batch_count() == 2
+    assert any(item["id"] == result["safety_point"]
+               for item in store.restore_points_for_source("mvi_cad"))
+    store.restore_source_point("mvi_cad", result["safety_point"])
+    assert store.summary()["categories"]["mvi_cad"] == {"Feminicídio": 1}
+    assert store.summary()["mvi_neac"] == 1
+    assert store.batch_count() == 3
+
+
 def test_quarantine_and_complete_import_never_delete(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     store.import_file("mvi_cad", "first.csv", csv_bytes([

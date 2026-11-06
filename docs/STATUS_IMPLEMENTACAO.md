@@ -1,5 +1,9 @@
 # Andamento da implantação — 06/11/2026
 
+## Recuperação de importações por base — 0.1.92
+
+A área de importações do GTB 2.0 local mostra os pontos automáticos criados antes de cada lote da base selecionada. O administrador pode restaurar um ponto mediante confirmação escrita. A restauração altera somente a fonte escolhida, recalcula seus indicadores e preserva as demais bases. Antes de restaurar, o sistema guarda uma nova cópia de segurança, também disponível na interface para desfazer a operação. Os arquivos ficam no computador de origem, sem custo adicional nem publicação de dados reais. Testes sintéticos confirmam recuperação, isolamento de outra fonte e desfazimento. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.
+
 ## Acesso online e gestão de contas — 0.1.91
 
 A entrada do GTB 2.0 ocupa toda a janela e adapta o conteúdo ao celular. O administrador pode entrar com e-mail ou com o login Tavares; os demais usuários entram com e-mail para preservar a privacidade do vínculo entre apelido e endereço. A Central de Acesso online lista contas autorizadas e permite alterar nome, posto e perfil ou revogar acesso. E-mail e senha continuam sob autenticação do Firebase. A interface usa as permissões já existentes no Firestore, sem ativar serviços pagos. Compilação e testes sintéticos validam o fluxo; a edição em uma conta administrativa real ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.

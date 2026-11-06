@@ -11,6 +11,8 @@ export type Source = 'mvi_cad' | 'mvi_neac' | 'ocorrencias' | 'armas' | 'drogas'
 export type Summary = LegacySummaryFields & { mvi_cad: number; mvi_neac: number; cvp: number; tentativas: number; tco: number; mandados: number; visitas: number; sossego: number; domestica: number; by_source: Record<Source, number>; monthly: Record<string, Partial<Record<Source, number>>>; categories: Partial<Record<Source, Record<string, number>>>; quarantined_rows: number; last_imported_at?: Partial<Record<Source, string | null>>; period_end?: string | null }
 export type Batch = { id: string; source: Source; filename: string; imported_at: string; row_count: number; inserted: number; updated: number; unchanged: number; quarantined: number; differences: number; status: string }
 export type BatchPage = AuditPage<Batch>
+export type RestorePoint = { id: string; source: Source; created_at: string; label: string; kind: 'batch' | 'safety' }
+export type RestoreResult = { source: Source; restored_records: number; safety_point: string }
 export type AuditPage<T> = { items: T[]; total: number; page: number; size: number }
 export type BatchAudit = {
   divergences: AuditPage<{ source: Source; natural_key: string; reason: string }>
@@ -185,6 +187,17 @@ export async function getMviRecordVersions(source: MviSource, naturalKey: string
 
 export async function getBatches(page = 1): Promise<BatchPage> {
   return json(await apiFetch(`${baseUrl}/imports?page=${page}&size=20`))
+}
+
+export async function getRestorePoints(source: Source): Promise<RestorePoint[]> {
+  const response = await json<{ items: RestorePoint[] }>(await apiFetch(`${baseUrl}/imports/checkpoints/${source}`))
+  return response.items
+}
+
+export async function restorePoint(source: Source, pointId: string): Promise<RestoreResult> {
+  return json(await apiFetch(`${baseUrl}/imports/checkpoints/${source}/${encodeURIComponent(pointId)}/restore`, {
+    method: 'POST',
+  }))
 }
 
 export async function getBatchAudit(batchId: string, quarantinePage = 1, divergencePage = 1): Promise<BatchAudit> {

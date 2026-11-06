@@ -17,7 +17,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.91"
+APP_VERSION = "0.1.92"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -104,7 +104,8 @@ async def authorize(request: Request, call_next):
         user = auth_manager.user_for_token(token)
         if not user:
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
-        if (path.startswith(("/auth/users", "/online/", "/reports/"))) and user["role"] != "admin":
+        if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints"))
+                and user["role"] != "admin"):
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
         if request.method == "POST" and path.startswith(("/imports/", "/cad/")) and user["role"] == "viewer":
             return JSONResponse({"detail": "Perfil somente para consulta"}, status_code=403)
@@ -303,6 +304,27 @@ def imports(page: int = Query(1, ge=1, le=1_000_000),
             size: int = Query(20, ge=1, le=100)) -> dict:
     return {"items": store.batches(size, (page - 1) * size),
             "total": store.batch_count(), "page": page, "size": size}
+
+
+@app.get("/imports/checkpoints/{source}")
+def import_checkpoints(source: str) -> dict:
+    try:
+        return {"items": store.restore_points_for_source(source)}
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+
+
+@app.post("/imports/checkpoints/{source}/{point_id}/restore")
+def restore_import_checkpoint(source: str, point_id: str) -> dict:
+    if demo_mode():
+        raise HTTPException(403, "Demonstração somente para consulta")
+    try:
+        result = store.restore_source_point(source, point_id)
+        cloud_sync.start()
+        cloud_sync.wake.set()
+        return result
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
 
 
 @app.get("/imports/{batch_id}/divergences")
