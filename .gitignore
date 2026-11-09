@@ -13,6 +13,7 @@ __pycache__/
 .pytest_cache/
 backend/test-temp-*/
 backend/.pytest-temp/
+backend/.pytest-temp-*/
 .ruff_cache/
 .env
 !.env.example

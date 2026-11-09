@@ -1,4 +1,8 @@
-# Andamento da implantação — 06/11/2026
+# Andamento da implantação — 09/11/2026
+
+## Filtro Titular na importação alternativa de Drogas — 0.1.95
+
+A tela oficial do CAD mostra duas listas para “Titular ou Apoio na ocorrência?”. O assistente agora reconhece a lista da direita, aceita quando apenas Titular já está nela e, quando necessário, move somente Titular da lista da esquerda. A seleção é conferida antes da pesquisa para impedir a inclusão de Apoio. O teste com uma grade sintética baseada na captura enviada passou para os dois estados. A execução automática completa no CAD ainda precisa de conferência operacional. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante.
 
 ## Mapa, conferência do MVI CAD e aviso de atualização — 0.1.94
 

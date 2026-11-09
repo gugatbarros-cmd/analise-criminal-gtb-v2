@@ -147,13 +147,34 @@ function cadPageAction(action, options = {}) {
   if (action === 'titular') {
     const row = rowFor('Titular ou Apoio na ocorrência?');
     if (!row) return { ok: false, reason: 'O filtro Titular ou Apoio na ocorrência? não foi identificado.' };
-    const select = [...row.querySelectorAll('select')].filter(visible);
-    if (select.length === 1) {
-      const option = [...select[0].options].find((item) => normalize(item.textContent) === 'TITULAR');
+    const selects = [...row.querySelectorAll('select')].filter(visible);
+    if (selects.length >= 2 && selects.every((item) => item.multiple)) {
+      const source = selects[0], target = selects.at(-1);
+      if (![...target.options].some((item) => normalize(item.textContent) === 'TITULAR')) {
+        const option = [...source.options].find((item) => normalize(item.textContent) === 'TITULAR');
+        if (!option) return { ok: false, reason: 'A opção Titular não aparece no filtro.' };
+        for (const item of source.options) item.selected = false;
+        option.selected = true;
+        source.dispatchEvent(new Event('change', { bubbles: true }));
+        const left = source.getBoundingClientRect(), right = target.getBoundingClientRect();
+        const arrows = [...row.querySelectorAll('button,a,input[type="button"],input[type="image"],img')]
+          .filter((item) => visible(item) && item.getBoundingClientRect().left >= left.right && item.getBoundingClientRect().right <= right.left)
+          .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+        const arrow = arrows.find((item) => item.tagName === 'A' && normalize(item.title) === 'CAMPO MOVER PARA A DIREITA')
+          || (arrows.length === 4 ? arrows[1] : null);
+        if (!arrow) return { ok: false, reason: 'A seta para selecionar Titular não foi identificada.' };
+        arrow.click();
+      }
+      return target.options.length === 1 && normalize(target.options[0].textContent) === 'TITULAR'
+        ? { ok: true } : { ok: false, reason: 'Deixe somente Titular na lista da direita.' };
+    }
+    if (selects.length === 1 && !selects[0].multiple) {
+      const option = [...selects[0].options].find((item) => normalize(item.textContent) === 'TITULAR');
       if (!option) return { ok: false, reason: 'A opção Titular não aparece no filtro.' };
-      select[0].value = option.value;
-      select[0].dispatchEvent(new Event('change', { bubbles: true }));
-      return { ok: true };
+      selects[0].value = option.value;
+      selects[0].dispatchEvent(new Event('change', { bubbles: true }));
+      return normalize(selects[0].selectedOptions?.[0]?.textContent) === 'TITULAR'
+        ? { ok: true } : { ok: false, reason: 'O CAD não confirmou Titular.' };
     }
     const radios = [...row.querySelectorAll('input[type="radio"]')].filter(visible);
     const radio = radios.find((item) => normalize(item.value) === 'TITULAR' || normalize(item.closest('label')?.textContent) === 'TITULAR');

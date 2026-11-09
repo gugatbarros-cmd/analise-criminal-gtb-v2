@@ -42,6 +42,42 @@ def test_drugs_dispatch_unit_moves_only_tenth_bpm():
             browser.close()
 
 
+@pytest.mark.parametrize("preselected", [False, True])
+def test_drugs_titular_uses_the_two_lists_shown_by_cad(preselected):
+    with sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+        except PlaywrightError:
+            try:
+                browser = playwright.chromium.launch(channel="msedge", headless=True)
+            except PlaywrightError:
+                pytest.skip("Chrome ou Edge necessário para testar os controles CAD")
+        try:
+            page = browser.new_page()
+            page.set_content(f"""
+                <table><tr><td>Titular ou Apoio na ocorrência?</td><td>
+                  <select multiple id="source" style="display:inline-block;width:160px;height:100px">
+                    <option>Titular</option><option>Apoio</option>
+                  </select>
+                  <a title="Campo Mover para a direita" style="display:inline-block;width:30px;height:30px">&gt;</a>
+                  <select multiple id="target" style="display:inline-block;width:160px;height:100px">
+                    {'<option>Titular</option>' if preselected else ''}
+                  </select>
+                </td></tr></table>
+                <script>
+                  document.querySelector('a').onclick = () => {{
+                    const source = document.querySelector('#source');
+                    const target = document.querySelector('#target');
+                    for (const option of [...source.selectedOptions]) target.add(option);
+                  }};
+                </script>
+            """)
+            assert page.evaluate(f"({ACTIONS})('titular')") == {"ok": True}
+            assert page.locator("#target option").all_text_contents() == ["Titular"]
+        finally:
+            browser.close()
+
+
 @pytest.mark.parametrize("with_seconds", [False, True])
 def test_date_range_accepts_cad_fields_with_optional_seconds(with_seconds):
     with sync_playwright() as playwright:
