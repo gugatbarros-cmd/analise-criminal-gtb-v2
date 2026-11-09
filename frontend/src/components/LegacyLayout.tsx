@@ -54,10 +54,11 @@ const alagoasClock = new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Maceio',
   hour: '2-digit',
   minute: '2-digit',
-  hour12: false,
+  second: '2-digit',
+  hourCycle: 'h23',
 })
 
-function HeaderClock() {
+function GreetingClock() {
   const [time, setTime] = useState(() => alagoasClock.format(new Date()))
   useEffect(() => {
     const update = () => setTime(alagoasClock.format(new Date()))
@@ -68,7 +69,10 @@ function HeaderClock() {
       document.removeEventListener('visibilitychange', update)
     }
   }, [])
-  return <time className="workspace-clock" title="Hora de Alagoas" aria-label={`Hora de Alagoas: ${time}`}><span aria-hidden="true">AL</span> {time}</time>
+  return <time className="workspace-clock" title="Hora de Alagoas" aria-label={`Hora de Alagoas: ${time}`}>
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+    <span className="workspace-clock-text"><span className="workspace-clock-label">HORA DE ALAGOAS</span><strong>{time}</strong></span>
+  </time>
 }
 
 export function LegacyLayout({ children, version, demo, username, onLogout, onNavigate }: {
@@ -148,7 +152,7 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
           {username && <div className="legacy-user"><span className="legacy-avatar">10</span><div><small>{greeting}</small><strong>{username}</strong></div><button type="button" onClick={onLogout}>Sair</button></div>}
         </div>
       </header>
-      <div className="workspace-greeting"><div className="workspace-greeting-message">{username && <strong>{greeting}, {username}!</strong>}<span>{date}</span></div><HeaderClock /></div>
+      <div className="workspace-greeting"><div className="workspace-greeting-message">{username && <strong>{greeting}, {username}!</strong>}<span>{date}</span></div><GreetingClock /></div>
       {children}
     </div>
   </div></IndicatorNavigationContext.Provider>

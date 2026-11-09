@@ -1,5 +1,9 @@
 # Andamento da implantação — 09/11/2026
 
+## Relógio com segundos — 0.1.99
+
+A faixa da saudação exibe a hora de Alagoas com horas, minutos e segundos em um cartão compacto, com ícone de relógio e números alinhados para leitura estável. O valor atualiza a cada segundo e quando a aba volta a ficar visível; no celular, o ícone se recolhe para preservar espaço.
+
 ## Organização do cabeçalho — 0.1.98
 
 O brasão do 10º BPM fica centralizado na barra superior em telas largas. O nome da página permanece à esquerda e o ambiente, a versão e a conta ficam agrupados à direita. A hora de Alagoas passa para a faixa da saudação, junto à data, e continua atualizando automaticamente. Em telas pequenas, o brasão fica ao lado do menu para manter o título legível.

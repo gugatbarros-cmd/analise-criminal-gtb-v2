@@ -66,8 +66,11 @@ body{background:var(--legacy-bg);color:var(--legacy-text)}
 .workspace-greeting{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:46px}
 .workspace-greeting-message{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;min-width:0}
 .workspace-greeting-message span{margin-left:0}
-.workspace-clock{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;color:#0a3d75;font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
-.workspace-clock span{margin-left:0;color:#526a82;font-size:9px;font-weight:800;letter-spacing:.08em}
+.workspace-clock{display:inline-flex;align-items:center;gap:9px;flex:0 0 auto;white-space:nowrap;padding:6px 11px;border:1px solid #cbdbe9;border-radius:10px;background:#fff;color:#0a3d75;box-shadow:0 1px 3px rgba(10,49,94,.08);font-variant-numeric:tabular-nums}
+.workspace-clock svg{width:19px;height:19px;stroke:#2d6194;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.workspace-clock-text{display:grid;gap:1px}
+.workspace-clock .workspace-clock-label{margin:0;color:#607b97;font-size:8px;font-weight:800;letter-spacing:.1em;line-height:1}
+.workspace-clock strong{color:#0a315e;font-size:16px;font-weight:800;letter-spacing:.06em;line-height:1.15}
 @media(min-width:901px) and (max-width:1080px){.legacy-header{gap:10px;padding:0 12px}.legacy-title p,.legacy-user .legacy-avatar{display:none}.legacy-header-actions{gap:8px}.legacy-user strong{max-width:70px}}
 @media(max-width:900px){.legacy-header{grid-template-columns:42px 48px minmax(0,1fr) auto;gap:10px;padding:0 14px}.legacy-header>img{position:static;grid-column:2;grid-row:1;transform:none}.legacy-header>.legacy-title{grid-column:3;grid-row:1;max-width:none}.legacy-header-actions{grid-column:4;grid-row:1}.legacy-user{display:none}}
-@media(max-width:520px){.legacy-header{grid-template-columns:38px 42px minmax(0,1fr);gap:8px}.legacy-header-actions{display:none}.legacy-title h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.workspace-greeting{align-items:center;padding:8px 16px}.workspace-greeting-message{display:grid;gap:2px}.workspace-greeting-message span{font-size:11px}.workspace-clock{font-size:13px}}
+@media(max-width:520px){.legacy-header{grid-template-columns:38px 42px minmax(0,1fr);gap:8px}.legacy-header-actions{display:none}.legacy-title h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.workspace-greeting{align-items:center;padding:8px 16px}.workspace-greeting-message{display:grid;gap:2px}.workspace-greeting-message span{font-size:11px}.workspace-clock{padding:5px 8px}.workspace-clock svg{display:none}.workspace-clock strong{font-size:14px}.workspace-clock .workspace-clock-label{font-size:7px}}

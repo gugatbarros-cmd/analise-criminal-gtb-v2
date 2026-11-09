@@ -20,6 +20,7 @@ describe('interface herdada do sistema anterior', () => {
     expect(html).not.toContain('Em migração')
     expect(html).toContain('Dashboard criminal')
     expect(html).toContain('Hora de Alagoas')
+    expect(html).toMatch(/aria-label="Hora de Alagoas: \d{2}:\d{2}:\d{2}"/)
     expect(html.indexOf('workspace-greeting')).toBeLessThan(html.indexOf('Hora de Alagoas'))
     expect(html).toContain('legacy-header-actions')
     expect(html).toContain('v0.1.94')
