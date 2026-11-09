@@ -121,6 +121,52 @@ def test_cad_narrative_recovers_confirmed_homicide_without_structured_death(tmp_
     assert store.summary()['mvi_cad'] == 0
 
 
+def test_attempt_evolution_requires_documented_confirmation_and_keeps_neac_separate(tmp_path):
+    store = Store(tmp_path / 'data' / 'gtb.duckdb')
+    store.import_file('mvi_cad', 'tentativa.csv', csv_bytes([
+        cad(**{'Número da ocorrência': 'CAD-A1', 'Tipificação no despacho': 'Tentativa de homicídio',
+               'Óbito?': 'N', 'Relato': 'Vítima socorrida para atendimento.'}),
+        cad(**{'Número da ocorrência': 'CAD-A2', 'Tipificação no despacho': 'Tentativa de furto',
+               'Nome da vítima': 'Outra Pessoa', 'Nº NIC': 'NIC-222', 'Óbito?': 'N',
+               'Relato': 'Sem notícia de óbito.'}),
+    ]))
+    store.import_file('mvi_neac', 'neac.csv', csv_bytes([
+        neac(**{'Número da ocorrência': 'NEAC-9'}),
+    ]))
+    cases = store.mvi_cad_review_cases(focus='attempts')
+    assert cases['total'] == 1
+    case = cases['items'][0]
+    assert case['occurrence'] == 'CAD-A1'
+    assert case['attempted'] is True
+    assert case['neac_candidates'][0]['same_occurrence'] is False
+    assert store.summary()['mvi_cad'] == 0
+    assert store.summary()['mvi_neac'] == 1
+    with pytest.raises(ValueError, match='referência'):
+        store.review_mvi_cad(case['natural_key'], case['row_hash'], 'confirmed',
+                             'Homicídio doloso', 'admin')
+    with pytest.raises(ValueError, match='anterior'):
+        store.review_mvi_cad(case['natural_key'], case['row_hash'], 'confirmed',
+                             'Homicídio doloso', 'admin', 'Boletim complementar NEAC-9', '2026-01-04')
+    store.review_mvi_cad(case['natural_key'], case['row_hash'], 'confirmed',
+                         'Homicídio doloso', 'admin', 'Boletim complementar NEAC-9', '2026-01-06')
+    assert store.summary()['mvi_cad'] == 1
+    assert store.summary()['mvi_neac'] == 1
+    reviewed = store.mvi_cad_review_cases(status='reviewed', focus='attempts')['items'][0]
+    assert reviewed['evidence_note'] == 'Boletim complementar NEAC-9'
+    assert reviewed['death_date'] == '2026-01-06'
+    later = store.import_file('mvi_cad', 'outro.csv', csv_bytes([
+        cad(**{'Número da ocorrência': 'CAD-A3', 'Nome da vítima': 'Terceira Pessoa',
+               'Nº NIC': 'NIC-333'}),
+    ]), 'partial')
+    store.restore_source_point('mvi_cad', f"batch:{later['id']}")
+    restored = store.mvi_cad_review_cases(status='reviewed', focus='attempts')['items'][0]
+    assert restored['evidence_note'] == 'Boletim complementar NEAC-9'
+    assert store.summary()['mvi_cad'] == 1
+    store.review_mvi_cad(case['natural_key'], case['row_hash'], 'pending', None, 'admin')
+    assert store.summary()['mvi_cad'] == 0
+    assert store.mvi_cad_review_cases(status='reviewed', focus='attempts')['total'] == 0
+
+
 def test_cad_adapter_upgrade_preserves_raw_and_backs_up_changes(tmp_path):
     path = tmp_path / 'data' / 'gtb.duckdb'
     store = Store(path)

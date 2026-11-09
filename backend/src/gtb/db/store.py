@@ -17,7 +17,12 @@ import duckdb
 from gtb.db.neac_upgrade import upgrade_neac
 from gtb.indicators.arms import arm_field, arm_quantity, arm_restricted, arm_seized
 from gtb.indicators.drugs import drug_field, drug_quantity, drug_weight_grams
-from gtb.indicators.mvi_narrative import cad_narrative_reviewable, narrative_values
+from gtb.indicators.mvi_narrative import (
+    cad_attempted_mvi,
+    cad_narrative_death_signal,
+    cad_narrative_reviewable,
+    narrative_values,
+)
 from gtb.indicators.mvi_time import mvi_hour, time_band
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain, victim_role
 from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
@@ -99,6 +104,10 @@ class Store:
             natural_key VARCHAR NOT NULL, row_hash VARCHAR NOT NULL,
             decision VARCHAR NOT NULL, category VARCHAR, reviewer VARCHAR NOT NULL,
             reviewed_at TIMESTAMP NOT NULL, PRIMARY KEY (natural_key, row_hash))""")
+        db.execute("""CREATE TABLE IF NOT EXISTS mvi_cad_review_evidence (
+            natural_key VARCHAR NOT NULL, row_hash VARCHAR NOT NULL,
+            note VARCHAR NOT NULL, death_date DATE,
+            PRIMARY KEY (natural_key, row_hash))""")
         db.execute("""CREATE TABLE IF NOT EXISTS map_location_overrides (
             source VARCHAR NOT NULL, natural_key VARCHAR NOT NULL, row_hash VARCHAR NOT NULL,
             latitude DOUBLE NOT NULL, longitude DOUBLE NOT NULL,
@@ -188,32 +197,71 @@ class Store:
                 raise
 
     def mvi_cad_review_cases(self, page: int = 1, size: int = 20,
-                             status: str = 'pending') -> dict:
-        if page < 1 or not 1 <= size <= 100 or status not in {'pending', 'all', 'reviewed'}:
+                             status: str = 'pending', focus: str = 'all') -> dict:
+        if (page < 1 or not 1 <= size <= 100 or status not in {'pending', 'all', 'reviewed'}
+                or focus not in {'all', 'attempts', 'death_mentions'}):
             raise ValueError('Filtro de revisão inválido')
         with self.lock, self._connect() as db:
             rows = db.execute("""SELECT v.natural_key, v.row_hash, v.occurrence, v.victim,
                 v.event_date, v.municipality, v.nature, v.category, v.eligible,
-                v.reason, v.raw_json, r.decision, r.reviewer, r.reviewed_at
+                v.reason, v.raw_json, r.decision, r.reviewer, r.reviewed_at,
+                e.note, e.death_date
                 FROM record_versions v LEFT JOIN mvi_cad_reviews r
                   ON v.natural_key = r.natural_key AND v.row_hash = r.row_hash
+                LEFT JOIN mvi_cad_review_evidence e
+                  ON v.natural_key = e.natural_key AND v.row_hash = e.row_hash
                 WHERE v.source = 'mvi_cad' AND v.is_current
                 ORDER BY v.event_date DESC, v.natural_key""").fetchall()
+            neac_rows = db.execute("""SELECT year, occurrence, victim, municipality,
+                event_date, category FROM record_versions
+                WHERE source = 'mvi_neac' AND is_current AND eligible""").fetchall()
+        neac_by_person = {}
+        for year, occurrence, victim, city, day, category in neac_rows:
+            if key(victim):
+                neac_by_person.setdefault((year, key(victim)), []).append(
+                    (occurrence, city, day, category))
         items = []
-        for natural_key, row_hash, occurrence, victim, day, city, nature, category, eligible, reason, raw, decision, reviewer, reviewed_at in rows:
+        for (natural_key, row_hash, occurrence, victim, day, city, nature, category,
+             eligible, reason, raw, decision, reviewer, reviewed_at, note, death_date) in rows:
             fields = json.loads(raw)
-            if not cad_narrative_reviewable(fields) or not narrative_values(fields):
+            if not victim_role(pick(fields, 'role')):
+                continue
+            attempted = cad_attempted_mvi(nature)
+            narrative_match = cad_narrative_reviewable(fields)
+            if not attempted and not narrative_match:
+                continue
+            if focus == 'attempts' and not attempted:
+                continue
+            if focus == 'death_mentions' and (attempted or not narrative_match):
                 continue
             if status == 'pending' and (decision or eligible):
                 continue
             if status == 'reviewed' and not decision:
                 continue
+            neac_candidates = []
+            if attempted and victim:
+                for neac_occurrence, neac_city, neac_day, neac_category in neac_by_person.get(
+                        (day.year, key(victim)), []):
+                    if key(city) != key(neac_city) or abs((neac_day - day).days) > 30:
+                        continue
+                    neac_candidates.append({'occurrence': neac_occurrence,
+                                            'event_date': str(neac_day),
+                                            'municipality': neac_city,
+                                            'category': neac_category,
+                                            'same_occurrence': key(occurrence) == key(neac_occurrence)})
             items.append({'natural_key': natural_key, 'row_hash': row_hash,
                           'occurrence': occurrence, 'victim': victim, 'event_date': str(day),
                           'municipality': city, 'nature': nature, 'category': category,
                           'eligible': eligible, 'reason': reason, 'decision': decision,
                           'reviewer': reviewer, 'reviewed_at': str(reviewed_at) if reviewed_at else None,
+                          'attempted': attempted,
+                          'death_signal': cad_narrative_death_signal(fields),
+                          'evidence_note': note, 'death_date': str(death_date) if death_date else None,
+                          'neac_candidates': neac_candidates[:3],
                           'narratives': [value[:20000] for value in narrative_values(fields)]})
+        items.sort(key=lambda item: (not item['attempted'],
+                                     not item['death_signal'],
+                                     not bool(item['neac_candidates'])))
         return {'items': items[(page - 1) * size:page * size], 'total': len(items),
                 'page': page, 'size': size}
 
@@ -227,26 +275,41 @@ class Store:
         return hashlib.sha256(json.dumps([rows, locations], ensure_ascii=False).encode()).hexdigest()
 
     def review_mvi_cad(self, natural_key: str, row_hash: str, decision: str,
-                       category: str | None, reviewer: str) -> dict:
+                       category: str | None, reviewer: str,
+                       evidence_note: str | None = None,
+                       death_date: str | None = None) -> dict:
         if decision not in {'confirmed', 'rejected', 'pending'}:
             raise ValueError('Decisão desconhecida')
         allowed = {'Homicídio doloso', 'Feminicídio', 'Latrocínio',
                    'Lesão corporal seguida de morte'}
         if decision == 'confirmed' and category not in allowed:
             raise ValueError('Classificação MVI obrigatória')
+        note = ' '.join((evidence_note or '').split())
+        if len(note) > 1000:
+            raise ValueError('Referência da confirmação acima de 1.000 caracteres')
+        try:
+            confirmed_death = calendar_date.fromisoformat(death_date) if death_date else None
+        except ValueError as error:
+            raise ValueError('Data do óbito inválida') from error
         with self.lock, self._connect() as db:
             db.execute('BEGIN TRANSACTION')
             try:
-                row = db.execute("""SELECT version, row_hash, raw_json FROM record_versions
+                row = db.execute("""SELECT version, row_hash, raw_json, nature, event_date
+                    FROM record_versions
                     WHERE source = 'mvi_cad' AND natural_key = ? AND is_current""",
                                  [natural_key]).fetchone()
                 if not row or row[1] != row_hash:
                     raise ValueError('Caso alterado após a leitura; atualize a lista')
                 fields = json.loads(row[2])
-                if not cad_narrative_reviewable(fields):
+                attempted = cad_attempted_mvi(row[3])
+                if not attempted and not cad_narrative_reviewable(fields):
                     raise ValueError('Relato sem indício de MVI')
                 if not victim_role(pick(fields, 'role')):
                     raise ValueError('Registro não identifica a pessoa como vítima')
+                if decision == 'confirmed' and attempted and len(note) < 12:
+                    raise ValueError('Informe a referência que confirma o óbito após a tentativa')
+                if confirmed_death and confirmed_death < row[4]:
+                    raise ValueError('Data do óbito anterior à data da tentativa')
                 original = normalize('mvi_cad', fields)
                 eligible = decision == 'confirmed' or (decision == 'pending' and original.eligible)
                 chosen = category if decision == 'confirmed' else original.category
@@ -258,9 +321,14 @@ class Store:
                            [eligible, chosen, reason, natural_key, row[0]])
                 db.execute('DELETE FROM mvi_cad_reviews WHERE natural_key = ? AND row_hash = ?',
                            [natural_key, row_hash])
+                db.execute('DELETE FROM mvi_cad_review_evidence WHERE natural_key = ? AND row_hash = ?',
+                           [natural_key, row_hash])
                 if decision != 'pending':
                     db.execute('INSERT INTO mvi_cad_reviews VALUES (?, ?, ?, ?, ?, ?)',
                                [natural_key, row_hash, decision, chosen, reviewer, datetime.now(UTC)])
+                    if note or confirmed_death:
+                        db.execute('INSERT INTO mvi_cad_review_evidence VALUES (?, ?, ?, ?)',
+                                   [natural_key, row_hash, note, confirmed_death])
                 db.execute('COMMIT')
             except Exception:
                 db.execute('ROLLBACK')
@@ -621,6 +689,7 @@ class Store:
                         db.execute("DELETE FROM record_versions WHERE source = ?", [source])
                         if source == 'mvi_cad':
                             db.execute('DELETE FROM mvi_cad_reviews')
+                            db.execute('DELETE FROM mvi_cad_review_evidence')
                         db.execute('DELETE FROM map_location_overrides WHERE source = ?', [source])
                         db.execute("""INSERT INTO record_versions SELECT * FROM checkpoint.record_versions
                             WHERE source = ?""", [source])
@@ -633,6 +702,11 @@ class Store:
                                 WHERE table_catalog = 'checkpoint' AND table_name = 'mvi_cad_reviews'""").fetchone()[0]
                             if has_reviews:
                                 db.execute('INSERT INTO mvi_cad_reviews SELECT * FROM checkpoint.mvi_cad_reviews')
+                            has_evidence = db.execute("""SELECT count(*) FROM information_schema.tables
+                                WHERE table_catalog = 'checkpoint' AND table_name = 'mvi_cad_review_evidence'""").fetchone()[0]
+                            if has_evidence:
+                                db.execute('INSERT INTO mvi_cad_review_evidence '
+                                           'SELECT * FROM checkpoint.mvi_cad_review_evidence')
                         db.execute("""INSERT INTO import_batches SELECT * FROM checkpoint.import_batches
                             WHERE source = ?""", [source])
                         db.execute("""INSERT INTO quarantine SELECT q.* FROM checkpoint.quarantine q

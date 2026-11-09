@@ -1,5 +1,9 @@
 # Andamento da implantação — 09/11/2026
 
+## Evolução de tentativas para MVI CAD — 0.1.96
+
+A revisão local do MVI CAD agora oferece uma fila específica para tentativas de homicídio, feminicídio e latrocínio, inclusive quando a linha importada não contém relato. Relatos que mencionam morte permanecem em outra fila. Possíveis pares do NEAC, encontrados por nome completo, município, ano e data próxima, aparecem apenas como pistas de conferência; não alteram nenhum indicador. O administrador lê o relato e consulta a documentação oficial, registra a referência da confirmação e pode informar a data do óbito. Uma tentativa só entra na contagem CAD após confirmação humana com referência; descarte e reabertura permanecem auditáveis. A referência fica apenas no banco local, integra os pontos de restauração por fonte e não é enviada ao site. Testes sintéticos confirmam a exigência de evidência, a preservação do NEAC e a reversão da contagem ao reabrir. A conferência operacional caso a caso e a paridade oficial entre as fontes continuam pendentes. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante.
+
 ## Filtro Titular na importação alternativa de Drogas — 0.1.95
 
 A tela oficial do CAD mostra duas listas para “Titular ou Apoio na ocorrência?”. O assistente agora reconhece a lista da direita, aceita quando apenas Titular já está nela e, quando necessário, move somente Titular da lista da esquerda. A seleção é conferida antes da pesquisa para impedir a inclusão de Apoio. O teste com uma grade sintética baseada na captura enviada passou para os dois estados. A execução automática completa no CAD ainda precisa de conferência operacional. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante.

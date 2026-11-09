@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-09",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.95: o filtro Titular ou Apoio da importação alternativa de Drogas agora reconhece as duas listas do CAD, confirma Titular na lista da direita e evita incluir Apoio. A consulta automática completa ainda requer conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.96: fila própria para tentativas de MVI CAD, leitura do relato, pistas de possível correspondência no NEAC e confirmação humana com referência de óbito antes de alterar o indicador CAD. NEAC permanece independente; casos reais ainda exigem conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

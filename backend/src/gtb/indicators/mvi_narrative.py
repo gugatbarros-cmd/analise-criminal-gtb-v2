@@ -95,6 +95,18 @@ _UNCERTAIN_DEATH = re.compile(r"\b(?:possivel|supost[oa]|suspeita\s+de|a\s+confi
                               r"aparentemente)\b.{0,35}\b(?:morte|obito|homicidio)\b")
 _REVIEW_TERMS = re.compile(r"\b(?:homicidio|feminicidio|latrocinio|obito|morte|morreu|"
                            r"faleceu|assassinat\w*|assassinad\w*)\b")
+_ATTEMPT_MVI = re.compile(r"\btentativa\s+de\s+(?:homicidio|feminicidio|latrocinio)\b")
+
+
+def cad_attempted_mvi(nature: str) -> bool:
+    """Destaca tentativas de MVI para acompanhar eventual óbito posterior."""
+    return bool(_ATTEMPT_MVI.search(plain(nature)))
+
+
+def cad_narrative_death_signal(row: dict[str, str]) -> bool:
+    """Sinal para priorizar leitura; não confirma óbito automaticamente."""
+    return any(_DEATH.search(plain(value)) or _CONSUMED.search(plain(value))
+               for value in narrative_values(row))
 
 
 def cad_narrative_reviewable(row: dict[str, str]) -> bool:

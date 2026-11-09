@@ -18,6 +18,14 @@
 .cad-review-narrative{white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;padding:12px;background:#fff;border:1px solid #dbe4eb;border-radius:6px}
 .cad-review-actions{display:flex;flex-wrap:wrap;align-items:end;gap:8px}
 .cad-review-actions label{display:flex;flex-direction:column;gap:4px}
+.cad-review-filters,.cad-review-evidence{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}
+.cad-review-filters label,.cad-review-evidence label{display:flex;flex-direction:column;gap:4px}
+.cad-review-evidence label:first-child{flex:1 1 320px}
+.cad-review-evidence textarea{width:100%;min-height:74px;resize:vertical}
+.cad-review-evidence small{flex-basis:100%;color:#526a82}
+.cad-review-signal{padding:8px 10px;border-left:3px solid #bd771c;background:#fff6e9;color:#70420a}
+.cad-review-neac{padding:10px 12px;border:1px solid #b7d5ea;border-radius:7px;background:#edf7ff}
+.cad-review-neac ul{margin:8px 0;padding-left:20px}
 .location-review-case{margin:14px 0;padding:15px;border:1px solid #d5e0e9;border-radius:10px;background:#f8fbfd}
 .location-review-case>div:first-child{display:flex;flex-direction:column;gap:4px}
 .location-review-case small{color:#536a7e}
