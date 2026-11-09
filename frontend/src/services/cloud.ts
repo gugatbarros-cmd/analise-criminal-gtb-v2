@@ -19,7 +19,7 @@ let refreshing: Promise<Session> | undefined
 async function read<T>(response: Response): Promise<T> {
   if (!response.ok) {
     if (response.status === 429) throw Error('Cota gratuita indisponível. Tente mais tarde.')
-    if (response.status === 401 || response.status === 403) throw Error('Acesso recusado. Use uma conta ativa autorizada no sistema antigo.')
+    if (response.status === 401 || response.status === 403) throw Error('Acesso recusado. Use uma conta online ativa e autorizada.')
     if (response.status === 404) throw Error('Nenhuma base sincronizada. Conecte a conta no sistema local e aguarde o primeiro envio.')
     throw Error('Não foi possível acessar o serviço online. Confira a conexão e suas credenciais.')
   }
@@ -79,7 +79,7 @@ export async function cloudUser(): Promise<LocalUser> {
   const admin = current.email.toLowerCase() === 'gugatbarros@hotmail.com'
   if (!admin) {
     const profile = await getDocument(root + '/users/' + encodeURIComponent(current.uid))
-    if (profile.fields.status?.stringValue !== 'active') throw Error('Conta ainda não autorizada no sistema antigo.')
+    if (profile.fields.status?.stringValue !== 'active') throw Error('Conta online ainda não autorizada.')
   }
   return { username: current.email, role: admin ? 'admin' : 'viewer', expires_at: new Date(current.expires).toISOString() }
 }
@@ -129,6 +129,18 @@ export async function revokeCloudAccount(account: CloudAccount): Promise<void> {
     method: 'DELETE', headers: { Authorization: 'Bearer ' + current.token },
   })
   if (!response.ok) throw Error('Não foi possível revogar o acesso. Recarregue a lista e tente novamente.')
+}
+
+export async function sendCloudPasswordReset(account: CloudAccount): Promise<void> {
+  const current = await validSession()
+  if (current.email.toLowerCase() !== 'gugatbarros@hotmail.com') throw Error('Acesso administrativo necessário.')
+  if (!account.email.trim()) throw Error('Esta conta não tem e-mail cadastrado.')
+  const response = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' + key, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Firebase-Locale': 'pt-BR' },
+    body: JSON.stringify({ requestType: 'PASSWORD_RESET', email: account.email.trim() }),
+  })
+  if (response.status === 429) throw Error('Limite gratuito de e-mails atingido. Tente novamente mais tarde.')
+  if (!response.ok) throw Error('Não foi possível enviar a recuperação de senha para esta conta.')
 }
 
 export function cloudLogout(): void {

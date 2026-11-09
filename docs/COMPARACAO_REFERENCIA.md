@@ -12,4 +12,4 @@ Para conferir amostras anonimizadas, copie [`fixtures/synthetic/reference-checks
 
 O comando retorna código `0` quando todos os totais conferem, `1` quando há diferenças e `2` para manifesto ou arquivos inválidos. Uma diferença deve ser analisada por fonte e caso, inclusive linhas em quarentena. O resultado sintético não comprova paridade com dados oficiais.
 
-Não coloque planilhas reais, amostras operacionais ou manifestos com seus caminhos em `fixtures/`, no Git ou na prévia publicada. O sistema antigo permanece em uso até a validação paralela e o backup de seus dados operacionais.
+Não coloque planilhas reais, amostras operacionais ou manifestos com seus caminhos em `fixtures/`, no Git ou na prévia publicada. O aplicativo anterior foi retirado do fluxo de uso; a validação dos dados históricos continua necessária para comprovar paridade.

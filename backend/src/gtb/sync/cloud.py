@@ -38,7 +38,7 @@ def request_json(url, payload=None, token=None, method=None):
         if error.code == 429:
             raise ValueError('Cota gratuita indisponível. O envio será tentado depois; nenhum plano pago será ativado.') from None
         if error.code in (401, 403):
-            raise ValueError('Acesso online recusado. Conecte uma conta autorizada do sistema antigo.') from None
+            raise ValueError('Acesso online recusado. Conecte uma conta online autorizada.') from None
         if error.code == 404:
             return None
         raise ValueError(f'Serviço online indisponível (HTTP {error.code}).') from None

@@ -1,5 +1,5 @@
 import { cloudLogin, cloudLogout, cloudUser, isCloud } from './cloud'
-export type LocalUser = { username: string; role: 'admin' | 'analyst' | 'viewer'; expires_at: string }
+export type LocalUser = { username: string; role: 'admin' | 'analyst' | 'viewer'; expires_at: string; status?: 'active' | 'revoked'; must_change_password?: boolean }
 export type LocalSession = LocalUser & { token: string }
 
 const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
@@ -68,5 +68,26 @@ export async function createUser(token: string, username: string, password: stri
   await read(await fetch(`${baseUrl}/auth/users`, {
     method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password, role }),
+  }))
+}
+
+export async function updateUser(token: string, username: string, role: LocalUser['role'], status: 'active' | 'revoked'): Promise<void> {
+  await read(await fetch(`${baseUrl}/auth/users/${encodeURIComponent(username)}/profile`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role, status }),
+  }))
+}
+
+export async function resetUserPassword(token: string, username: string, password: string): Promise<void> {
+  await read(await fetch(`${baseUrl}/auth/users/${encodeURIComponent(username)}/reset`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  }))
+}
+
+export async function changePassword(token: string, currentPassword: string, newPassword: string): Promise<void> {
+  await read(await fetch(`${baseUrl}/auth/password`, {
+    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
   }))
 }

@@ -17,7 +17,7 @@ def test_full_backup_restores_data_accounts_and_raw_files(tmp_path):
     store = Store(data_dir / "gtb.duckdb")
     store.import_file("mvi_cad", "cad.csv", csv_bytes([cad()]))
     manager = AuthManager(data_dir / "auth.sqlite3")
-    manager.create_user("admin", "Abcdefg!234", "admin")
+    manager.create_user("admin", "Abcdefg!2345", "admin")
     backup = create_backup(data_dir)
     assert backup.parent == data_dir / "backups"
     with zipfile.ZipFile(backup) as archive:
@@ -25,8 +25,8 @@ def test_full_backup_restores_data_accounts_and_raw_files(tmp_path):
         assert "gtb.duckdb" in names and "auth.sqlite3" in names
         assert any(name.startswith("raw/") for name in names)
         assert json.loads(archive.read("manifest.json"))["format"] == 1
-    session = manager.authenticate("admin", "Abcdefg!234")
-    manager.create_user("reader", "Reader!123", "viewer", session)
+    session = manager.authenticate("admin", "Abcdefg!2345")
+    manager.create_user("reader", "Reader!12345", "viewer", session)
     store.import_file("mvi_cad", "cad2.csv", csv_bytes([cad(**{"Nº NIC": "NIC-222"})]))
     (data_dir / "raw" / "extra.txt").write_text("novo", encoding="utf-8")
     previous = restore_backup(data_dir, backup)
@@ -40,7 +40,7 @@ def test_full_backup_restores_data_accounts_and_raw_files(tmp_path):
 def test_corrupt_backup_does_not_replace_current_data(tmp_path):
     data_dir = tmp_path / "data"
     manager = AuthManager(data_dir / "auth.sqlite3")
-    manager.create_user("admin", "Abcdefg!234", "admin")
+    manager.create_user("admin", "Abcdefg!2345", "admin")
     original = create_backup(data_dir)
     corrupt = data_dir / "backups" / "corrupt.zip"
     with zipfile.ZipFile(original) as source, zipfile.ZipFile(corrupt, "w") as target:
@@ -62,8 +62,8 @@ def test_restore_rejects_archive_outside_backup_directory(tmp_path):
 def test_restore_invalidates_sessions_from_the_backup(tmp_path):
     data_dir = tmp_path / "data"
     manager = AuthManager(data_dir / "auth.sqlite3")
-    manager.create_user("admin", "Abcdefg!234", "admin")
-    session = manager.authenticate("admin", "Abcdefg!234")
+    manager.create_user("admin", "Abcdefg!2345", "admin")
+    session = manager.authenticate("admin", "Abcdefg!2345")
     assert manager.user_for_token(session["token"])
     backup = create_backup(data_dir)
 
@@ -72,7 +72,7 @@ def test_restore_invalidates_sessions_from_the_backup(tmp_path):
     restored = AuthManager(data_dir / "auth.sqlite3")
     assert restored.has_users()
     assert restored.user_for_token(session["token"]) is None
-    assert restored.authenticate("admin", "Abcdefg!234")
+    assert restored.authenticate("admin", "Abcdefg!2345")
 
 
 @pytest.mark.parametrize("database_name", ["gtb.duckdb", "auth.sqlite3"])
@@ -81,7 +81,7 @@ def test_restore_rejects_hash_valid_but_invalid_database(tmp_path, database_name
     store = Store(data_dir / "gtb.duckdb")
     store.import_file("mvi_cad", "cad.csv", csv_bytes([cad()]))
     manager = AuthManager(data_dir / "auth.sqlite3")
-    manager.create_user("admin", "Abcdefg!234", "admin")
+    manager.create_user("admin", "Abcdefg!2345", "admin")
     original = create_backup(data_dir)
     invalid = data_dir / "backups" / f"invalid-{database_name}.zip"
     with zipfile.ZipFile(original) as archive:

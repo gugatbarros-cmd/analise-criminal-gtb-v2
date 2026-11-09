@@ -29,6 +29,24 @@ it('edita perfil online com a autorização do Firestore e preserva concorrênci
   expect(body.writes[0].update.fields.role.stringValue).toBe('visitor')
 })
 
+it('envia recuperação de senha somente pelo painel administrativo online', async () => {
+  const values = storage()
+  values.set('gtb-online-session', JSON.stringify({ token: 'synthetic-token', refresh: 'synthetic-refresh',
+    email: 'gugatbarros@hotmail.com', uid: 'synthetic-admin', expires: Date.now() + 3600000 }))
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ email: 'user@example.test' }))
+  vi.stubGlobal('fetch', fetcher)
+  const cloud = await import('./cloud')
+  const account = { uid: 'synthetic-user', email: 'user@example.test', rank: 'Cb PM',
+    name: 'Pessoa Exemplo', requestedName: 'Pessoa Exemplo', role: 'visitor' as const, updateTime: '2026-01-01T00:00:00Z' }
+  await cloud.sendCloudPasswordReset(account)
+  expect(String(fetcher.mock.calls[0][0])).toContain('accounts:sendOobCode')
+  expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ requestType: 'PASSWORD_RESET', email: 'user@example.test' })
+  values.set('gtb-online-session', JSON.stringify({ token: 'synthetic-token', refresh: 'synthetic-refresh',
+    email: 'reader@example.test', uid: 'synthetic-reader', expires: Date.now() + 3600000 }))
+  await expect(cloud.sendCloudPasswordReset(account)).rejects.toThrow('administrativo')
+  expect(fetcher).toHaveBeenCalledTimes(1)
+})
+
 function storage() {
   const values = new Map<string, string>()
   vi.stubGlobal('sessionStorage', { getItem: (key: string) => values.get(key) || null,

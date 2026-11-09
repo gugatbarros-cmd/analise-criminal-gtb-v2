@@ -1,6 +1,6 @@
 # Sincronização online — 0.1.60
 
-O usuário autorizou a consulta online das importações em 29/10/2026. A origem é o computador configurado em **Administração → Sincronização online**, com conta administradora ou analista ativa do Firebase do sistema antigo. A senha é usada uma vez no login HTTPS e descartada. Somente o refresh token é persistido, protegido pelo Windows DPAPI e vinculado ao usuário do Windows. Ao restaurar dados em outro usuário/computador, reconecte a conta.
+O usuário autorizou a consulta online das importações em 29/10/2026. A origem é o computador configurado em **Administração → Sincronização online**, com conta administradora ou analista online ativa no Firebase Spark existente. O aplicativo anterior não é necessário. A senha é usada uma vez no login HTTPS e descartada. Somente o refresh token é persistido, protegido pelo Windows DPAPI e vinculado ao usuário do Windows. Ao restaurar dados em outro usuário/computador, reconecte a conta.
 
 O DuckDB permanece como banco principal. Após uma importação e na inicialização de uma nova versão, uma assinatura de versão e lotes identifica mudanças. O exportador bloqueia importações durante a leitura para produzir uma cópia consistente: totais e tabelas usam o mesmo lote. Não há mesclagem entre computadores: configure um único computador como origem. Um computador sem importações não substitui a base online.
 

@@ -31,6 +31,7 @@ import { LegacyLayout } from './components/LegacyLayout'
 import { ConsolidatedTable } from './components/ConsolidatedTable'
 import { MunicipalityOverview } from './components/MunicipalityOverview'
 import { ProfilePanel } from './components/ProfilePanel'
+import { PasswordChange } from './components/PasswordChange'
 import { LocalAssistant } from './components/LocalAssistant'
 import { CadImport } from './components/CadImport'
 import { StorageStatus } from './components/StorageStatus'
@@ -85,7 +86,7 @@ function App() {
   const demo = health.data?.mode === 'demo'
   const auth = useQuery({ queryKey: ['auth-me', token], queryFn: () => getMe(token),
     enabled: ['local', 'online'].includes(health.data?.mode || '') && !!token, retry: false })
-  const canRead = demo || auth.isSuccess
+  const canRead = demo || (auth.isSuccess && !auth.data.must_change_password)
   const canImport = !demo && !isCloud && auth.data?.role !== 'viewer'
   const [cloudError, setCloudError] = useState('')
   useEffect(() => {
@@ -133,6 +134,8 @@ function App() {
     return <LoginScreen setup={health.data?.mode === 'setup'} onLogin={value => { saveSession(value); setToken(value); void queryClient.invalidateQueries({ queryKey: ['health'] }) }} />
   if (['local', 'online'].includes(health.data?.mode || '') && auth.isPending)
     return <main className="shell"><p className="empty">Validando sessão local…</p></main>
+  if (!isCloud && auth.data?.must_change_password)
+    return <main className="shell"><PasswordChange token={token} required onChanged={() => { void queryClient.invalidateQueries({ queryKey: ['auth-me', token] }) }} /><button type="button" onClick={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }) }}>Sair da conta</button></main>
 
   return <LegacyLayout onNavigate={navigateToIndicator} version={health.data?.version || APP_VERSION} demo={demo} username={auth.data?.username} onLogout={() => { void logout(token).finally(() => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }) }}><main className="shell">
     <CriminalOverview summary={summary.data} year={year} municipality={municipality} loading={summary.isFetching} serviceAvailable={health.isSuccess && !summary.isError} demo={!!demo} cloud={isCloud} />
@@ -174,7 +177,7 @@ function App() {
     {!isCloud && !demo && auth.data?.role === 'admin' && <RestorePoints key={source} source={source} label={labels[source]} onRestored={() => { setValidatedFile(''); setBatchPage(1); importer.reset(); validator.reset() }} />}
     {canImport && <CadImport onComplete={() => { setBatchPage(1); void queryClient.invalidateQueries() }} />}
     {isCloud && <section className="panel" aria-labelledby="cad-online-title"><div className="section-head"><div><p className="eyebrow">Alternativa de importação</p><h2 id="cad-online-title">Importar bases do CAD</h2></div></div><p className="muted">No aplicativo local, em Importações, marque Ocorrências, Drogas ou ambas e escolha o período. O aplicativo local acessa o CAD e envia as bases processadas para consulta aqui após a sincronização. A página online não acessa o CAD deste computador.</p><fieldset className="cad-sources" disabled><legend>Bases disponíveis no aplicativo local</legend><label><input type="checkbox" checked readOnly /> Ocorrências</label><label><input type="checkbox" checked readOnly /> Drogas</label></fieldset></section>}
-    {auth.data && <div id="perfil"><ProfilePanel user={auth.data} /></div>}
+    {auth.data && <div id="perfil"><ProfilePanel user={auth.data} token={token} local={!isCloud} onPasswordChanged={() => { void queryClient.invalidateQueries({ queryKey: ['auth-me', token] }) }} /></div>}
     <div id="online-sync">{auth.data?.role === 'admin' && !isCloud && <OnlineSync />}</div>
     <div id="usuarios">{auth.data?.role === 'admin' && (isCloud ? <CloudUserManagement /> : <UserManagement token={token} />)}</div>
     <div id="armazenamento"><StorageStatus /></div>

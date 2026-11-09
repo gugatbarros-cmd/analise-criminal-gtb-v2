@@ -45,6 +45,8 @@ def test_comparisons_require_login_and_allow_viewer_without_reports_access(tmp_p
     assert client.get('/comparisons/dataset').status_code == 401
     token = client.post('/auth/login', json={'username': 'reader', 'password': 'Reader!Synthetic1'}).json()['token']
     headers = {'Authorization': 'Bearer ' + token}
+    assert client.post('/auth/password', json={'current_password': 'Reader!Synthetic1',
+                                                'new_password': 'ReaderNew!Synthetic1'}, headers=headers).status_code == 200
     assert client.get('/comparisons/dataset', headers=headers).json()['rows'] == []
     assert client.get('/reports/dataset', headers=headers).status_code == 403
 

@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Versão local 0.1.99. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Versão local 0.1.100. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Em **Relatórios e apresentações → MVI NEAC · Informe para o Comando**, prepare a prévia com o período desejado. Use **Imprimir ou salvar PDF** para o documento completo e **Abrir no WhatsApp** para compartilhar o resumo sem dados pessoais.
 
@@ -8,10 +8,11 @@ O informe MVI NEAC e o texto para WhatsApp apresentam a comparação com o mesmo
 
 Na prévia do WhatsApp, confira os emojis e use **Abrir WhatsApp com emojis** para preencher a mensagem ou **Copiar mensagem com emojis** para colá-la diretamente na conversa. A cópia oferece um método alternativo quando a área de transferência moderna não está disponível no navegador.
 
-Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte o e-mail e a senha de administrador ou analista ativo do sistema antigo. O Firebase permanece no Spark, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases do legado. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
+Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte uma conta online ativa de administrador ou analista do GTB 2.0. A identidade online continua no Firebase Spark existente, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases históricas. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
 
-- Instalação: baixe `GTB2-Instalador-0.1.99.exe` em [Releases](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v0.1.99).
-- Sistema online: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/ — usa as contas já autorizadas no sistema antigo.
+- Instalação: baixe `GTB2-Instalador-0.1.100.exe` em [Releases](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v0.1.100).
+- Para várias máquinas, siga [contas e operação em várias máquinas](docs/CONTAS-E-MULTIPLAS-MAQUINAS.md).
+- Sistema online: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/ — usa as contas online autorizadas no Firebase existente.
 - Demonstração fictícia: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/?demo=1 — sem importações reais.
 
 Arquivos originais, backups, contas locais, quarentena e divergências permanecem locais. Tabelas processadas, análises e histórico MVI são consultáveis online depois do primeiro envio. Nenhum dado real entra no Git ou nos arquivos públicos do GitHub Pages. Veja [sincronização](docs/SYNC_LOCAL.md) e [instalador](docs/EMPACOTAMENTO_WINDOWS.md).
@@ -39,7 +40,7 @@ Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar
 
 Para criar um executável independente do ambiente de desenvolvimento, siga [o empacotamento Windows](docs/EMPACOTAMENTO_WINDOWS.md). O `GTB2-Local.exe` abre a interface e a API na mesma porta local e oferece comandos de backup e restauração dos dados do projeto novo.
 
-O instalador pronto fica em **Releases**. Baixe e execute `GTB2-Instalador-0.1.99.exe`; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
+O instalador pronto fica em **Releases**. Baixe e execute `GTB2-Instalador-0.1.100.exe`; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
 
 ### Ver a demonstração
 
@@ -61,4 +62,4 @@ As regras foram extraídas do legado, mas não há paridade comprovada com bases
 
 O [andamento por fase](docs/STATUS_IMPLEMENTACAO.md) também aparece na tela inicial. A implementação funcional está **100% concluída** e a validação operacional está **90% concluída, com 10% dependente das bases e conferências futuras**; as Fases 0 e 1 estão concluídas. O [benchmark local](docs/BENCHMARKS.md) registra os ensaios sintéticos de 10 mil, 100 mil e um milhão de ocorrências.
 
-O código antigo continua dois diretórios acima e na URL de produção. Seu backup de código está em `../legacy-v4.6.256-2026-10-22.bundle`. O bundle não contém dados privados do navegador nem exportação atual do Firestore.
+O aplicativo anterior foi retirado do fluxo de uso. O Firebase Spark existente continua necessário para as contas online e para a cópia autenticada do GTB 2.0. As cópias de recuperação do sistema anterior foram preservadas fora da pasta do aplicativo.

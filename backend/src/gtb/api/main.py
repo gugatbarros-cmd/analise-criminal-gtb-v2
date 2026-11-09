@@ -17,7 +17,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.99"
+APP_VERSION = "0.1.100"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -47,6 +47,20 @@ class LoginRequest(BaseModel):
 
 class CreateUserRequest(LoginRequest):
     role: str
+
+
+class UpdateUserRequest(BaseModel):
+    role: str
+    status: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class PasswordResetRequest(BaseModel):
+    password: str
 
 
 class OnlineCredentials(BaseModel):
@@ -118,6 +132,8 @@ async def authorize(request: Request, call_next):
         user = auth_manager.user_for_token(token)
         if not user:
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
+        if user.get("must_change_password") and path not in {"/auth/me", "/auth/password", "/auth/logout"}:
+            return JSONResponse({"detail": "Troque a senha temporária antes de continuar"}, status_code=403)
         if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints", "/mvi/cad/reviews", "/map/location-reviews"))
                 and user["role"] != "admin"):
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
@@ -143,7 +159,7 @@ def online_connect(credentials: OnlineCredentials) -> dict:
         cloud_sync.connect(credentials.email, credentials.password)
         return cloud_sync.status()
     except (ValueError, OSError):
-        raise HTTPException(400, 'Não foi possível conectar. Confira o e-mail, a senha e a permissão de administrador ou analista no sistema antigo.') from None
+        raise HTTPException(400, 'Não foi possível conectar. Confira o e-mail, a senha e a permissão de administrador ou analista da conta online.') from None
 
 
 @app.post('/online/sync')
@@ -231,6 +247,34 @@ def create_user(body: CreateUserRequest, request: Request) -> dict:
     except (ValueError, PermissionError) as error:
         raise HTTPException(422, str(error)) from error
     return {"status": "created", "username": body.username, "role": body.role}
+
+
+@app.post("/auth/users/{username}/profile")
+def update_user(username: str, body: UpdateUserRequest, request: Request) -> dict:
+    try:
+        auth_manager.update_user(username, body.role, body.status, request.state.user)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return {"status": "updated"}
+
+
+@app.post("/auth/users/{username}/reset")
+def reset_user_password(username: str, body: PasswordResetRequest, request: Request) -> dict:
+    try:
+        auth_manager.reset_password(username, body.password, request.state.user)
+    except (ValueError, PermissionError) as error:
+        raise HTTPException(422, str(error)) from error
+    return {"status": "reset", "must_change_password": True}
+
+
+@app.post("/auth/password")
+def change_password(body: PasswordChangeRequest, request: Request) -> dict:
+    try:
+        auth_manager.change_password(request.state.user["username"], body.current_password,
+                                     body.new_password, request.state.token)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return {"status": "changed"}
 
 
 @app.get("/sources")

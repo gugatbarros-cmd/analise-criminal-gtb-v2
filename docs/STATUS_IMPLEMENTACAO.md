@@ -1,5 +1,9 @@
 # Andamento da implantação — 09/11/2026
 
+## Contas locais e retirada do aplicativo anterior — 0.1.100
+
+A Central de Acesso local lista contas ativas e revogadas. O administrador pode alterar perfil, revogar sessões e redefinir uma senha temporária com troca obrigatória; novas senhas exigem 12 caracteres, sem impedir o login das contas existentes. A Central de Acesso online permite revisar e revogar perfis Firebase e enviar e-mail de recuperação para o titular definir nova senha. O aplicativo anterior saiu do fluxo de acesso; o Firebase Spark existente permanece necessário. As cópias de recuperação locais foram preservadas antes da tentativa de remoção da pasta antiga. Para instalações adicionais, recomenda-se um computador importador e consulta online autenticada nos demais; escrita simultânea exige protocolo de conflito e ensaio próprio. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas. Veja [contas e várias máquinas](CONTAS-E-MULTIPLAS-MAQUINAS.md).
+
 ## Relógio com segundos — 0.1.99
 
 A faixa da saudação exibe a hora de Alagoas com horas, minutos e segundos em um cartão compacto, com ícone de relógio e números alinhados para leitura estável. O valor atualiza a cada segundo e quando a aba volta a ficar visível; no celular, o ícone se recolhe para preservar espaço.

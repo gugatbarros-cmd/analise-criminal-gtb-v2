@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-09",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.99: relógio da hora de Alagoas na faixa da saudação com horas, minutos e segundos, apresentação aprimorada e atualização automática. Casos reais do MVI CAD ainda exigem conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.100: administração de contas locais com revogação e senha temporária, além da retirada do aplicativo anterior do fluxo de acesso. O Firebase Spark existente continua necessário para contas e consulta online. Instalações adicionais seguem o modelo de um computador importador e consulta autenticada nos demais. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e ensaio com duas máquinas.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -54,8 +54,8 @@
       "weight": 10,
       "completed": 4,
       "total": 5,
-      "done": "Central de Acesso com criação de perfis e senha local de 8 caracteres com maiúscula, minúscula e especial; saudação por horário e data; backup integral verificável, restauração validada e executável Windows instalável no perfil do usuário, com inicializador supervisionado, atalhos, log de falhas e atualização que preserva os dados; acesso online em tela cheia e gestão administrativa de nome, posto, perfil e revogação das contas autorizadas",
-      "remaining": "Backup dos dados operacionais do legado, operação paralela e aprovação do plano de troca; confirmar gestão online em conta administrativa real"
+      "done": "Central de Acesso local com listagem, perfis, revogação, senha temporária e troca obrigatória; novas senhas de 12 caracteres; saudação por horário e data; backup integral verificável, restauração validada e executável Windows instalável no perfil do usuário, com inicializador supervisionado, atalhos, log de falhas e atualização que preserva os dados; gestão online de nome, posto, perfil, revogação e envio de recuperação de senha das contas autorizadas",
+      "remaining": "Conferir as cópias de dados históricos, testar operação em duas máquinas e confirmar gestão online em conta administrativa real"
     }
   ]
 }
