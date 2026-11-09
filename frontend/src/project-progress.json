@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-09",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.97: relógio da hora de Alagoas na barra superior do site e do aplicativo local, com atualização automática e apresentação adaptada ao celular. Casos reais do MVI CAD ainda exigem conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.98: brasão centralizado no cabeçalho e relógio da hora de Alagoas integrado à faixa da saudação, com adaptação para telas menores. Casos reais do MVI CAD ainda exigem conferência operacional. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

@@ -1,5 +1,9 @@
 # Andamento da implantação — 09/11/2026
 
+## Organização do cabeçalho — 0.1.98
+
+O brasão do 10º BPM fica centralizado na barra superior em telas largas. O nome da página permanece à esquerda e o ambiente, a versão e a conta ficam agrupados à direita. A hora de Alagoas passa para a faixa da saudação, junto à data, e continua atualizando automaticamente. Em telas pequenas, o brasão fica ao lado do menu para manter o título legível.
+
 ## Relógio na barra superior — 0.1.97
 
 O cabeçalho compartilhado pelo site e pelo aplicativo local mostra a hora de Alagoas em formato de 24 horas. O relógio atualiza automaticamente, inclusive quando a aba volta a ficar visível, e permanece à vista em telas pequenas.

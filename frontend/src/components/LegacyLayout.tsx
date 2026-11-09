@@ -68,7 +68,7 @@ function HeaderClock() {
       document.removeEventListener('visibilitychange', update)
     }
   }, [])
-  return <time className="legacy-header-clock" title="Hora de Alagoas" aria-label={`Hora de Alagoas: ${time}`}><span aria-hidden="true">AL</span> {time}</time>
+  return <time className="workspace-clock" title="Hora de Alagoas" aria-label={`Hora de Alagoas: ${time}`}><span aria-hidden="true">AL</span> {time}</time>
 }
 
 export function LegacyLayout({ children, version, demo, username, onLogout, onNavigate }: {
@@ -141,13 +141,14 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
     <div className="legacy-workspace">
       <header className="legacy-header">
         <button className="legacy-mobile-menu" type="button" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">☰</button>
-        <img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="" />
         <div className="legacy-title"><span>Polícia Militar de Alagoas · 10º Batalhão</span><h1>{current?.label || 'Dashboard criminal'}</h1><p>{current?.planned ? 'Módulo identificado no legado e programado para migração.' : 'Indicadores operacionais e criminais com rastreabilidade local.'}</p></div>
-        <div className="legacy-header-state"><span>{isCloud ? 'Ambiente online' : demo ? 'Demonstração pública' : 'Ambiente local'}</span><strong>v{version}</strong></div>
-        <HeaderClock />
-        {username && <div className="legacy-user"><span className="legacy-avatar">10</span><div><small>{greeting}</small><strong>{username}</strong></div><button type="button" onClick={onLogout}>Sair</button></div>}
+        <img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="" />
+        <div className="legacy-header-actions">
+          <div className="legacy-header-state"><span>{isCloud ? 'Ambiente online' : demo ? 'Demonstração pública' : 'Ambiente local'}</span><strong>v{version}</strong></div>
+          {username && <div className="legacy-user"><span className="legacy-avatar">10</span><div><small>{greeting}</small><strong>{username}</strong></div><button type="button" onClick={onLogout}>Sair</button></div>}
+        </div>
       </header>
-      {username && <p className="workspace-greeting" role="status">{greeting}, {username}! <span>{date}</span></p>}
+      <div className="workspace-greeting"><div className="workspace-greeting-message">{username && <strong>{greeting}, {username}!</strong>}<span>{date}</span></div><HeaderClock /></div>
       {children}
     </div>
   </div></IndicatorNavigationContext.Provider>
