@@ -19,6 +19,7 @@ describe('interface herdada do sistema anterior', () => {
     expect(html).toMatch(/Bom dia|Boa tarde|Boa noite/)
     expect(html).not.toContain('Em migração')
     expect(html).toContain('Dashboard criminal')
+    expect(html).toContain('Hora de Alagoas')
     expect(html).toContain('v0.1.94')
   })
 })

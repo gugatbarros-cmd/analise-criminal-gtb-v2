@@ -50,6 +50,27 @@ const menuGroups: MenuGroup[] = [
   ] },
 ]
 
+const alagoasClock = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Maceio',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+function HeaderClock() {
+  const [time, setTime] = useState(() => alagoasClock.format(new Date()))
+  useEffect(() => {
+    const update = () => setTime(alagoasClock.format(new Date()))
+    const timer = window.setInterval(update, 1000)
+    document.addEventListener('visibilitychange', update)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', update)
+    }
+  }, [])
+  return <time className="legacy-header-clock" title="Hora de Alagoas" aria-label={`Hora de Alagoas: ${time}`}><span aria-hidden="true">AL</span> {time}</time>
+}
+
 export function LegacyLayout({ children, version, demo, username, onLogout, onNavigate }: {
   children: ReactNode
   version: string
@@ -123,6 +144,7 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
         <img src={`${import.meta.env.BASE_URL}logo-10bpm-3d-ui.png`} alt="" />
         <div className="legacy-title"><span>Polícia Militar de Alagoas · 10º Batalhão</span><h1>{current?.label || 'Dashboard criminal'}</h1><p>{current?.planned ? 'Módulo identificado no legado e programado para migração.' : 'Indicadores operacionais e criminais com rastreabilidade local.'}</p></div>
         <div className="legacy-header-state"><span>{isCloud ? 'Ambiente online' : demo ? 'Demonstração pública' : 'Ambiente local'}</span><strong>v{version}</strong></div>
+        <HeaderClock />
         {username && <div className="legacy-user"><span className="legacy-avatar">10</span><div><small>{greeting}</small><strong>{username}</strong></div><button type="button" onClick={onLogout}>Sair</button></div>}
       </header>
       {username && <p className="workspace-greeting" role="status">{greeting}, {username}! <span>{date}</span></p>}
