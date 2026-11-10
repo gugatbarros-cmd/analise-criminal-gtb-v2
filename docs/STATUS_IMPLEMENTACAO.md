@@ -307,6 +307,14 @@ Em 25/10/2026, quatro layouts fornecidos foram importados numa base local isolad
 
 Cada entrega futura deve atualizar o arquivo de progresso, este registro e a versão no mesmo trabalho. A conclusão da implantação exige validação de paridade, segurança e dados, além do código pronto.
 
+## Entrega 0.1.108 — 10/11/2026
+
+O filtro **Unidade / Despacho** da consulta de Armas no CAD agora reconhece a barra exibida na tela e confirma que somente **10º BPM** está na lista da direita. O teste automatizado cobre a seleção nova e a opção já selecionada. A consulta autenticada no CAD ainda exige conferência operacional com uma sessão real.
+
+No MVI CAD, o XLS original é mantido integralmente em arquivo local `.xls.gz`, com verificação SHA-256 na migração dos arquivos existentes. O leitor preserva o horário quando a planilha repete **Data da Ocorrência** com uma segunda coluna contendo somente a data. O JSON processado guarda até 19 grupos de campos necessários para estatísticas, revisão e localização; as fichas enviadas para consulta online passam pelo mesmo recorte, inclusive as NEAC. O Nº NIC permanece quando informado. Uma cópia do banco é criada antes de reduzir registros CAD antigos, e a redução é adiada se algum original não estiver íntegro. Identificadores, hashes de revisão e histórico de lotes permanecem os mesmos.
+
+Testes sintéticos da importação, histórico, backup, sincronização e automação CAD: **87 aprovados**. A suíte completa encontrou uma incompatibilidade CSV NEAC, corrigida e revalidada com **45 testes** diretamente relacionados. O instalador 0.1.108 foi executado em diretório isolado e confirmou o executável e `version.txt` corretos. Implementação funcional: **100%**; validação operacional: **90% concluída, 10% restante**. Permanecem a paridade com totais oficiais, o ensaio em duas máquinas e a consulta CAD autenticada de Armas.
+
 ## Fechamento técnico 0.1.56 — 28/10/2026
 
 A entrega conclui as alterações pendentes do executável sem console, direciona os logs do servidor para o arquivo local e impede que backup/restauração sejam ignorados quando outra instância está aberta. O instalador oferece o atalho **Encerrar GTB 2.0** para parar o servidor antes de atualizar ou restaurar; fechar apenas a janela do navegador mantém o servidor local ativo. Os dados operacionais não são publicados. O progresso operacional permanece em 90% concluído e 10% restante; nenhuma fase foi marcada como concluída sem as conferências oficiais.

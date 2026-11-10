@@ -7,6 +7,7 @@ from pathlib import Path
 import xlrd
 from openpyxl import load_workbook
 
+from gtb.indicators.mvi_time import mvi_hour
 from gtb.indicators.rules import key
 from gtb.ingestion.adapters.neac_model import add_adjacent_fields, is_neac_model
 
@@ -26,11 +27,16 @@ def _xls_value(book: xlrd.book.Book, cell: xlrd.sheet.Cell) -> str:
 
 
 def _row(names: list[str], values: list[str]) -> dict[str, str]:
-    """Combina cabeçalhos repetidos, preservando o último valor não vazio."""
+    """Combina cabeçalhos repetidos sem perder a hora da primeira data CAD."""
     result: dict[str, str] = {}
     for index, (name, value) in enumerate(zip(names, values)):
         if not name and value:
             name = f'Coluna {index + 1}'
+        if (name and key(name) == 'datadaocorrencia' and name in result
+                and mvi_hour({name: result[name]}) is not None
+                and mvi_hour({name: value}) in {None, 0}
+                and mvi_hour({name: result[name]}) != 0):
+            continue
         if name and (value or name not in result):
             result[name] = value
     add_adjacent_fields(names, values, result)
@@ -50,13 +56,12 @@ def read_rows(filename: str, content: bytes) -> list[dict[str, str]]:
         except csv.Error:
             delimiter = ";" if sample.count(";") > sample.count(",") else ","
         reader = csv.DictReader(io.StringIO(decoded), delimiter=delimiter)
-        if reader.fieldnames and is_neac_model({key(name): '' for name in reader.fieldnames}):
-            matrix = csv.reader(io.StringIO(decoded), delimiter=delimiter)
-            names = [name.strip() for name in next(matrix)]
-            return [_row(names, [value.strip() for value in values]) for values in matrix if any(values)]
-        if not reader.fieldnames or any(field is None or not field.strip() for field in reader.fieldnames):
+        if not reader.fieldnames or (any(field is None or not field.strip() for field in reader.fieldnames)
+                                     and not is_neac_model({key(name): '' for name in reader.fieldnames if name})):
             raise ValueError("Cabeçalhos vazios ou ausentes no CSV")
-        return [{str(k).strip(): str(v or "").strip() for k, v in row.items()} for row in reader]
+        matrix = csv.reader(io.StringIO(decoded), delimiter=delimiter)
+        names = [name.strip() for name in next(matrix)]
+        return [_row(names, [value.strip() for value in values]) for values in matrix if any(values)]
     if suffix == ".xlsx":
         workbook = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
         result: list[dict[str, str]] = []

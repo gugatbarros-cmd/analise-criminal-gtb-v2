@@ -114,7 +114,7 @@ function cadPageAction(action, options = {}) {
     const hasTenthBpm = (row) => [...row.querySelectorAll('select')].some((list) =>
       visible(list) && [...list.options].some((option) => normalize(option.textContent) === '10º BPM'));
     const rows = [...document.querySelectorAll('tr')].filter((candidate) => visible(candidate)
-      && /\bUNIDADE\s+(?:DE\s+)?DESPACHO\b/.test(normalize(candidate.textContent))
+      && /\bUNIDADE\s+(?:\/\s*|DE\s+)?DESPACHO\b/.test(normalize(candidate.textContent))
       && hasTenthBpm(candidate));
     const namedLists = [...document.querySelectorAll('select')].filter((list) => visible(list)
       && /UNID.*DESPACH/.test(normalize([list.id, list.name, list.title,

@@ -8,8 +8,10 @@ from gtb.cad.automation import ACTIONS
 
 
 @pytest.mark.parametrize("label", ["Unidade Despacho", "Unidade Despacho:",
-                                    "Unidade de Despacho:", "Unidade Despacho da ocorrência"])
-def test_dispatch_unit_moves_only_tenth_bpm_from_labeled_row(label):
+                                    "Unidade de Despacho:", "Unidade / Despacho",
+                                    "Unidade Despacho da ocorrência"])
+@pytest.mark.parametrize("preselected", [False, True])
+def test_dispatch_unit_moves_only_tenth_bpm_from_labeled_row(label, preselected):
     with sync_playwright() as playwright:
         try:
             browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -29,7 +31,7 @@ def test_dispatch_unit_moves_only_tenth_bpm_from_labeled_row(label):
                   </select>
                   <a id="Bbpassfld_righ" title="Campo Mover para a direita"
                      style="display:inline-block;width:30px;height:30px">&gt;</a>
-                  <select multiple id="target" style="display:inline-block;width:160px;height:100px"></select>
+                  <select multiple id="target" style="display:inline-block;width:160px;height:100px">__TARGET__</select>
                 </td></tr></table>
                 <script>
                   document.querySelector('#Bbpassfld_righ').onclick = () => {
@@ -38,10 +40,12 @@ def test_dispatch_unit_moves_only_tenth_bpm_from_labeled_row(label):
                     for (const option of [...source.selectedOptions]) target.add(option);
                   };
                 </script>
-            """.replace("__LABEL__", label))
+            """.replace("__LABEL__", label).replace(
+                "__TARGET__", "<option>10º BPM</option>" if preselected else ""))
             assert page.evaluate(f"({ACTIONS})('dispatchUnit', {{grade:'drugs'}})") == {"ok": True}
             assert page.locator("#target option").all_text_contents() == ["10º BPM"]
-            assert page.locator("#source option").all_text_contents() == ["9º BPM", "11º BPM"]
+            assert page.locator("#source option").all_text_contents() == (
+                ["9º BPM", "10º BPM", "11º BPM"] if preselected else ["9º BPM", "11º BPM"])
             assert page.locator("#other").input_value() == "9º BPM"
         finally:
             browser.close()

@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 
 from gtb.comparisons import comparison_dataset
 from gtb.db.store import Store
+from gtb.ingestion.adapters.mvi_fields import project_mvi_fields
 from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.reports import report_dataset
 
@@ -80,7 +81,8 @@ def build_snapshot(store: Store, version: str) -> dict:
                 'valid_to': end, 'batch_id': batch, 'eligible': eligible, 'category': category})
             detail = {'source': source, 'natural_key': key, 'version': ver, 'is_current': current,
                 'batch_id': batch, 'eligible': eligible, 'category': category, 'occurrence': occurrence,
-                'victim': victim, 'event_date': day, 'municipality': city, 'reason': reason, 'fields': json.loads(raw)}
+                'victim': victim, 'event_date': day, 'municipality': city, 'reason': reason,
+                'fields': project_mvi_fields(source, json.loads(raw))}
             entry['history'][str(ver)] = detail
             if current:
                 entry['current'] = detail

@@ -2,6 +2,7 @@ import gzip
 import json
 
 import pytest
+from test_imports import cad, csv_bytes
 
 from gtb.db.store import Store
 from gtb.sync import cloud
@@ -20,6 +21,23 @@ def test_snapshot_keeps_all_pages_and_exact_indicator_totals(tmp_path):
     assert snapshot['auditLocalOnly'] is True
     assert snapshot['audit'] == {}
     assert 'password' not in json.dumps(snapshot, default=str)
+
+
+def test_snapshot_mvi_details_keep_nic_and_omit_unused_personal_columns(tmp_path):
+    store = Store(tmp_path / 'test.duckdb')
+    row = cad(**{'CPF': '11122233344', 'RG': 'RG-SECRET', 'E-mail': 'secret@example.test',
+                 'Telefone': '999999999', 'Descrição física': 'Cabelo azul',
+                 'Relato': 'Disparo com arma de fogo'})
+    store.import_file('mvi_cad', 'cad.csv', csv_bytes([row]))
+    snapshot = build_snapshot(store, 'test-version')
+    detail = next(iter(snapshot['details']['mvi_cad'].values()))['current']
+    fields = detail['fields']
+    assert fields['Nº NIC'] == 'NIC-111'
+    assert len(fields) <= 19
+    encoded = json.dumps(fields, ensure_ascii=False)
+    assert all(secret not in encoded for secret in ('11122233344', 'RG-SECRET',
+                                                   'secret@example.test', '999999999', 'Cabelo azul'))
+    assert 'Disparo com arma de fogo' in encoded
 
 
 class SyntheticStore:

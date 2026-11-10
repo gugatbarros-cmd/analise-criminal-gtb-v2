@@ -1,6 +1,7 @@
 """Importação transacional e consultas por fonte em um DuckDB local."""
 
 import csv
+import gzip
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ import uuid
 from datetime import UTC, datetime
 from datetime import date as calendar_date
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import duckdb
 
@@ -26,6 +28,7 @@ from gtb.indicators.mvi_narrative import (
 from gtb.indicators.mvi_time import mvi_hour, time_band
 from gtb.indicators.rules import domestic_triage, key, operational_action, plain, victim_role
 from gtb.indicators.teams import team_complexity, team_field, team_group, team_officers
+from gtb.ingestion.adapters.mvi_fields import project_mvi_fields
 from gtb.ingestion.adapters.neac_model import NEAC_ADAPTER_VERSION
 from gtb.ingestion.adapters.normalize import SOURCES, Record, declared_instrument, normalize, pick
 from gtb.ingestion.adapters.tabular import read_rows
@@ -65,6 +68,125 @@ class Store:
         self._upgrade_occurrences()
         self._upgrade_cad()
         upgrade_neac(self)
+        self._compress_legacy_xls()
+        self._reduce_existing_mvi_cad()
+
+    def _reduce_existing_mvi_cad(self) -> None:
+        """Enxuga fichas antigas uma vez, depois de verificar todos os originais."""
+        with self.lock:
+            with self._connect() as db:
+                if db.execute("SELECT 1 FROM storage_migrations WHERE name = 'mvi-cad-19-fields'").fetchone():
+                    return
+                batches = db.execute("SELECT id, filename, raw_path, sha256 FROM import_batches WHERE source = 'mvi_cad'").fetchall()
+                rows = db.execute("SELECT natural_key, version, batch_id, raw_json FROM record_versions WHERE source = 'mvi_cad'").fetchall()
+            recovered_hours: dict[tuple[str, str], str] = {}
+            for batch_id, filename, recorded, digest in batches:
+                if not recorded:
+                    return
+                archive = self.path.parent / "raw" / Path(recorded).name
+                if not archive.is_file() or archive.is_symlink():
+                    return
+                checksum = hashlib.sha256()
+                opener = gzip.open if archive.suffix.lower() == '.gz' else open
+                try:
+                    with opener(archive, 'rb') as original:
+                        for chunk in iter(lambda: original.read(1024 * 1024), b''):
+                            checksum.update(chunk)
+                except (OSError, EOFError):
+                    return
+                if checksum.hexdigest() != digest:
+                    return
+                if Path(filename).suffix.lower() == '.xls':
+                    try:
+                        with opener(archive, 'rb') as original:
+                            for source_row in read_rows(filename, original.read()):
+                                hour = mvi_hour(source_row)
+                                if hour in {None, 0}:
+                                    continue
+                                try:
+                                    natural_key = normalize('mvi_cad', source_row).natural_key
+                                except ValueError:
+                                    continue
+                                recovered_hours[(batch_id, natural_key)] = pick(source_row, 'date')
+                    except (OSError, EOFError, ValueError):
+                        pass
+            changes = []
+            for natural_key, version, batch_id, raw in rows:
+                original_row = json.loads(raw)
+                recovered = recovered_hours.get((batch_id, natural_key))
+                if recovered and mvi_hour(original_row) in {None, 0}:
+                    original_row['Data da ocorrência'] = recovered
+                reduced = json.dumps(project_mvi_fields('mvi_cad', original_row),
+                                     ensure_ascii=False, sort_keys=True)
+                if reduced != raw:
+                    changes.append((natural_key, version, reduced))
+            if changes:
+                backup_dir = self.path.parent / 'backups'
+                backup_dir.mkdir(exist_ok=True)
+                with self._connect() as checkpoint:
+                    checkpoint.execute('CHECKPOINT')
+                shutil.copy2(self.path, backup_dir / f'before-mvi-fields-{uuid.uuid4()}.duckdb')
+            stage: Path | None = None
+            try:
+                if changes:
+                    with NamedTemporaryFile(mode='w', encoding='utf-8', newline='',
+                                            suffix='.csv', prefix='mvi-fields-',
+                                            dir=self.path.parent, delete=False) as output:
+                        stage = Path(output.name)
+                        writer = csv.writer(output, delimiter=';')
+                        writer.writerow(('natural_key', 'version', 'raw_json'))
+                        writer.writerows(changes)
+                with self._connect() as db:
+                    db.execute('BEGIN TRANSACTION')
+                    try:
+                        if stage:
+                            db.execute("CREATE TEMP TABLE reduced_mvi AS SELECT * FROM read_csv(?, header=true, delim=';', all_varchar=true)",
+                                       [str(stage)])
+                            db.execute("""UPDATE record_versions AS target SET raw_json = reduced_mvi.raw_json
+                                FROM reduced_mvi WHERE target.source = 'mvi_cad'
+                                AND target.natural_key = reduced_mvi.natural_key
+                                AND target.version = CAST(reduced_mvi.version AS INTEGER)""")
+                        db.execute("INSERT INTO storage_migrations VALUES ('mvi-cad-19-fields', ?)",
+                                   [datetime.now(UTC)])
+                        db.execute('COMMIT')
+                    except Exception:
+                        db.execute('ROLLBACK')
+                        raise
+            finally:
+                if stage:
+                    stage.unlink(missing_ok=True)
+
+    def _compress_legacy_xls(self) -> None:
+        """Converte originais XLS locais sem perder bytes ou mudar o hash do lote."""
+        raw_dir = self.path.parent / "raw"
+        if not raw_dir.is_dir() or raw_dir.is_symlink():
+            return
+        with self.lock, self._connect() as db:
+            batches = db.execute("SELECT id, raw_path, sha256 FROM import_batches WHERE lower(raw_path) LIKE '%.xls'").fetchall()
+            for batch_id, recorded, digest in batches:
+                original = raw_dir / Path(recorded).name
+                if not original.is_file() or original.is_symlink():
+                    continue
+                compressed = original.with_name(original.name + ".gz")
+                temporary = compressed.with_name(compressed.name + ".tmp")
+                try:
+                    with (original.open("rb") as source, temporary.open("wb") as target,
+                          gzip.GzipFile(fileobj=target, mode="wb", filename="", mtime=0) as archive):
+                        shutil.copyfileobj(source, archive, 1024 * 1024)
+                    checksum = hashlib.sha256()
+                    with gzip.open(temporary, "rb") as archive:
+                        for chunk in iter(lambda: archive.read(1024 * 1024), b""):
+                            checksum.update(chunk)
+                    if checksum.hexdigest() != digest:
+                        continue
+                    temporary.replace(compressed)
+                    db.execute("UPDATE import_batches SET raw_path = ? WHERE id = ?",
+                               [str(compressed), batch_id])
+                    original.unlink()
+                except OSError:
+                    continue
+                finally:
+                    temporary.unlink(missing_ok=True)
 
     def _connect(self) -> duckdb.DuckDBPyConnection:
         return duckdb.connect(str(self.path))
@@ -118,6 +240,8 @@ class Store:
             schema_version INTEGER NOT NULL, payload_json VARCHAR NOT NULL,
             status VARCHAR NOT NULL, created_at TIMESTAMP NOT NULL,
             attempts INTEGER NOT NULL, next_attempt_at TIMESTAMP, last_error VARCHAR)""")
+        db.execute("""CREATE TABLE IF NOT EXISTS storage_migrations (
+            name VARCHAR PRIMARY KEY, applied_at TIMESTAMP NOT NULL)""")
 
     def _upgrade_occurrences(self) -> None:
         """Reclassifica dados derivados antigos, mantendo originais e um backup anterior."""
@@ -410,7 +534,7 @@ class Store:
             raise ValueError("Arquivo vazio ou acima de 64 MB")
         filename = Path(filename).name
         digest = hashlib.sha256(content).hexdigest()
-        with self.lock:
+        with self.lock:  # noqa: SIM117 - importação usa a conexão dentro do bloqueio
             with self._connect() as db:
                 self._schema(db)
                 previous = db.execute("""SELECT id, row_count, inserted, updated, unchanged,
@@ -472,8 +596,9 @@ class Store:
                 shutil.copy2(self.path, backup_path)
             raw_dir = self.path.parent / "raw"
             raw_dir.mkdir(exist_ok=True)
-            raw_path = raw_dir / f"{batch_id}{Path(filename).suffix.lower()}"
-            raw_path.write_bytes(content)
+            suffix = Path(filename).suffix.lower()
+            raw_path = raw_dir / f"{batch_id}{suffix}{'.gz' if suffix == '.xls' else ''}"
+            raw_path.write_bytes(gzip.compress(content, mtime=0) if suffix == '.xls' else content)
             keys_path = raw_dir / f"stage-{batch_id}-keys.csv"
             changes_path = raw_dir / f"stage-{batch_id}-changes.csv"
             inserted = updated = unchanged = 0
@@ -515,8 +640,9 @@ class Store:
                             updated += 1
                         else:
                             inserted += 1
+                        stored_row = project_mvi_fields(source, row) if source == 'mvi_cad' else row
                         pending_rows.append((record.natural_key, version, row_hash,
-                                             json.dumps(row, ensure_ascii=False, sort_keys=True),
+                                             json.dumps(stored_row, ensure_ascii=False, sort_keys=True),
                                              record.event_date, record.year, record.municipality,
                                              record.occurrence, record.victim, record.nature,
                                              record.category, record.eligible, record.reason,
@@ -545,8 +671,9 @@ class Store:
                             CAST(json_extract(indicators_json, '$') AS VARCHAR[])
                             FROM changed_rows""", [source, stamp, batch_id])
                     for number, row, reason in rejected:
+                        stored_row = project_mvi_fields(source, row) if source == 'mvi_cad' else row
                         db.execute("INSERT INTO quarantine VALUES (?, ?, ?, ?)",
-                                   [batch_id, number, reason, json.dumps(row, ensure_ascii=False)])
+                                   [batch_id, number, reason, json.dumps(stored_row, ensure_ascii=False)])
                     if scope == "complete":
                         db.execute("""INSERT INTO import_divergences
                             SELECT ?, ?, r.natural_key,

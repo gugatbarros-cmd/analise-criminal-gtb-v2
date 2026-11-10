@@ -1,5 +1,7 @@
 import csv
+import gzip
 import io
+import json
 from datetime import date, datetime
 from pathlib import Path
 
@@ -8,6 +10,8 @@ import xlwt
 from openpyxl import Workbook
 
 from gtb.db.store import Store
+from gtb.indicators.mvi_time import mvi_hour
+from gtb.ingestion.adapters.tabular import read_rows
 
 
 def csv_bytes(rows: list[dict[str, str]], delimiter: str = ";") -> bytes:
@@ -64,6 +68,105 @@ def test_legacy_xls_accepts_cad_headers_and_duplicate_columns(tmp_path):
     assert store.records("ocorrencias")["items"][0]["occurrence"] == "CAD-XLS-001"
     assert store.summary()["tco"] == 1
 
+
+def test_duplicate_occurrence_date_keeps_time_in_xls_and_csv():
+    headers = ["Data da Ocorrência", "Data da Ocorrência", "Número da ocorrência"]
+    book = xlwt.Workbook()
+    sheet = book.add_sheet("CAD")
+    for index, header in enumerate(headers):
+        sheet.write(0, index, header)
+    sheet.write(1, 0, datetime(2026, 11, 10, 14, 35),
+                xlwt.easyxf(num_format_str="DD/MM/YYYY HH:MM"))
+    sheet.write(1, 1, datetime(2026, 11, 10), xlwt.easyxf(num_format_str="DD/MM/YYYY"))
+    sheet.write(1, 2, "CAD-001")
+    output = io.BytesIO()
+    book.save(output)
+    xls_row = read_rows("cad.xls", output.getvalue())[0]
+    assert mvi_hour(xls_row) == 14
+    csv_row = read_rows("cad.csv", (",".join(headers) + "\n"
+        "10/11/2026 14:35,10/11/2026,CAD-001\n").encode())[0]
+    assert mvi_hour(csv_row) == 14
+
+
+def test_xls_original_is_compressed_and_existing_archive_is_migrated(tmp_path):
+    book = xlwt.Workbook()
+    sheet = book.add_sheet("CAD")
+    headers = ["Número da ocorrência", "Data da ocorrência", "Cidade ocorrência",
+               "Tipificação no despacho", "Nome da vítima", "Nº NIC", "Envolvimento", "Óbito?"]
+    for index, header in enumerate(headers):
+        sheet.write(0, index, header)
+    for index, value in enumerate(["CAD-001", "05/01/2026", "Igaci", "Homicídio doloso",
+                                   "Maria Aparecida", "NIC-001", "Vítima", "S"]):
+        sheet.write(1, index, value)
+    output = io.BytesIO()
+    book.save(output)
+    content = output.getvalue()
+    store = Store(tmp_path / "gtb.duckdb")
+    result = store.import_file("mvi_cad", "cad.xls", content)
+    with store._connect() as db:
+        raw_path = Path(db.execute("SELECT raw_path FROM import_batches WHERE id = ?",
+                                   [result["id"]]).fetchone()[0])
+    assert raw_path.name.endswith(".xls.gz")
+    assert gzip.decompress(raw_path.read_bytes()) == content
+
+    legacy = raw_path.with_suffix("")
+    legacy.write_bytes(content)
+    raw_path.unlink()
+    with store._connect() as db:
+        db.execute("UPDATE import_batches SET raw_path = ? WHERE id = ?", [str(legacy), result["id"]])
+    Store(store.path)
+    assert not legacy.exists()
+    assert gzip.decompress(raw_path.read_bytes()) == content
+
+
+def test_existing_mvi_cad_json_is_reduced_only_with_verified_original(tmp_path):
+    row = cad(**{"CPF": "11122233344", "E-mail": "secret@example.test",
+                 "Descrição física": "Cabelo azul", "Relato": "Disparo com arma de fogo"})
+    store = Store(tmp_path / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.csv", csv_bytes([row]))
+    with store._connect() as db:
+        original_hash = db.execute("SELECT row_hash FROM record_versions WHERE source='mvi_cad'").fetchone()[0]
+        db.execute("UPDATE record_versions SET raw_json = ? WHERE source='mvi_cad'",
+                   [json.dumps(row, ensure_ascii=False, sort_keys=True)])
+        db.execute("DELETE FROM storage_migrations WHERE name='mvi-cad-19-fields'")
+    Store(store.path)
+    with store._connect() as db:
+        reduced, current_hash = db.execute("SELECT raw_json,row_hash FROM record_versions WHERE source='mvi_cad'").fetchone()
+    assert "secret@example.test" not in reduced
+    assert "Cabelo azul" not in reduced
+    assert "Disparo com arma de fogo" in reduced
+    assert current_hash == original_hash
+    assert list((tmp_path / "backups").glob("before-mvi-fields-*.duckdb"))
+
+
+def test_existing_mvi_cad_hour_is_recovered_from_original_xls(tmp_path):
+    book = xlwt.Workbook()
+    sheet = book.add_sheet("CAD")
+    headers = ["Número da ocorrência", "Data da ocorrência", "Data da ocorrência",
+               "Cidade ocorrência", "Tipificação no despacho", "Nome da vítima",
+               "Envolvimento", "Óbito?"]
+    values = ["CAD-001", datetime(2026, 11, 10, 14, 35), datetime(2026, 11, 10),
+              "Igaci", "Homicídio doloso", "Maria Aparecida", "Vítima", "S"]
+    for index, header in enumerate(headers):
+        sheet.write(0, index, header)
+        if index in (1, 2):
+            sheet.write(1, index, values[index], xlwt.easyxf(num_format_str="DD/MM/YYYY HH:MM"))
+        else:
+            sheet.write(1, index, values[index])
+    output = io.BytesIO()
+    book.save(output)
+    store = Store(tmp_path / "gtb.duckdb")
+    store.import_file("mvi_cad", "cad.xls", output.getvalue())
+    with store._connect() as db:
+        raw = json.loads(db.execute("SELECT raw_json FROM record_versions WHERE source='mvi_cad'").fetchone()[0])
+        raw['Data da ocorrência'] = '2026-11-10 00:00:00'
+        db.execute("UPDATE record_versions SET raw_json = ? WHERE source='mvi_cad'",
+                   [json.dumps(raw, ensure_ascii=False, sort_keys=True)])
+        db.execute("DELETE FROM storage_migrations WHERE name='mvi-cad-19-fields'")
+    Store(store.path)
+    with store._connect() as db:
+        restored = json.loads(db.execute("SELECT raw_json FROM record_versions WHERE source='mvi_cad'").fetchone()[0])
+    assert mvi_hour(restored) == 14
 
 def test_sources_independent_and_idempotent(tmp_path):
     store = Store(tmp_path / "data" / "gtb.duckdb")
