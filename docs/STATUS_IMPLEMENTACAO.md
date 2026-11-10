@@ -1,5 +1,9 @@
 # Andamento da implantação — 10/11/2026
 
+## Correção do filtro de Armas no CAD — 0.1.106
+
+A captura da importação real de Armas mostrou a falha “O filtro Unidade de Despacho não foi identificado.” A identificação anterior exigia rótulo idêntico ao usado na grade de Drogas. A automação agora aceita variações como dois-pontos e texto adicional, localiza a linha que contém a opção 10º BPM e, se o rótulo estiver em outra linha, usa o nome técnico do campo. A seleção continua restrita ao filtro Unidade Despacho, sem mudar outro filtro de Unidade. Testes com páginas sintéticas verificam as duas estruturas e o fluxo de Armas; a nova versão ainda precisa de uma execução completa na sessão oficial do CAD. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
+
 ## Status da atualização na abertura — 0.1.105
 
 Ao abrir o GTB local, uma janela informa a verificação de versão, o download, a conferência SHA-256, a instalação e a abertura do sistema. O atualizador continua em segundo plano enquanto a janela responde normalmente; se a rede ou a instalação falhar, mostra a falha e abre a versão já instalada. A janela não apresenta percentual inventado: usa indicador de atividade para etapas cuja duração depende da rede ou do instalador. A primeira atualização a partir de uma versão anterior ainda usa o lançador antigo; a janela passa a aparecer nas aberturas posteriores à instalação da 0.1.105. A sequência de estados, a falha de atualização, os acentos no PowerShell do Windows e a instalação isolada do script de status foram verificados. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.

@@ -111,7 +111,18 @@ function cadPageAction(action, options = {}) {
     return { ok: true };
   }
   if (action === 'dispatchUnit') {
-    const row = rowFor('Unidade Despacho') || rowFor('Unidade de Despacho');
+    const hasTenthBpm = (row) => [...row.querySelectorAll('select')].some((list) =>
+      visible(list) && [...list.options].some((option) => normalize(option.textContent) === '10º BPM'));
+    const rows = [...document.querySelectorAll('tr')].filter((candidate) => visible(candidate)
+      && /\bUNIDADE\s+(?:DE\s+)?DESPACHO\b/.test(normalize(candidate.textContent))
+      && hasTenthBpm(candidate));
+    const namedLists = [...document.querySelectorAll('select')].filter((list) => visible(list)
+      && /UNID.*DESPACH/.test(normalize([list.id, list.name, list.title,
+        list.getAttribute('aria-label')].join(' ').replace(/[_-]/g, ' ')))
+      && [...list.options].some((option) => normalize(option.textContent) === '10º BPM'));
+    const namedRows = [...new Set(namedLists.map((list) => list.closest('tr')).filter(Boolean))];
+    const row = rows.sort((left, right) => left.querySelectorAll('select').length
+      - right.querySelectorAll('select').length)[0] || (namedRows.length === 1 ? namedRows[0] : null);
     if (!row) return { ok: false, reason: 'O filtro Unidade de Despacho não foi identificado.' };
     const lists = [...row.querySelectorAll('select')].filter(visible);
     if (lists.length === 1 && !lists[0].multiple) {

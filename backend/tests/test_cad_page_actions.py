@@ -7,7 +7,9 @@ from playwright.sync_api import sync_playwright
 from gtb.cad.automation import ACTIONS
 
 
-def test_drugs_dispatch_unit_moves_only_tenth_bpm():
+@pytest.mark.parametrize("label", ["Unidade Despacho", "Unidade Despacho:",
+                                    "Unidade de Despacho:", "Unidade Despacho da ocorrência"])
+def test_dispatch_unit_moves_only_tenth_bpm_from_labeled_row(label):
     with sync_playwright() as playwright:
         try:
             browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -19,7 +21,9 @@ def test_drugs_dispatch_unit_moves_only_tenth_bpm():
         try:
             page = browser.new_page()
             page.set_content("""
-                <table><tr><td>Unidade Despacho</td><td>
+                <table><tr><td>Unidade</td><td><select id="other">
+                  <option>9º BPM</option><option>10º BPM</option>
+                </select></td></tr><tr><td>__LABEL__</td><td>
                   <select multiple id="source" style="display:inline-block;width:160px;height:100px">
                     <option>9º BPM</option><option>10º BPM</option><option>11º BPM</option>
                   </select>
@@ -34,10 +38,40 @@ def test_drugs_dispatch_unit_moves_only_tenth_bpm():
                     for (const option of [...source.selectedOptions]) target.add(option);
                   };
                 </script>
-            """)
+            """.replace("__LABEL__", label))
             assert page.evaluate(f"({ACTIONS})('dispatchUnit', {{grade:'drugs'}})") == {"ok": True}
             assert page.locator("#target option").all_text_contents() == ["10º BPM"]
             assert page.locator("#source option").all_text_contents() == ["9º BPM", "11º BPM"]
+            assert page.locator("#other").input_value() == "9º BPM"
+        finally:
+            browser.close()
+
+
+def test_dispatch_unit_uses_named_field_when_label_is_on_another_row():
+    with sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+        except PlaywrightError:
+            try:
+                browser = playwright.chromium.launch(channel="msedge", headless=True)
+            except PlaywrightError:
+                pytest.skip("Chrome ou Edge necessário para testar os controles CAD")
+        try:
+            page = browser.new_page()
+            page.set_content("""
+                <table>
+                  <tr><td>Unidade de Despacho:</td></tr>
+                  <tr><td><select id="unidade_despacho">
+                    <option>9º BPM</option><option>10º BPM</option>
+                  </select></td></tr>
+                  <tr><td>Unidade</td><td><select id="unidade">
+                    <option>9º BPM</option><option>10º BPM</option>
+                  </select></td></tr>
+                </table>
+            """)
+            assert page.evaluate(f"({ACTIONS})('dispatchUnit', {{grade:'armas'}})") == {"ok": True}
+            assert page.locator("#unidade_despacho").input_value() == "10º BPM"
+            assert page.locator("#unidade").input_value() == "9º BPM"
         finally:
             browser.close()
 
