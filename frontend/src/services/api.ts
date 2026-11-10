@@ -91,7 +91,7 @@ export async function getCadStatus(): Promise<CadStatus> {
 }
 
 export async function startCadImport(cpf: string, password: string, startDate: string, endDate: string,
-  sources: ('ocorrencias' | 'drogas')[]): Promise<CadStatus> {
+  sources: ('ocorrencias' | 'drogas' | 'armas')[]): Promise<CadStatus> {
   return json(await apiFetch(`${baseUrl}/cad/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cpf, password, start_date: startDate, end_date: endDate, sources }) }))
 }

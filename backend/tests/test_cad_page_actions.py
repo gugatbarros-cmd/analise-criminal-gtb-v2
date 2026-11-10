@@ -111,7 +111,8 @@ def test_date_range_accepts_cad_fields_with_optional_seconds(with_seconds):
             browser.close()
 
 
-def test_drugs_columns_target_the_official_available_and_selected_lists():
+@pytest.mark.parametrize("grade", ["drugs", "drogas", "armas"])
+def test_cad_columns_target_the_official_available_and_selected_lists(grade):
     with sync_playwright() as playwright:
         try:
             browser = playwright.chromium.launch(channel="chrome", headless=True)
@@ -131,14 +132,14 @@ def test_drugs_columns_target_the_official_available_and_selected_lists():
                   <li>Boletim</li>
                 </ul>
             """)
-            inventory = page.evaluate(f"({ACTIONS})('columnInventory', {{grade:'drugs'}})")
+            inventory = page.evaluate(f"({ACTIONS})('columnInventory', {{grade:'{grade}'}})")
             assert inventory["ok"] and inventory["count"] == 2
             assert inventory["from"]["x"] < inventory["to"]["x"]
             page.locator(".sc_ui_fldsel_available li").first.evaluate("element => element.remove()")
-            assert page.evaluate(f"({ACTIONS})('columns', {{grade:'drugs'}})")["ok"] is False
+            assert page.evaluate(f"({ACTIONS})('columns', {{grade:'{grade}'}})")["ok"] is False
             page.locator(".sc_ui_fldsel_available li").first.evaluate("element => element.remove()")
-            assert page.evaluate(f"({ACTIONS})('columnInventory', {{grade:'drugs'}})")["count"] == 0
-            assert page.evaluate(f"({ACTIONS})('columns', {{grade:'drugs'}})")["ok"]
+            assert page.evaluate(f"({ACTIONS})('columnInventory', {{grade:'{grade}'}})")["count"] == 0
+            assert page.evaluate(f"({ACTIONS})('columns', {{grade:'{grade}'}})")["ok"]
             page.wait_for_function("window.applied === true")
         finally:
             browser.close()

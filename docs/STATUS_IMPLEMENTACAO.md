@@ -1,5 +1,9 @@
 # Andamento da implantação — 10/11/2026
 
+## Importação alternativa de Armas no CAD — 0.1.104
+
+A área de importações local agora oferece Armas junto de Ocorrências e Drogas. Para Armas, abre a grade oficial indicada pelo operador, filtra Unidade Despacho em 10º BPM e a Data da Ocorrência pelo intervalo informado, executa Pesquisa Avançada, move todas as colunas disponíveis à direita, aplica a seleção e exporta em XLS. O arquivo é validado e importado na base `armas`, com histórico, backup e sincronização da base processada. Testes sintéticos verificam o roteamento, os controles de colunas e a chamada de importação; a execução completa na sessão oficial do CAD ainda precisa de conferência operacional. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
+
 ## Consulta CAD em segundo plano e importação mais rápida — 0.1.103
 
 O Chrome ou Edge usado para consultar o CAD agora roda sem janela visível, com o token informado na própria tela do GTB. A planilha baixada é validada durante a importação, evitando uma segunda leitura integral. O hash do arquivo também é consultado antes da leitura; quando o mesmo XLS já foi importado com o mesmo adaptador, o lote é reconhecido de imediato. A importação CAD continua recusando arquivos sem registros válidos. A geração do XLS e a resposta do portal oficial não têm tempo controlado pelo GTB. Os testes usam somente dados e páginas sintéticas; o fluxo completo no portal CAD ainda requer conferência operacional. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.

@@ -22,7 +22,8 @@ MENU_PATH = "/app/cad/cad_blank_menu_respons/cad_blank_menu_respons.php"
 MENU_URL = CAD_ORIGIN + MENU_PATH
 OCCURRENCES_URL = CAD_ORIGIN + "/app/cad/cad_grid_tb_ocor_consulta_com_cadastro/"
 DRUGS_URL = CAD_ORIGIN + "/app/cad/cad_grid_droga_boletim/"
-CAD_SOURCES = ("ocorrencias", "drogas")
+ARMS_URL = CAD_ORIGIN + "/app/cad/cad_grid_arma_boletim/"
+CAD_SOURCES = ("ocorrencias", "drogas", "armas")
 TOKEN_WORDS = re.compile(r"token|c[oó]digo|verification|otp|2fa", re.IGNORECASE)
 ACTIONS = Path(__file__).with_name("page_actions.js").read_text(encoding="utf-8").strip()
 XLS_DOWNLOAD_TIMEOUT_SECONDS = 15 * 60
@@ -80,7 +81,7 @@ class CadImportManager:
         check_period(start_date, end_date)
         sources = sources if sources is not None else ["ocorrencias"]
         if not sources or len(sources) != len(set(sources)) or any(source not in CAD_SOURCES for source in sources):
-            raise ValueError("Marque ocorrências, drogas ou ambas para consultar o CAD.")
+            raise ValueError("Marque ocorrências, drogas e/ou armas para consultar o CAD.")
         with self.lock:
             if self.worker and self.worker.is_alive():
                 if self.session_owner != owner:
@@ -352,7 +353,7 @@ class CadImportManager:
         initial_count = None
         for _ in range(200):
             inventory = self._action(page, "columnInventory", "Selecionando as colunas do relatório.",
-                                     {"grade": "drugs" if source == "drogas" else "occurrences"})
+                                     {"grade": source if source in {"drogas", "armas"} else "occurrences"})
             if not inventory.get("count"):
                 self._set("filtering", "Todas as colunas foram selecionadas.", progress=70)
                 return
@@ -372,7 +373,7 @@ class CadImportManager:
             page.mouse.up()
             page.wait_for_timeout(350)
             after = self._action(page, "columnInventory", "Conferindo as colunas selecionadas.",
-                                 {"grade": "drugs" if source == "drogas" else "occurrences"})
+                                 {"grade": source if source in {"drogas", "armas"} else "occurrences"})
             if after.get("count", 0) >= inventory["count"]:
                 raise ValueError("O CAD não confirmou a seleção de uma coluna.")
             selected = initial_count - after.get("count", 0)
@@ -458,19 +459,20 @@ class CadImportManager:
                              source: str = "ocorrencias") -> dict:
         if source not in CAD_SOURCES:
             raise ValueError("Base do CAD inválida.")
-        url = DRUGS_URL if source == "drogas" else OCCURRENCES_URL
+        url = {"ocorrencias": OCCURRENCES_URL, "drogas": DRUGS_URL, "armas": ARMS_URL}[source]
         page.goto(url, wait_until="load", timeout=45000)
         if not page.url.startswith(url):
             raise ValueError("A consulta de " + source + " não abriu no CAD.")
-        self._wait_control(page, "Pesquisa Avançada" if source == "drogas" else "Pesquisar")
+        self._wait_control(page, "Pesquisa Avançada" if source in {"drogas", "armas"} else "Pesquisar")
         self._action(page, "dateRangeMode", "Selecionando o intervalo de datas.", progress=18)
         page.wait_for_timeout(800)
         self._action(page, "dateRangeValues", "Preenchendo as datas da consulta.",
                      {"startDate": start_date, "endDate": end_date}, progress=22)
-        if source == "drogas":
+        if source in {"drogas", "armas"}:
             self._action(page, "dispatchUnit", "Selecionando Unidade de Despacho 10º BPM.", progress=25)
-            self._action(page, "titular", "Marcando Titular na ocorrência.", progress=28)
-            self._action(page, "advancedSearch", "Pesquisando drogas no CAD.", progress=32)
+            if source == "drogas":
+                self._action(page, "titular", "Marcando Titular na ocorrência.", progress=28)
+            self._action(page, "advancedSearch", "Pesquisando " + source + " no CAD.", progress=32)
         else:
             self._action(page, "agency", "Selecionando Polícia Militar.", progress=25)
             page.wait_for_timeout(800)
@@ -481,7 +483,7 @@ class CadImportManager:
         self._wait_control(page, "Aplicar")
         self._select_all_columns(page, source)
         self._action(page, "columns", "Aplicando todas as colunas.",
-                     {"grade": "drugs" if source == "drogas" else "occurrences"}, progress=72)
+                     {"grade": source if source in {"drogas", "armas"} else "occurrences"}, progress=72)
         self._wait_control(page, "Exportação", 120000)
         self._action(page, "exportMenu", "Abrindo as opções de exportação.", progress=75)
         page.wait_for_timeout(300)

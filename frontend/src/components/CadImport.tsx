@@ -16,9 +16,10 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
   const [dateError, setDateError] = useState('')
   const [occurrences, setOccurrences] = useState(true)
   const [drugs, setDrugs] = useState(false)
+  const [arms, setArms] = useState(false)
   const [lastCpf, setLastCpf] = useState(() => { try { return localStorage.getItem('gtb-v2-last-cad-cpf') || '' } catch { return '' } })
   const status = useQuery({ queryKey: ['cad-status'], queryFn: getCadStatus, refetchInterval: 1500 })
-  const start = useMutation({ mutationFn: ({ cpf, password, first, last, sources }: { cpf: string; password: string; first: string; last: string; sources: ('ocorrencias' | 'drogas')[] }) =>
+  const start = useMutation({ mutationFn: ({ cpf, password, first, last, sources }: { cpf: string; password: string; first: string; last: string; sources: ('ocorrencias' | 'drogas' | 'armas')[] }) =>
     startCadImport(cpf, password, first, last, sources), onSuccess: () => { setLocalError(''); void status.refetch() },
     onError: error => setLocalError(error.message) })
   const verify = useMutation({ mutationFn: submitCadToken,
@@ -52,9 +53,10 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
       const invalid = cadPeriodError(first, last)
       setDateError(invalid)
       if (invalid) return
-      const sources: ('ocorrencias' | 'drogas')[] = []
+      const sources: ('ocorrencias' | 'drogas' | 'armas')[] = []
       if (occurrences) sources.push('ocorrencias')
       if (drugs) sources.push('drogas')
+      if (arms) sources.push('armas')
       if (!sources.length) { setLocalError('Marque pelo menos uma base do CAD.'); return }
       const value = password.current?.value || ''
       const documentId = (cpf.current?.value || '').replace(/\D/g, '')
@@ -73,6 +75,7 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
       <fieldset className="cad-sources"><legend>Bases para baixar</legend>
         <label><input type="checkbox" checked={occurrences} onChange={event => setOccurrences(event.target.checked)} /> Ocorrências</label>
         <label><input type="checkbox" checked={drugs} onChange={event => setDrugs(event.target.checked)} /> Drogas</label>
+        <label><input type="checkbox" checked={arms} onChange={event => setArms(event.target.checked)} /> Armas</label>
       </fieldset>
       <label>Data inicial<input ref={startInput} type="date" value={startDate} onChange={event => { setStartDate(event.target.value); setDateError('') }} onInput={event => { if (event.currentTarget.validity.badInput) setDateError('Confira a data inicial: o dia informado não existe neste mês.') }} aria-invalid={!!dateError} required /></label>
       <label>Data final<input ref={endInput} type="date" value={endDate} min={startDate} onChange={event => { setEndDate(event.target.value); setDateError('') }} onInput={event => { if (event.currentTarget.validity.badInput) setDateError('Confira a data final: o dia informado não existe neste mês.') }} aria-invalid={!!dateError} required /></label>

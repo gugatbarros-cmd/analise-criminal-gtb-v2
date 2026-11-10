@@ -142,11 +142,56 @@ def test_cad_reuses_session_without_credentials_and_blocks_other_local_profile(t
 
 def test_cad_rejects_empty_or_unknown_sources_before_opening_browser(tmp_path):
     manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
-    for sources in ([], ["armas"], ["drogas", "drogas"]):
+    for sources in ([], ["desconhecida"], ["drogas", "drogas"]):
         with pytest.raises(ValueError, match="Marque ocorrências"):
             manager.start("12345678901", "synthetic-only", "2026-11-01", "2026-11-03",
                           "operador", sources)
     assert manager.worker is None
+
+
+def test_cad_arms_uses_advanced_search_and_imports_arms_xls(tmp_path, monkeypatch):
+    manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+    actions = []
+
+    class Page:
+        url = ""
+
+        def goto(self, url, **_kwargs):
+            self.url = url
+
+        def wait_for_timeout(self, _milliseconds):
+            pass
+
+    class Download:
+        suggested_filename = "armas.xls"
+
+        def failure(self):
+            return None
+
+        def save_as(self, path):
+            path.write_bytes(b"synthetic XLS content")
+
+    monkeypatch.setattr(manager, "_wait_control", lambda _page, label, *_args: actions.append(label))
+    monkeypatch.setattr(manager, "_action", lambda _page, action, _message, options=None,
+                        **_kwargs: actions.append((action, options)) or {"ok": True})
+    monkeypatch.setattr(manager, "_select_all_columns", lambda _page, source: actions.append(("select_all", source)))
+    monkeypatch.setattr(manager, "_request_xls_download", lambda _page: Download())
+    monkeypatch.setattr(manager.store, "import_file", lambda *args, **kwargs: (
+        actions.append(("import", args, kwargs)) or
+        {"row_count": 1, "inserted": 1, "updated": 0, "quarantined": 0, "repeated": False}))
+
+    page = Page()
+    result = manager._download_and_import(page, "2026-11-01", "2026-11-10", "armas")
+    assert page.url.endswith("/cad_grid_arma_boletim/")
+    assert actions.index("Pesquisa Avançada") < actions.index(("advancedSearch", None))
+    assert ("dispatchUnit", None) in actions
+    assert ("titular", None) not in actions
+    assert ("select_all", "armas") in actions
+    assert ("columns", {"grade": "armas"}) in actions
+    assert ("exportMenu", None) in actions
+    assert ("import", ("armas", "armas.xls", b"synthetic XLS content", "partial"),
+            {"require_accepted": True}) in actions
+    assert result["inserted"] == 1
 
 
 def test_cad_imports_both_selected_sources_in_order(tmp_path, monkeypatch):
