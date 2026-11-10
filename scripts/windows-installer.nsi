@@ -84,6 +84,7 @@ Section "Sistema completo" Main
     Abort
   executable_ready:
   File "atualizar-gtb.ps1"
+  File "mostrar-atualizacao.ps1"
   File "..\desktop\brasao.ico"
   File "iniciar-gtb.ps1"
   File "encerrar-gtb.ps1"
@@ -133,6 +134,7 @@ Section "Uninstall"
   Delete "$INSTDIR\iniciar-gtb.ps1"
   Delete "$INSTDIR\encerrar-gtb.ps1"
   Delete "$INSTDIR\atualizar-gtb.ps1"
+  Delete "$INSTDIR\mostrar-atualizacao.ps1"
   Delete "$INSTDIR\version.txt"
   Delete "$INSTDIR\desinstalar-gtb.ps1"
   Delete "$INSTDIR\README.md"

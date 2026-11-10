@@ -1,4 +1,4 @@
-param([switch]$NoLaunch)
+﻿param([switch]$NoLaunch)
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -32,6 +32,7 @@ Copy-Item -LiteralPath $sourceLauncher -Destination $installedLauncher -Force
 Copy-Item -LiteralPath $sourceUninstaller -Destination (Join-Path $installDirectory 'desinstalar-gtb.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'encerrar-gtb.ps1') -Destination (Join-Path $installDirectory 'encerrar-gtb.ps1') -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'atualizar-gtb.ps1') -Destination (Join-Path $installDirectory 'atualizar-gtb.ps1') -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'mostrar-atualizacao.ps1') -Destination (Join-Path $installDirectory 'mostrar-atualizacao.ps1') -Force
 Set-Content -LiteralPath (Join-Path $installDirectory 'version.txt') -Value ((Get-Content (Join-Path $projectRoot 'frontend\package.json') -Raw | ConvertFrom-Json).version) -NoNewline
 
 $shortcutName = 'An' + [char]0x00E1 + 'lise Criminal GTB 2.0.lnk'

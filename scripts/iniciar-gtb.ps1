@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $installedExecutable = Join-Path $PSScriptRoot 'GTB2-Local.exe'
 if (Test-Path -LiteralPath $installedExecutable -PathType Leaf) {
   $root = $PSScriptRoot
@@ -52,7 +52,12 @@ function Open-GtbInterface {
 try {
   $updater = Join-Path $PSScriptRoot 'atualizar-gtb.ps1'
   if (Test-Path -LiteralPath $updater -PathType Leaf) {
-    & $updater
+    $updateStatus = Join-Path $PSScriptRoot 'mostrar-atualizacao.ps1'
+    if (Test-Path -LiteralPath $updateStatus -PathType Leaf) {
+      & $updateStatus -UpdaterPath $updater
+    } else {
+      & $updater
+    }
   }
   if (-not (Test-Path -LiteralPath $executable)) {
     throw "Executável não encontrado: $executable"

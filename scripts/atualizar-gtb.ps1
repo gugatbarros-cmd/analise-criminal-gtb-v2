@@ -1,4 +1,4 @@
-param([switch]$CheckOnly)
+﻿param([switch]$CheckOnly, [switch]$EmitStatus)
 
 $ErrorActionPreference = 'Stop'
 $versionFile = Join-Path $PSScriptRoot 'version.txt'
@@ -10,8 +10,14 @@ function Write-UpdateLog([string]$Message) {
   Add-Content -LiteralPath $logFile -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message" -Encoding UTF8
 }
 
+function Send-UpdateStatus([string]$Phase, [string]$Message) {
+  if ($EmitStatus) {
+    Write-Output ([pscustomobject]@{ Type = 'GTB.UpdateStatus'; Phase = $Phase; Message = $Message })
+  }
+}
+
 try {
-  if (-not (Test-Path -LiteralPath $versionFile -PathType Leaf)) { exit 0 }
+  if (-not (Test-Path -LiteralPath $versionFile -PathType Leaf)) { return }
   $currentText = (Get-Content -LiteralPath $versionFile -Raw).Trim()
   if ($currentText -notmatch '^\d+\.\d+\.\d+$') { throw 'Versão instalada inválida.' }
   $current = [version]$currentText
@@ -19,13 +25,20 @@ try {
   # Instala na próxima abertura, após o servidor local ser encerrado.
   $running = @(Get-CimInstance Win32_Process -Filter "Name = 'GTB2-Local.exe'" |
     Where-Object { $_.ExecutablePath -and [string]::Equals($_.ExecutablePath, (Join-Path $PSScriptRoot 'GTB2-Local.exe'), [StringComparison]::OrdinalIgnoreCase) })
-  if ($running.Count -gt 0) { exit 0 }
+  if ($running.Count -gt 0) {
+    Send-UpdateStatus 'ready' 'O GTB já está aberto. Preparando a interface…'
+    return
+  }
 
+  Send-UpdateStatus 'checking' 'Verificando se existe uma nova versão…'
   $api = 'https://api.github.com/repos/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest'
   $release = Invoke-RestMethod -Uri $api -TimeoutSec 15 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
   if ($release.tag_name -notmatch '^v(\d+\.\d+\.\d+)$') { throw 'Versão da publicação inválida.' }
   $publishedText = $Matches[1]
-  if ([version]$publishedText -le $current) { exit 0 }
+  if ([version]$publishedText -le $current) {
+    Send-UpdateStatus 'ready' "Versão $currentText atualizada. Abrindo o sistema…"
+    return
+  }
 
   $expectedName = "GTB2-Instalador-$publishedText.exe"
   $asset = @($release.assets | Where-Object { $_.name -eq $expectedName }) | Select-Object -First 1
@@ -36,7 +49,9 @@ try {
   }
   $expectedHash = $Matches[1].ToUpperInvariant()
   if ([long]$asset.size -le 0) { throw 'Tamanho do instalador inválido.' }
-  if ($CheckOnly) { Write-Output $publishedText; exit 0 }
+  if ($CheckOnly) { Write-Output $publishedText; return }
+
+  Send-UpdateStatus 'available' "Nova versão $publishedText encontrada. Preparando o download…"
 
   $updates = Join-Path $env:LOCALAPPDATA 'GTB2\updates'
   New-Item -ItemType Directory -Path $updates -Force | Out-Null
@@ -45,9 +60,11 @@ try {
     ((Get-Item -LiteralPath $destination).Length -eq [long]$asset.size) -and
     ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -eq $expectedHash)
   if (-not $valid) {
+    Send-UpdateStatus 'downloading' "Baixando a versão $publishedText. Aguarde…"
     $temporary = Join-Path $updates "$expectedName.download"
     try {
       Invoke-WebRequest -Uri $expectedUrl -OutFile $temporary -TimeoutSec 300 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
+      Send-UpdateStatus 'verifying' 'Conferindo a integridade do arquivo baixado…'
       if ((Get-Item -LiteralPath $temporary).Length -ne [long]$asset.size -or
         (Get-FileHash -LiteralPath $temporary -Algorithm SHA256).Hash -ne $expectedHash) {
         throw 'O instalador baixado não passou na verificação SHA-256.'
@@ -58,13 +75,16 @@ try {
     }
   }
 
+  Send-UpdateStatus 'installing' "Instalando a versão $publishedText. Não feche o computador…"
   Write-UpdateLog "Instalando versão $publishedText verificada (SHA-256 $expectedHash)."
   $installer = Start-Process -FilePath $destination -ArgumentList '/S' -Wait -PassThru -WindowStyle Hidden
   if ($installer.ExitCode -ne 0) { throw "Instalador retornou código $($installer.ExitCode)." }
   $installedText = (Get-Content -LiteralPath $versionFile -Raw).Trim()
   if ($installedText -ne $publishedText) { throw "A instalação não confirmou a versão $publishedText." }
   Write-UpdateLog "Versão $publishedText instalada."
+  Send-UpdateStatus 'complete' "Versão $publishedText instalada. Abrindo o sistema…"
 } catch {
   Write-UpdateLog "Falha na atualização: $($_.Exception.Message)"
   if ($CheckOnly) { throw }
+  Send-UpdateStatus 'failed' 'Não foi possível atualizar agora. Abrindo a versão instalada…'
 }

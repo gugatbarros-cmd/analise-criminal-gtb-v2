@@ -1,5 +1,9 @@
 # Andamento da implantação — 10/11/2026
 
+## Status da atualização na abertura — 0.1.105
+
+Ao abrir o GTB local, uma janela informa a verificação de versão, o download, a conferência SHA-256, a instalação e a abertura do sistema. O atualizador continua em segundo plano enquanto a janela responde normalmente; se a rede ou a instalação falhar, mostra a falha e abre a versão já instalada. A janela não apresenta percentual inventado: usa indicador de atividade para etapas cuja duração depende da rede ou do instalador. A primeira atualização a partir de uma versão anterior ainda usa o lançador antigo; a janela passa a aparecer nas aberturas posteriores à instalação da 0.1.105. A sequência de estados, a falha de atualização, os acentos no PowerShell do Windows e a instalação isolada do script de status foram verificados. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
+
 ## Importação alternativa de Armas no CAD — 0.1.104
 
 A área de importações local agora oferece Armas junto de Ocorrências e Drogas. Para Armas, abre a grade oficial indicada pelo operador, filtra Unidade Despacho em 10º BPM e a Data da Ocorrência pelo intervalo informado, executa Pesquisa Avançada, move todas as colunas disponíveis à direita, aplica a seleção e exporta em XLS. O arquivo é validado e importado na base `armas`, com histórico, backup e sincronização da base processada. Testes sintéticos verificam o roteamento, os controles de colunas e a chamada de importação; a execução completa na sessão oficial do CAD ainda precisa de conferência operacional. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
