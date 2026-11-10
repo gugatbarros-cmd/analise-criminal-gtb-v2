@@ -1,4 +1,8 @@
-# Andamento da implantação — 09/11/2026
+# Andamento da implantação — 10/11/2026
+
+## Instalador menor e atualização automática — 0.1.101
+
+O pacote Windows deixa de incluir Polars, uma biblioteca que não é importada pelo aplicativo. O instalador caiu de 132.369.095 para 79.378.319 bytes (40% menor). A instalação encerra as instâncias locais do executável e espera a liberação do arquivo antes de substituí-lo; em caso de falha, informa o problema. A partir desta versão, o atalho consulta a versão estável mais recente no GitHub quando o aplicativo está fechado, baixa o instalador, confere tamanho e SHA-256 publicados pela API de Releases e instala silenciosamente antes de abrir a interface. Se a rede estiver indisponível, a versão instalada continua abrindo e a tentativa ocorre na próxima abertura. O banco, contas e backups permanecem fora da pasta do programa. Para computadores na versão 0.1.100, esta versão precisa ser instalada uma vez; as atualizações seguintes passam a ser automáticas. A instalação e reinstalação silenciosas passaram em diretório isolado e preservaram um arquivo de controle, sem tocar as bases em uso. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
 
 ## Contas locais e retirada do aplicativo anterior — 0.1.100
 

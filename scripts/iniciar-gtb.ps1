@@ -50,6 +50,10 @@ function Open-GtbInterface {
 }
 
 try {
+  $updater = Join-Path $PSScriptRoot 'atualizar-gtb.ps1'
+  if (Test-Path -LiteralPath $updater -PathType Leaf) {
+    & $updater
+  }
   if (-not (Test-Path -LiteralPath $executable)) {
     throw "Executável não encontrado: $executable"
   }

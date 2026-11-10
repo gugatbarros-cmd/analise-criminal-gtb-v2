@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-09",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.100: administração de contas locais com revogação e senha temporária, além da retirada do aplicativo anterior do fluxo de acesso. O Firebase Spark existente continua necessário para contas e consulta online. Instalações adicionais seguem o modelo de um computador importador e consulta autenticada nos demais. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e ensaio com duas máquinas.",
+  "updatedAt": "2026-11-10",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.101: instalador reduzido com retirada de dependência sem uso, encerramento supervisionado durante instalação e atualização automática verificada por SHA-256 na próxima abertura do aplicativo. O Firebase Spark existente continua necessário para contas e consulta online. Instalações adicionais seguem o modelo de um computador importador e consulta autenticada nos demais. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e ensaio com duas máquinas.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

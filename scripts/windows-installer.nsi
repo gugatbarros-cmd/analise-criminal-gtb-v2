@@ -2,11 +2,16 @@ Unicode true
 !include "MUI2.nsh"
 !include "x64.nsh"
 !include "WinVer.nsh"
+!include "LogicLib.nsh"
 !ifndef VERSION
 !error "Defina VERSION ao compilar."
 !endif
 Name "Análise Criminal GTB 2.0"
+!ifdef GTB_INSTALLER_TEST
+OutFile "..\dist\GTB2-Instalador-Test-${VERSION}.exe"
+!else
 OutFile "..\dist\GTB2-Instalador-${VERSION}.exe"
+!endif
 InstallDir "$LOCALAPPDATA\Programs\GTB2"
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
@@ -42,16 +47,27 @@ FunctionEnd
 Section "Sistema completo" Main
   SetShellVarContext current
   SetRegView 64
-  IfFileExists "$INSTDIR\encerrar-gtb.ps1" 0 +2
-  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\encerrar-gtb.ps1"' $0
+  InitPluginsDir
+  File /oname=$PLUGINSDIR\encerrar-gtb.ps1 "encerrar-gtb.ps1"
+  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$PLUGINSDIR\encerrar-gtb.ps1" -ExecutablePath "$INSTDIR\GTB2-Local.exe"' $0
+  ${If} $0 != 0
+    MessageBox MB_ICONSTOP "O GTB 2.0 não pôde ser encerrado. Feche o programa e execute a instalação novamente."
+    SetErrorLevel 1
+    Abort
+  ${EndIf}
   SetOutPath "$INSTDIR"
   SetOverwrite on
   File "..\dist\GTB2-Local.exe"
+  File "atualizar-gtb.ps1"
   File "..\desktop\brasao.ico"
   File "iniciar-gtb.ps1"
   File "encerrar-gtb.ps1"
   File "..\README.md"
+  FileOpen $1 "$INSTDIR\version.txt" w
+  FileWrite $1 "${VERSION}"
+  FileClose $1
   WriteUninstaller "$INSTDIR\Desinstalar-GTB2.exe"
+  !ifndef GTB_INSTALLER_TEST
   CreateDirectory "$SMPROGRAMS\GTB 2.0"
   CreateShortCut "$DESKTOP\Análise Criminal GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\iniciar-gtb.ps1"' "$INSTDIR\brasao.ico"
   CreateShortCut "$SMPROGRAMS\GTB 2.0\Análise Criminal GTB 2.0.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\iniciar-gtb.ps1"' "$INSTDIR\brasao.ico"
@@ -66,6 +82,7 @@ Section "Sistema completo" Main
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "QuietUninstallString" '$\"$INSTDIR\Desinstalar-GTB2.exe$\" /S'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\GTB2" "NoRepair" 1
+  !endif
 SectionEnd
 
 Function Launch
@@ -88,6 +105,8 @@ Section "Uninstall"
   Delete "$INSTDIR\brasao.ico"
   Delete "$INSTDIR\iniciar-gtb.ps1"
   Delete "$INSTDIR\encerrar-gtb.ps1"
+  Delete "$INSTDIR\atualizar-gtb.ps1"
+  Delete "$INSTDIR\version.txt"
   Delete "$INSTDIR\desinstalar-gtb.ps1"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\Desinstalar-GTB2.exe"

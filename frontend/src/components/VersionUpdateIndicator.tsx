@@ -42,11 +42,9 @@ export function VersionUpdateIndicator() {
             : state === 'ahead' ? `Versão ${APP_VERSION} · aguardando manifesto online`
           : state === 'unavailable' ? 'Verificação indisponível'
             : `Sistema atualizado · v${APP_VERSION}`}</strong>
-      {state === 'available' && <small>Versão em uso: {APP_VERSION}</small>}
+      {state === 'available' && <small>{isCloud ? `Versão em uso: ${APP_VERSION}` : 'A atualização será instalada automaticamente na próxima abertura do programa.'}</small>}
       {state === 'unavailable' && <small>Versão em uso: {APP_VERSION}</small>}
     </div>
-    {state === 'available' && (isCloud
-      ? <button type="button" onClick={update}>Atualizar agora</button>
-      : <a href={`https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v${published}`} target="_blank" rel="noopener noreferrer">Baixar atualização</a>)}
+    {state === 'available' && isCloud && <button type="button" onClick={update}>Atualizar agora</button>}
   </aside>
 }

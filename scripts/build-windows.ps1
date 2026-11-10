@@ -27,7 +27,8 @@ try {
     --icon 'desktop\brasao.ico' `
     --add-data 'frontend\dist-local;web' `
     --add-data 'backend\src\gtb\cad\page_actions.js;gtb\cad' `
-    --collect-all duckdb --collect-all polars --collect-all openpyxl --collect-all xlrd --collect-all playwright `
+    --collect-all duckdb --collect-all openpyxl --collect-all xlrd --collect-all playwright `
+    --exclude-module polars --exclude-module _polars_runtime_32 `
     desktop\launcher.py
   if ($LASTEXITCODE -ne 0) { throw 'Empacotamento falhou' }
   Write-Output (Join-Path $root 'dist\GTB2-Local.exe')
