@@ -57,7 +57,32 @@ Section "Sistema completo" Main
   ${EndIf}
   SetOutPath "$INSTDIR"
   SetOverwrite on
-  File "..\dist\GTB2-Local.exe"
+  IfFileExists "$INSTDIR\GTB2-Local.next.exe" 0 executable_stage
+  ClearErrors
+  Delete "$INSTDIR\GTB2-Local.next.exe"
+  IfErrors executable_blocked
+  executable_stage:
+  File /oname=GTB2-Local.next.exe "..\dist\GTB2-Local.exe"
+  Delete "$INSTDIR\GTB2-Local.previous.exe"
+  IfFileExists "$INSTDIR\GTB2-Local.exe" 0 executable_swap
+  ClearErrors
+  Rename "$INSTDIR\GTB2-Local.exe" "$INSTDIR\GTB2-Local.previous.exe"
+  IfErrors executable_blocked
+  executable_swap:
+  ClearErrors
+  Rename "$INSTDIR\GTB2-Local.next.exe" "$INSTDIR\GTB2-Local.exe"
+  IfErrors executable_restore
+  Delete "$INSTDIR\GTB2-Local.previous.exe"
+  Goto executable_ready
+  executable_restore:
+    IfFileExists "$INSTDIR\GTB2-Local.previous.exe" 0 executable_blocked
+    Rename "$INSTDIR\GTB2-Local.previous.exe" "$INSTDIR\GTB2-Local.exe"
+  executable_blocked:
+    Delete "$INSTDIR\GTB2-Local.next.exe"
+    MessageBox MB_ICONSTOP "O executável do GTB 2.0 está em uso ou não pôde ser substituído. A versão anterior foi preservada. Feche o programa e execute a instalação novamente."
+    SetErrorLevel 1
+    Abort
+  executable_ready:
   File "atualizar-gtb.ps1"
   File "..\desktop\brasao.ico"
   File "iniciar-gtb.ps1"
@@ -102,6 +127,8 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\GTB 2.0\Desinstalar.lnk"
   RMDir "$SMPROGRAMS\GTB 2.0"
   Delete "$INSTDIR\GTB2-Local.exe"
+  Delete "$INSTDIR\GTB2-Local.next.exe"
+  Delete "$INSTDIR\GTB2-Local.previous.exe"
   Delete "$INSTDIR\brasao.ico"
   Delete "$INSTDIR\iniciar-gtb.ps1"
   Delete "$INSTDIR\encerrar-gtb.ps1"

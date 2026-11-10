@@ -17,8 +17,8 @@ try {
   $current = [version]$currentText
 
   # Instala na próxima abertura, após o servidor local ser encerrado.
-  $running = @(Get-Process -Name 'GTB2-Local' -ErrorAction SilentlyContinue |
-    Where-Object { $_.Path -and [string]::Equals($_.Path, (Join-Path $PSScriptRoot 'GTB2-Local.exe'), [StringComparison]::OrdinalIgnoreCase) })
+  $running = @(Get-CimInstance Win32_Process -Filter "Name = 'GTB2-Local.exe'" |
+    Where-Object { $_.ExecutablePath -and [string]::Equals($_.ExecutablePath, (Join-Path $PSScriptRoot 'GTB2-Local.exe'), [StringComparison]::OrdinalIgnoreCase) })
   if ($running.Count -gt 0) { exit 0 }
 
   $api = 'https://api.github.com/repos/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest'
