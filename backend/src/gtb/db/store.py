@@ -401,7 +401,7 @@ class Store:
                 'longitude': longitude}
 
     def import_file(self, source: str, filename: str, content: bytes,
-                    scope: str = "partial") -> dict:
+                    scope: str = "partial", *, require_accepted: bool = False) -> dict:
         if source not in SOURCES:
             raise ValueError("Fonte desconhecida")
         if scope not in {"partial", "complete"}:
@@ -410,6 +410,20 @@ class Store:
             raise ValueError("Arquivo vazio ou acima de 64 MB")
         filename = Path(filename).name
         digest = hashlib.sha256(content).hexdigest()
+        with self.lock:
+            with self._connect() as db:
+                self._schema(db)
+                previous = db.execute("""SELECT id, row_count, inserted, updated, unchanged,
+                    quarantined, status FROM import_batches WHERE source = ? AND sha256 = ?
+                    AND adapter_version = ? AND status IN ('completed', 'completed_with_quarantine')
+                    ORDER BY imported_at DESC LIMIT 1""",
+                    [source, digest, source_adapter_version(source)]).fetchone()
+                if previous and (not require_accepted or sum(previous[2:5]) > 0):
+                    differences = db.execute("SELECT count(*) FROM import_divergences WHERE batch_id = ?",
+                                             [previous[0]]).fetchone()[0]
+                    return dict(zip(("id", "row_count", "inserted", "updated", "unchanged",
+                                     "quarantined", "status"), previous)) | {
+                                         "repeated": True, "differences": differences}
         rows = read_rows(filename, content)
         if not rows:
             raise ValueError("Planilha sem registros")
@@ -430,6 +444,9 @@ class Store:
                 prepared.append((number, row, record, row_hash))
             except ValueError as error:
                 rejected.append((number, row, str(error)))
+
+        if require_accepted and not prepared:
+            raise ValueError("Nenhum registro válido de " + source + " foi encontrado no XLS.")
 
         with self.lock:
             with self._connect() as db:

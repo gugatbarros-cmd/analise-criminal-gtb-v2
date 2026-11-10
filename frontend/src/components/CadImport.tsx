@@ -44,7 +44,7 @@ export function CadImport({ onComplete }: { onComplete: () => void }) {
   return <section className="panel" aria-labelledby="cad-import-title">
     <div className="section-head"><div><p className="eyebrow">Alternativa de importação</p>
       <h2 id="cad-import-title">Importar bases do CAD</h2></div></div>
-    <p className="muted">Escolha o intervalo e marque as bases. O sistema baixa cada XLS e importa na base local correspondente. A sessão do CAD é reutilizada enquanto estiver válida; senha e token não são salvos.</p>
+    <p className="muted">Escolha o intervalo e marque as bases. O sistema consulta o CAD em segundo plano, baixa cada XLS e importa na base local correspondente. Informe o token aqui quando solicitado. A sessão é reutilizada enquanto estiver válida; senha e token não são salvos.</p>
     <form noValidate onSubmit={event => {
       event.preventDefault()
       const first = startInput.current?.value || ''

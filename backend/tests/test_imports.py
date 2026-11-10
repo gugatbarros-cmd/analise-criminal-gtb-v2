@@ -90,6 +90,24 @@ def test_sources_independent_and_idempotent(tmp_path):
     assert not list((tmp_path / "data" / "raw").glob("stage-*"))
 
 
+def test_repeated_import_skips_spreadsheet_parsing(tmp_path, monkeypatch):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    content = csv_bytes([cad()])
+    first = store.import_file("mvi_cad", "cad.csv", content, require_accepted=True)
+    monkeypatch.setattr("gtb.db.store.read_rows", lambda *_args: pytest.fail("repeated file was parsed"))
+    repeated = store.import_file("mvi_cad", "cad.csv", content, require_accepted=True)
+    assert repeated["repeated"] is True
+    assert repeated["id"] == first["id"]
+
+
+def test_cad_import_rejects_file_without_valid_records(tmp_path):
+    store = Store(tmp_path / "data" / "gtb.duckdb")
+    with pytest.raises(ValueError, match="Nenhum registro válido"):
+        store.import_file("mvi_cad", "invalid.csv", csv_bytes([{"vazio": "x"}]),
+                          require_accepted=True)
+    assert store.records("mvi_cad")["total"] == 0
+
+
 def test_cad_narrative_recovers_confirmed_homicide_without_structured_death(tmp_path):
     store = Store(tmp_path / 'data' / 'gtb.duckdb')
     cases = [

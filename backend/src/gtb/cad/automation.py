@@ -155,10 +155,10 @@ class CadImportManager:
                 self.profile_dir.mkdir(parents=True, exist_ok=True)
                 try:
                     context = playwright.chromium.launch_persistent_context(
-                        str(self.profile_dir), channel="chrome", headless=False, accept_downloads=True)
+                        str(self.profile_dir), channel="chrome", headless=True, accept_downloads=True)
                 except PlaywrightError:
                     context = playwright.chromium.launch_persistent_context(
-                        str(self.profile_dir), channel="msedge", headless=False, accept_downloads=True)
+                        str(self.profile_dir), channel="msedge", headless=True, accept_downloads=True)
                 try:
                     page = context.pages[0] if context.pages else context.new_page()
                     if not self._resume_access(page):
@@ -199,7 +199,7 @@ class CadImportManager:
         except Exception:  # noqa: BLE001 — erro inesperado não pode deixar a interface aguardando.
             if not self.stop.is_set():
                 self._set("error", "A consulta CAD parou antes de confirmar a importação. "
-                          "Confira a janela oficial e tente novamente.")
+                          "Confira o acesso ao CAD e tente novamente.")
 
     def _run_import(self, page, start_date: str, end_date: str,
                     sources: list[str] | None = None) -> bool:
@@ -306,14 +306,12 @@ class CadImportManager:
             if TOKEN_WORDS.search(description):
                 matches.append(field)
         if len(matches) != 1:
-            self._set("token", "Campo não identificado. Confirme o token na janela oficial do CAD.")
-            return
+            raise ValueError("O campo de token não foi identificado no CAD. A consulta foi interrompida.")
         field = matches[0]
         field.fill(token)
         form = field.locator("xpath=ancestor::form[1]")
         if form.count() != 1:
-            self._set("token", "Confirme o token na janela oficial do CAD.")
-            return
+            raise ValueError("O formulário de token do CAD não foi identificado. A consulta foi interrompida.")
         submit = form.locator('button[type="submit"],input[type="submit"]')
         if submit.count() == 1:
             submit.click()
@@ -500,13 +498,8 @@ class CadImportManager:
         content = saved.read_bytes()
         if not content or len(content) > MAX_UPLOAD_BYTES:
             raise ValueError("O XLS está vazio ou acima do limite de 64 MB.")
-        self._set("validating", "Validando a planilha antes da importação.", progress=88)
-        validation = self.store.validate_file(source, filename, content)
-        self._check_stop()
-        if validation["accepted"] == 0:
-            raise ValueError("Nenhum registro válido de " + source + " foi encontrado no XLS.")
-        self._set("importing", "Importando " + source + " no sistema 2.0.", progress=95)
-        result = self.store.import_file(source, filename, content, "partial")
+        self._set("importing", "Validando e importando " + source + " no sistema 2.0.", progress=88)
+        result = self.store.import_file(source, filename, content, "partial", require_accepted=True)
         if self.on_import:
             self.on_import()
         return {
