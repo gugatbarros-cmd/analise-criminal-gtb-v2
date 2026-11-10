@@ -1,8 +1,28 @@
 import packageInfo from '../../package.json'
 import { isCloud } from './cloud'
+import { getSessionToken } from './auth'
 
 export const APP_VERSION = packageInfo.version
 export const ONLINE_VERSION_URL = 'https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/app-version.json'
+const localApi = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+
+export type LocalUpdateStatus = { phase: string; message: string }
+
+export async function localUpdateRequest(method: 'GET' | 'POST'): Promise<LocalUpdateStatus> {
+  const response = await fetch(`${localApi}/system/update${method === 'GET' ? '/status' : ''}`, {
+    method, headers: { Authorization: `Bearer ${getSessionToken()}` }, cache: 'no-store',
+  })
+  const body = await response.json() as LocalUpdateStatus & { detail?: string }
+  if (!response.ok) throw new Error(body.detail || 'Não foi possível iniciar a atualização.')
+  return body
+}
+
+export async function installedVersion(): Promise<string> {
+  const response = await fetch(`${localApi}/health`, { cache: 'no-store' })
+  if (!response.ok) throw new Error('Sistema reiniciando')
+  const body = await response.json() as { version?: string }
+  return body.version || ''
+}
 
 export function isNewerVersion(published: string, current: string): boolean {
   const parse = (value: string) => value.match(/^(\d+)\.(\d+)\.(\d+)$/)?.slice(1).map(Number)

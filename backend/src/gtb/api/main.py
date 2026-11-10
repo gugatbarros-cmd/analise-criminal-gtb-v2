@@ -1,6 +1,10 @@
 """API local para importações auditáveis e indicadores provisórios."""
 
+import json
 import os
+import subprocess
+import sys
+import threading
 from datetime import date
 from pathlib import Path
 from urllib.parse import unquote
@@ -17,13 +21,23 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.106"
+APP_VERSION = "0.1.107"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
 auth_manager = AuthManager(DATA_DIR / "auth.sqlite3")
 cloud_sync = CloudSync(store, DATA_DIR, APP_VERSION)
 cad_import = CadImportManager(store, DATA_DIR, lambda: (cloud_sync.start(), cloud_sync.wake.set()))
+update_lock = threading.Lock()
+update_process: subprocess.Popen | None = None
+active_data_operations = 0
+update_status_file = DATA_DIR / "update-status.json"
+
+
+def installed_updater_path() -> Path | None:
+    if not getattr(sys, "frozen", False) or os.name != "nt":
+        return None
+    return Path(sys.executable).resolve().parent / "atualizar-gtb.ps1"
 # A interface de desenvolvimento usa 5173; a interface embutida no executável
 # usa a mesma porta 8000 da API, inclusive para login e importação.
 LOCAL_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173",
@@ -107,6 +121,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def authorize(request: Request, call_next):
+    global active_data_operations
     origin = request.headers.get("origin")
     if origin and origin not in LOCAL_ORIGINS:
         return JSONResponse({"detail": "Origem não autorizada"}, status_code=403)
@@ -134,14 +149,25 @@ async def authorize(request: Request, call_next):
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
         if user.get("must_change_password") and path not in {"/auth/me", "/auth/password", "/auth/logout"}:
             return JSONResponse({"detail": "Troque a senha temporária antes de continuar"}, status_code=403)
-        if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints", "/mvi/cad/reviews", "/map/location-reviews"))
+        if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints", "/mvi/cad/reviews", "/map/location-reviews", "/system/update"))
                 and user["role"] != "admin"):
             return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
         if request.method == "POST" and path.startswith(("/imports/", "/cad/")) and user["role"] == "viewer":
             return JSONResponse({"detail": "Perfil somente para consulta"}, status_code=403)
         request.state.user = user
         request.state.token = token
-        response = await call_next(request)
+        data_operation = request.method == "POST" and path.startswith(("/imports/", "/cad/"))
+        if data_operation:
+            with update_lock:
+                if update_process is not None and update_process.poll() is None:
+                    return JSONResponse({"detail": "Aguarde a atualização do sistema terminar."}, status_code=409)
+                active_data_operations += 1
+        try:
+            response = await call_next(request)
+        finally:
+            if data_operation:
+                with update_lock:
+                    active_data_operations -= 1
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
@@ -182,6 +208,47 @@ def health() -> HealthResponse:
     return HealthResponse(status="ok", version=APP_VERSION,
                           mode="demo" if demo_mode() else "local" if auth_manager.has_users()
                           else "setup")
+
+
+@app.get("/system/update/status")
+def system_update_status() -> dict:
+    if not update_status_file.is_file():
+        return {"phase": "idle", "message": "Nenhuma atualização em andamento."}
+    try:
+        status = json.loads(update_status_file.read_text(encoding="utf-8-sig"))
+        if status.get("phase") not in {"checking", "available", "downloading", "verifying", "installing", "complete", "failed", "ready"}:
+            raise ValueError("Estado inválido")
+        return {"phase": status["phase"], "message": str(status.get("message", ""))}
+    except (OSError, ValueError, TypeError):
+        return {"phase": "failed", "message": "Não foi possível ler o andamento da atualização."}
+
+
+@app.post("/system/update")
+def start_system_update() -> dict:
+    global update_process
+    script = installed_updater_path()
+    if script is None:
+        raise HTTPException(409, "A instalação automática está disponível apenas no aplicativo Windows instalado.")
+    if not script.is_file():
+        raise HTTPException(503, "O atualizador não foi encontrado nesta instalação.")
+    with update_lock:
+        if update_process is not None and update_process.poll() is None:
+            return {"phase": "checking", "message": "Atualização já em andamento."}
+        with cad_import.lock:
+            cad_busy = cad_import.worker is not None and cad_import.worker.is_alive()
+        if cad_busy or active_data_operations:
+            raise HTTPException(409, "Conclua a importação e encerre a sessão do CAD antes de atualizar.")
+        update_status_file.write_text(json.dumps({"phase": "checking", "message": "Verificando nova versão…"}), encoding="utf-8")
+        powershell = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
+        try:
+            update_process = subprocess.Popen(
+                [str(powershell), "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+                 "-File", str(script), "-AllowRunning", "-Restart", "-StatusFile", str(update_status_file)],
+                cwd=str(script.parent), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
+        except OSError:
+            raise HTTPException(503, "Não foi possível iniciar o atualizador do Windows.") from None
+    return {"phase": "checking", "message": "Verificando nova versão…"}
 
 
 @app.get('/reports/dataset')

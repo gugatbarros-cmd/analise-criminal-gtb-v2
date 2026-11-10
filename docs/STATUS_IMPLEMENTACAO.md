@@ -1,5 +1,9 @@
 # Andamento da implantação — 10/11/2026
 
+## Atualização com o sistema aberto — 0.1.107
+
+O administrador pode iniciar a atualização pelo aviso de nova versão enquanto o aplicativo local está aberto. A atualização também inicia automaticamente após 90 segundos sem interação com o sistema. A interface acompanha verificação, download, instalação e reinício, e recarrega a nova versão após a API responder. A API recusa a atualização durante importação ou sessão CAD ativa, impede novas operações de dados durante o processo e executa o instalador em processo separado. O pacote continua sendo validado por tamanho e SHA-256. A primeira passagem de 0.1.106 para 0.1.107 ainda depende da abertura pelo atalho ou da instalação manual, pois a versão anterior não possui o comando de atualização em execução. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
+
 ## Correção do filtro de Armas no CAD — 0.1.106
 
 A captura da importação real de Armas mostrou a falha “O filtro Unidade de Despacho não foi identificado.” A identificação anterior exigia rótulo idêntico ao usado na grade de Drogas. A automação agora aceita variações como dois-pontos e texto adicional, localiza a linha que contém a opção 10º BPM e, se o rótulo estiver em outra linha, usa o nome técnico do campo. A seleção continua restrita ao filtro Unidade Despacho, sem mudar outro filtro de Unidade. Testes com páginas sintéticas verificam as duas estruturas e o fluxo de Armas; a nova versão ainda precisa de uma execução completa na sessão oficial do CAD. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.

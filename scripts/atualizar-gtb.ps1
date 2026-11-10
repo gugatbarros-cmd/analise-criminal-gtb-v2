@@ -1,4 +1,4 @@
-﻿param([switch]$CheckOnly, [switch]$EmitStatus)
+﻿param([switch]$CheckOnly, [switch]$EmitStatus, [switch]$AllowRunning, [switch]$Restart, [string]$StatusFile = '')
 
 $ErrorActionPreference = 'Stop'
 $versionFile = Join-Path $PSScriptRoot 'version.txt'
@@ -11,6 +11,12 @@ function Write-UpdateLog([string]$Message) {
 }
 
 function Send-UpdateStatus([string]$Phase, [string]$Message) {
+  if ($StatusFile) {
+    $status = @{ phase = $Phase; message = $Message } | ConvertTo-Json -Compress
+    $temporaryStatus = "$StatusFile.tmp"
+    [System.IO.File]::WriteAllText($temporaryStatus, $status, [System.Text.UTF8Encoding]::new($false))
+    Move-Item -LiteralPath $temporaryStatus -Destination $StatusFile -Force
+  }
   if ($EmitStatus) {
     Write-Output ([pscustomobject]@{ Type = 'GTB.UpdateStatus'; Phase = $Phase; Message = $Message })
   }
@@ -25,7 +31,7 @@ try {
   # Instala na próxima abertura, após o servidor local ser encerrado.
   $running = @(Get-CimInstance Win32_Process -Filter "Name = 'GTB2-Local.exe'" |
     Where-Object { $_.ExecutablePath -and [string]::Equals($_.ExecutablePath, (Join-Path $PSScriptRoot 'GTB2-Local.exe'), [StringComparison]::OrdinalIgnoreCase) })
-  if ($running.Count -gt 0) {
+  if ($running.Count -gt 0 -and -not $AllowRunning) {
     Send-UpdateStatus 'ready' 'O GTB já está aberto. Preparando a interface…'
     return
   }
@@ -82,9 +88,18 @@ try {
   $installedText = (Get-Content -LiteralPath $versionFile -Raw).Trim()
   if ($installedText -ne $publishedText) { throw "A instalação não confirmou a versão $publishedText." }
   Write-UpdateLog "Versão $publishedText instalada."
-  Send-UpdateStatus 'complete' "Versão $publishedText instalada. Abrindo o sistema…"
+  Send-UpdateStatus 'complete' "Versao $publishedText instalada. Reiniciando o sistema..."
+  if ($Restart) {
+    $previousNoBrowser = $env:GTB_NO_BROWSER
+    $env:GTB_NO_BROWSER = '1'
+    try {
+      Start-Process -FilePath (Join-Path $PSScriptRoot 'GTB2-Local.exe') -WorkingDirectory $PSScriptRoot -WindowStyle Hidden | Out-Null
+    } finally {
+      $env:GTB_NO_BROWSER = $previousNoBrowser
+    }
+  }
 } catch {
   Write-UpdateLog "Falha na atualização: $($_.Exception.Message)"
   if ($CheckOnly) { throw }
-  Send-UpdateStatus 'failed' 'Não foi possível atualizar agora. Abrindo a versão instalada…'
+  Send-UpdateStatus 'failed' "Falha na atualizacao: $($_.Exception.Message)"
 }
