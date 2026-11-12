@@ -3,7 +3,8 @@
 function cadPageAction(action, options = {}) {
   const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
   const visible = (element) => !!element && !element.disabled && !!element.getClientRects().length;
-  const exact = (element, label) => normalize(element.textContent || element.value) === normalize(label);
+  const exact = (element, label) => [element.textContent, element.value,
+    element.getAttribute('aria-label'), element.title].some((value) => normalize(value) === normalize(label));
   const controls = 'button,input[type="button"],input[type="submit"],a,[role="button"]';
   const click = (label) => {
     const matches = [...document.querySelectorAll(controls)].filter((element) => visible(element) && exact(element, label));

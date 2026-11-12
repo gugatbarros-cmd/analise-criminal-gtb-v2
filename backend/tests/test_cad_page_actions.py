@@ -4,7 +4,42 @@ import pytest
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
-from gtb.cad.automation import ACTIONS
+from gtb.cad.automation import ACTIONS, CadImportManager
+from gtb.db.store import Store
+
+
+@pytest.mark.parametrize("label,action", [
+    ("Pesquisa Avançada", "advancedSearch"),
+    ("Pesquisar", "search"),
+])
+def test_drugs_search_accepts_available_cad_control(tmp_path, label, action):
+    with sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+        except PlaywrightError:
+            try:
+                browser = playwright.chromium.launch(channel="msedge", headless=True)
+            except PlaywrightError:
+                pytest.skip("Chrome ou Edge necessário para testar os controles CAD")
+        try:
+            page = browser.new_page()
+            page.set_content(f'<button aria-label="{label}" onclick="window.clicked=true">Buscar</button>')
+
+            class CadPage:
+                url = "https://analisacad.seguranca.al.gov.br/app/cad/cad_grid_droga_boletim/"
+
+                def is_closed(self):
+                    return False
+
+                def wait_for_function(self, *args, **kwargs):
+                    return page.wait_for_function(*args, **kwargs)
+
+            manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+            assert manager._wait_control(CadPage(), ("Pesquisa Avançada", "Pesquisar")) == label
+            assert page.evaluate(f"({ACTIONS})('{action}')") == {"ok": True}
+            page.wait_for_function("window.clicked === true")
+        finally:
+            browser.close()
 
 
 @pytest.mark.parametrize("label", ["Unidade Despacho", "Unidade Despacho:",

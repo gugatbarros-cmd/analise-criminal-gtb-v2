@@ -320,22 +320,28 @@ class CadImportManager:
             field.press("Enter")
         self._set("verifying", "Aguardando a confirmação do token no CAD…")
 
-    def _wait_control(self, page, label: str, timeout: int = 45000) -> None:
+    def _wait_control(self, page, label: str | tuple[str, ...], timeout: int = 45000) -> str:
+        labels = (label,) if isinstance(label, str) else label
         deadline = time.monotonic() + timeout / 1000
         while time.monotonic() < deadline:
             self._check_stop()
             if page.is_closed() or not page.url.startswith(CAD_ORIGIN + "/"):
                 raise ValueError("A página do CAD foi fechada ou mudou de origem.")
             try:
-                page.wait_for_function("""label => [...document.querySelectorAll(
+                found = page.wait_for_function(r"""labels => {
+            const normalize = value => String(value || '').normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+            const controls = [...document.querySelectorAll(
             'button,input[type="button"],input[type="submit"],a,[role="button"]')]
-            .some(element => element.getClientRects().length &&
-                (element.textContent || element.value || '').trim() === label)
-                """, arg=label, timeout=1000)
-                return
+              .filter(element => element.getClientRects().length && !element.disabled);
+            return labels.find(label => controls.some(element =>
+              [element.textContent, element.value, element.getAttribute('aria-label'), element.title]
+                .some(value => normalize(value) === normalize(label)))) || false;
+          }""", arg=list(labels), timeout=1000)
+                return found.json_value()
             except PlaywrightError:
                 pass
-        raise TimeoutError(f"O CAD não mostrou {label} após a etapa anterior.")
+        raise TimeoutError(f"O CAD não mostrou {' ou '.join(labels)} após a etapa anterior.")
 
     def _action(self, page, action: str, message: str, options: dict | None = None,
                 progress: int | None = None) -> dict:
@@ -463,7 +469,8 @@ class CadImportManager:
         page.goto(url, wait_until="load", timeout=45000)
         if not page.url.startswith(url):
             raise ValueError("A consulta de " + source + " não abriu no CAD.")
-        self._wait_control(page, "Pesquisa Avançada" if source in {"drogas", "armas"} else "Pesquisar")
+        search_control = self._wait_control(page, ("Pesquisa Avançada", "Pesquisar")
+                                            if source in {"drogas", "armas"} else "Pesquisar")
         self._action(page, "dateRangeMode", "Selecionando o intervalo de datas.", progress=18)
         page.wait_for_timeout(800)
         self._action(page, "dateRangeValues", "Preenchendo as datas da consulta.",
@@ -472,7 +479,8 @@ class CadImportManager:
             self._action(page, "dispatchUnit", "Selecionando Unidade de Despacho 10º BPM.", progress=25)
             if source == "drogas":
                 self._action(page, "titular", "Marcando Titular na ocorrência.", progress=28)
-            self._action(page, "advancedSearch", "Pesquisando " + source + " no CAD.", progress=32)
+            search_action = "search" if search_control == "Pesquisar" else "advancedSearch"
+            self._action(page, search_action, "Pesquisando " + source + " no CAD.", progress=32)
         else:
             self._action(page, "agency", "Selecionando Polícia Militar.", progress=25)
             page.wait_for_timeout(800)

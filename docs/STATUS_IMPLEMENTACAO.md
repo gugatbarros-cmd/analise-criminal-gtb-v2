@@ -1,4 +1,8 @@
-# Andamento da implantação — 10/11/2026
+# Andamento da implantação — 12/11/2026
+
+## Correção da pesquisa de Drogas no CAD — 0.1.109
+
+A captura da importação alternativa de Drogas mostrou a falha “O CAD não mostrou Pesquisa Avançada após a etapa anterior.” A automação exigia esse texto exato antes de preencher o período. Agora reconhece “Pesquisa Avançada” ou “Pesquisar”, inclusive quando o nome acessível vem de `aria-label` ou `title`, e aciona o controle encontrado depois de confirmar o intervalo, a Unidade de Despacho 10º BPM e Titular. O mesmo ajuste vale para Armas. Testes sintéticos cobrem as duas variantes e a importação de Drogas até a gravação do XLS. A confirmação na sessão oficial do CAD ainda depende de nova tentativa pelo operador. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.
 
 ## Atualização com o sistema aberto — 0.1.107
 
