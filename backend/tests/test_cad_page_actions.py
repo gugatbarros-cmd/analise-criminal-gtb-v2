@@ -42,6 +42,42 @@ def test_drugs_search_accepts_available_cad_control(tmp_path, label, action):
             browser.close()
 
 
+def test_cad_follows_columns_in_result_popup_and_frame(tmp_path):
+    with sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch(channel="chrome", headless=True)
+        except PlaywrightError:
+            try:
+                browser = playwright.chromium.launch(channel="msedge", headless=True)
+            except PlaywrightError:
+                pytest.skip("Chrome ou Edge necessário para testar os controles CAD")
+        try:
+            context = browser.new_context()
+            origin = "https://analisacad.seguranca.al.gov.br"
+            def serve(route):
+                path = route.request.url.split("/")[-1]
+                html = ("<button onclick=\"window.open('/resultados','_blank')\">Pesquisar</button>"
+                        if path == "consulta" else
+                        "<iframe src='/controles'></iframe>" if path == "resultados" else
+                        "<button onclick=\"window.clicked=true\">Colunas</button>")
+                route.fulfill(status=200, content_type="text/html", body=html)
+            context.route(f"{origin}/**", serve)
+            page = context.new_page()
+            page.goto(f"{origin}/consulta")
+            with page.expect_popup() as popup_info:
+                page.get_by_role("button", name="Pesquisar").click()
+            popup = popup_info.value
+            manager = CadImportManager(Store(tmp_path / "gtb.duckdb"), tmp_path)
+            assert manager._wait_control(page, "Colunas", timeout=5000) == "Colunas"
+            assert manager._cad_control_page is popup
+            assert manager._cad_control_frame is not popup.main_frame
+            manager._action(page, "columnMenu", "Abrindo colunas")
+            popup.frame_locator("iframe").locator("body").wait_for()
+            assert manager._cad_control_frame.evaluate("window.clicked") is True
+        finally:
+            browser.close()
+
+
 @pytest.mark.parametrize("label", ["Unidade Despacho", "Unidade Despacho:",
                                     "Unidade de Despacho:", "Unidade / Despacho",
                                     "Unidade Despacho da ocorrência"])

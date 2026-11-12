@@ -3,6 +3,7 @@
 .version-update-indicator>div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .version-update-indicator strong{font-size:.78rem;line-height:1.3}
 .version-update-indicator small{color:#5b7183}
+.version-update-progress{width:100%;height:9px;accent-color:#0d4c85}
 .version-update-indicator button,.version-update-indicator a{flex:none;margin-left:5px;padding:7px 10px;border:0;border-radius:7px;background:#0d4c85;color:#fff;font:inherit;font-weight:700;text-decoration:none;cursor:pointer}
 .version-update-indicator button:hover,.version-update-indicator a:hover{background:#07355f}
 .version-update-available{border-color:#e7b24f;background:#fffaf0}

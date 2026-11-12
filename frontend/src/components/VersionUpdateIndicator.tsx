@@ -9,6 +9,7 @@ export function VersionUpdateIndicator() {
   const [state, setState] = useState<UpdateState>('checking')
   const [published, setPublished] = useState('')
   const [message, setMessage] = useState('')
+  const [progress, setProgress] = useState<number | null>(null)
   const [canInstall, setCanInstall] = useState(false)
   const checking = useRef(false)
   const updating = useRef(false)
@@ -56,6 +57,7 @@ export function VersionUpdateIndicator() {
   const installLocal = async () => {
     autoAttempted.current = true
     updating.current = true
+    setProgress(null)
     setMessage('Iniciando a atualização…')
     setState('updating')
     try {
@@ -78,6 +80,7 @@ export function VersionUpdateIndicator() {
         }
         const status = await localUpdateRequest('GET')
         setMessage(status.message)
+        setProgress(typeof status.progress === 'number' ? status.progress : null)
         if (status.phase === 'failed' || status.phase === 'ready') {
           window.clearInterval(timer)
           updating.current = false
@@ -119,7 +122,10 @@ export function VersionUpdateIndicator() {
           : state === 'unavailable' ? 'Verificação indisponível'
             : `Sistema atualizado · v${APP_VERSION}`}</strong>
       {state === 'available' && <small>{message || (isCloud ? `Versão em uso: ${APP_VERSION}` : canInstall ? 'Instale agora ou aguarde 90 segundos sem usar o sistema para a instalação automática.' : 'Peça ao administrador para instalar a atualização.')}</small>}
-      {state === 'updating' && !isCloud && <small>{message}</small>}
+      {state === 'updating' && !isCloud && <><small>{message}</small>
+        <progress className="version-update-progress" value={progress ?? undefined} max={100}
+          aria-label="Andamento da atualização" />
+        {progress !== null && <small>{progress}% do instalador baixado</small>}</>}
       {state === 'unavailable' && <small>Versão em uso: {APP_VERSION}</small>}
     </div>
     {state === 'available' && isCloud && <button type="button" onClick={update}>Atualizar agora</button>}

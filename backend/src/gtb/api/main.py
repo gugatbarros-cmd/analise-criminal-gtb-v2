@@ -21,7 +21,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.109"
+APP_VERSION = "0.1.110"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -218,7 +218,10 @@ def system_update_status() -> dict:
         status = json.loads(update_status_file.read_text(encoding="utf-8-sig"))
         if status.get("phase") not in {"checking", "available", "downloading", "verifying", "installing", "complete", "failed", "ready"}:
             raise ValueError("Estado inválido")
-        return {"phase": status["phase"], "message": str(status.get("message", ""))}
+        progress = status.get("progress")
+        if progress is not None and (type(progress) is not int or not 0 <= progress <= 100):
+            raise ValueError("Percentual inválido")
+        return {"phase": status["phase"], "message": str(status.get("message", "")), "progress": progress}
     except (OSError, ValueError, TypeError):
         return {"phase": "failed", "message": "Não foi possível ler o andamento da atualização."}
 
@@ -233,7 +236,7 @@ def start_system_update() -> dict:
         raise HTTPException(503, "O atualizador não foi encontrado nesta instalação.")
     with update_lock:
         if update_process is not None and update_process.poll() is None:
-            return {"phase": "checking", "message": "Atualização já em andamento."}
+            return {"phase": "checking", "message": "Atualização já em andamento.", "progress": None}
         with cad_import.lock:
             cad_busy = cad_import.worker is not None and cad_import.worker.is_alive()
         if cad_busy or active_data_operations:
@@ -248,7 +251,7 @@ def start_system_update() -> dict:
                 stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
         except OSError:
             raise HTTPException(503, "Não foi possível iniciar o atualizador do Windows.") from None
-    return {"phase": "checking", "message": "Verificando nova versão…"}
+    return {"phase": "checking", "message": "Verificando nova versão…", "progress": None}
 
 
 @app.get('/reports/dataset')

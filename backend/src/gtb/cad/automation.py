@@ -325,10 +325,20 @@ class CadImportManager:
         deadline = time.monotonic() + timeout / 1000
         while time.monotonic() < deadline:
             self._check_stop()
-            if page.is_closed() or not page.url.startswith(CAD_ORIGIN + "/"):
+            context = getattr(page, "context", None)
+            pages = context.pages if context else [page]
+            if not any(not candidate.is_closed() and candidate.url.startswith(CAD_ORIGIN + "/")
+                       for candidate in pages):
                 raise ValueError("A página do CAD foi fechada ou mudou de origem.")
-            try:
-                found = page.wait_for_function(r"""labels => {
+            for candidate in pages:
+                if candidate.is_closed() or not candidate.url.startswith(CAD_ORIGIN + "/"):
+                    continue
+                frames = getattr(candidate, "frames", None) or [candidate]
+                for frame in frames:
+                    if frame is not candidate and not frame.url.startswith(CAD_ORIGIN + "/"):
+                        continue
+                    try:
+                        found = frame.wait_for_function(r"""labels => {
             const normalize = value => String(value || '').normalize('NFD')
               .replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
             const controls = [...document.querySelectorAll(
@@ -337,19 +347,25 @@ class CadImportManager:
             return labels.find(label => controls.some(element =>
               [element.textContent, element.value, element.getAttribute('aria-label'), element.title]
                 .some(value => normalize(value) === normalize(label)))) || false;
-          }""", arg=list(labels), timeout=1000)
-                return found.json_value()
-            except PlaywrightError:
-                pass
+          }""", arg=list(labels), timeout=250)
+                        self._cad_control_page = candidate
+                        self._cad_control_frame = frame
+                        return found.json_value()
+                    except PlaywrightError:
+                        pass
         raise TimeoutError(f"O CAD não mostrou {' ou '.join(labels)} após a etapa anterior.")
 
     def _action(self, page, action: str, message: str, options: dict | None = None,
                 progress: int | None = None) -> dict:
         self._check_stop()
-        if not page.url.startswith(CAD_ORIGIN + "/"):
+        active_page = getattr(self, "_cad_control_page", page)
+        if active_page.is_closed() or not active_page.url.startswith(CAD_ORIGIN + "/"):
             raise ValueError("A página atual não pertence ao CAD.")
         self._set("filtering", message, progress=progress)
-        result = page.evaluate(f"({ACTIONS})({json.dumps(action)}, {json.dumps(options or {})})")
+        frame = getattr(self, "_cad_control_frame", active_page)
+        if frame is not active_page and not frame.url.startswith(CAD_ORIGIN + "/"):
+            raise ValueError("A janela interna do CAD mudou de origem.")
+        result = frame.evaluate(f"({ACTIONS})({json.dumps(action)}, {json.dumps(options or {})})")
         if not result or not result.get("ok"):
             raise ValueError(result.get("reason", f"O CAD não concluiu {action}.") if result else
                              f"O CAD não concluiu {action}.")
@@ -366,18 +382,27 @@ class CadImportManager:
             if initial_count is None:
                 initial_count = inventory["count"]
             start, end = inventory["from"], inventory["to"]
-            viewport = page.evaluate("({width: innerWidth, height: innerHeight})")
+            active_page = getattr(self, "_cad_control_page", page)
+            frame = getattr(self, "_cad_control_frame", active_page)
+            offset = {"x": 0, "y": 0}
+            if frame is not active_page and frame.parent_frame:
+                box = frame.frame_element().bounding_box()
+                if box is None:
+                    raise ValueError("A janela interna do CAD não está visível.")
+                offset = {"x": box["x"], "y": box["y"]}
+            viewport = active_page.evaluate("({width: innerWidth, height: innerHeight})")
             for point in (start, end):
-                if not (0 <= point["x"] < viewport["width"] and
-                        0 <= point["y"] < viewport["height"]):
+                point["x"] += offset["x"]
+                point["y"] += offset["y"]
+                if not (0 <= point["x"] < viewport["width"] and 0 <= point["y"] < viewport["height"]):
                     raise ValueError("Uma coluna está fora da janela do CAD.")
-            page.mouse.move(start["x"], start["y"])
-            page.mouse.down()
-            page.wait_for_timeout(150)
-            page.mouse.move(end["x"], end["y"], steps=24)
-            page.wait_for_timeout(100)
-            page.mouse.up()
-            page.wait_for_timeout(350)
+            active_page.mouse.move(start["x"], start["y"])
+            active_page.mouse.down()
+            active_page.wait_for_timeout(150)
+            active_page.mouse.move(end["x"], end["y"], steps=24)
+            active_page.wait_for_timeout(100)
+            active_page.mouse.up()
+            active_page.wait_for_timeout(350)
             after = self._action(page, "columnInventory", "Conferindo as colunas selecionadas.",
                                  {"grade": source if source in {"drogas", "armas"} else "occurrences"})
             if after.get("count", 0) >= inventory["count"]:
@@ -467,6 +492,8 @@ class CadImportManager:
             raise ValueError("Base do CAD inválida.")
         url = {"ocorrencias": OCCURRENCES_URL, "drogas": DRUGS_URL, "armas": ARMS_URL}[source]
         page.goto(url, wait_until="load", timeout=45000)
+        self._cad_control_page = page
+        self._cad_control_frame = page
         if not page.url.startswith(url):
             raise ValueError("A consulta de " + source + " não abriu no CAD.")
         search_control = self._wait_control(page, ("Pesquisa Avançada", "Pesquisar")

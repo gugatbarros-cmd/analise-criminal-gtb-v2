@@ -1,5 +1,9 @@
 # Andamento da implantação — 12/11/2026
 
+## Importação CAD e andamento da atualização — 0.1.110
+
+Após a pesquisa automática, o CAD pode exibir a grade de resultados em outra aba ou em uma janela interna. A automação agora procura os controles nessas páginas, usa a grade encontrada para configurar Colunas e exportar, e converte as coordenadas da seleção de colunas para a janela do navegador. O teste usa apenas páginas sintéticas. O instalador local informa o percentual real de bytes recebidos na janela de abertura e no aviso dentro do GTB; o SHA-256 é calculado durante o download, evitando outra leitura integral do arquivo. As etapas sem percentual mensurável continuam com indicador de atividade. Implementação funcional: **100% concluída** no escopo validado; validação operacional: **90% concluída, 10% restante** para conferir o CAD oficial e operar em duas máquinas.
+
 ## Correção da pesquisa de Drogas no CAD — 0.1.109
 
 A captura da importação alternativa de Drogas mostrou a falha “O CAD não mostrou Pesquisa Avançada após a etapa anterior.” A automação exigia esse texto exato antes de preencher o período. Agora reconhece “Pesquisa Avançada” ou “Pesquisar”, inclusive quando o nome acessível vem de `aria-label` ou `title`, e aciona o controle encontrado depois de confirmar o intervalo, a Unidade de Despacho 10º BPM e Titular. O mesmo ajuste vale para Armas. Testes sintéticos cobrem as duas variantes e a importação de Drogas até a gravação do XLS. A confirmação na sessão oficial do CAD ainda depende de nova tentativa pelo operador. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e operação em duas máquinas.

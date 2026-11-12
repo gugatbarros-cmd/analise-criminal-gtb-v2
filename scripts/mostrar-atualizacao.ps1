@@ -60,6 +60,12 @@ try {
         Write-Output $item
       } else {
         $label.Text = [string]$item.Message
+        if ($null -ne $item.Progress) {
+          $progress.Style = 'Continuous'
+          $progress.Value = [Math]::Max(0, [Math]::Min(100, [int]$item.Progress))
+        } else {
+          $progress.Style = 'Marquee'
+        }
       }
     }
     if (-not $NoWindow) { [System.Windows.Forms.Application]::DoEvents() }

@@ -10,15 +10,26 @@ function Write-UpdateLog([string]$Message) {
   Add-Content -LiteralPath $logFile -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message" -Encoding UTF8
 }
 
-function Send-UpdateStatus([string]$Phase, [string]$Message) {
+function Send-UpdateStatus([string]$Phase, [string]$Message, [int]$Progress = -1) {
+  $report = @{ phase = $Phase; message = $Message }
+  if ($Progress -ge 0) { $report.progress = [Math]::Min(100, $Progress) }
   if ($StatusFile) {
-    $status = @{ phase = $Phase; message = $Message } | ConvertTo-Json -Compress
+    $status = $report | ConvertTo-Json -Compress
     $temporaryStatus = "$StatusFile.tmp"
-    [System.IO.File]::WriteAllText($temporaryStatus, $status, [System.Text.UTF8Encoding]::new($false))
-    Move-Item -LiteralPath $temporaryStatus -Destination $StatusFile -Force
+    for ($attempt = 0; $attempt -lt 5; $attempt++) {
+      try {
+        [System.IO.File]::WriteAllText($temporaryStatus, $status, [System.Text.UTF8Encoding]::new($false))
+        Move-Item -LiteralPath $temporaryStatus -Destination $StatusFile -Force
+        break
+      } catch {
+        if ($attempt -eq 4) { throw }
+        Start-Sleep -Milliseconds 50
+      }
+    }
   }
   if ($EmitStatus) {
-    Write-Output ([pscustomobject]@{ Type = 'GTB.UpdateStatus'; Phase = $Phase; Message = $Message })
+    Write-Output ([pscustomobject]@{ Type = 'GTB.UpdateStatus'; Phase = $Phase; Message = $Message;
+        Progress = $(if ($Progress -ge 0) { $report.progress } else { $null }) })
   }
 }
 
@@ -66,13 +77,53 @@ try {
     ((Get-Item -LiteralPath $destination).Length -eq [long]$asset.size) -and
     ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -eq $expectedHash)
   if (-not $valid) {
-    Send-UpdateStatus 'downloading' "Baixando a versão $publishedText. Aguarde…"
+    Send-UpdateStatus 'downloading' "Baixando a versão ${publishedText}: 0%." 0
     $temporary = Join-Path $updates "$expectedName.download"
     try {
-      Invoke-WebRequest -Uri $expectedUrl -OutFile $temporary -TimeoutSec 300 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
+      Add-Type -AssemblyName System.Net.Http
+      $client = [System.Net.Http.HttpClient]::new()
+      $client.Timeout = [TimeSpan]::FromMinutes(5)
+      $client.DefaultRequestHeaders.UserAgent.ParseAdd('GTB2-Updater')
+      $deadline = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromMinutes(5))
+      $response = $null
+      $inputStream = $null
+      $outputStream = $null
+      $sha = $null
+      try {
+        $response = $client.GetAsync($expectedUrl, [System.Net.Http.HttpCompletionOption]::ResponseHeadersRead,
+          $deadline.Token).GetAwaiter().GetResult()
+        $response.EnsureSuccessStatusCode() | Out-Null
+        $inputStream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+        $outputStream = [System.IO.File]::Open($temporary, [System.IO.FileMode]::Create,
+          [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        $buffer = New-Object byte[] (1024 * 1024)
+        $received = [long]0
+        $lastPercent = 0
+        while (($count = $inputStream.ReadAsync($buffer, 0, $buffer.Length,
+            $deadline.Token).GetAwaiter().GetResult()) -gt 0) {
+          $outputStream.Write($buffer, 0, $count)
+          [void]$sha.TransformBlock($buffer, 0, $count, $buffer, 0)
+          $received += $count
+          if ($received -gt [long]$asset.size) { throw 'O download excedeu o tamanho publicado.' }
+          $percent = [int][Math]::Floor(100 * $received / [long]$asset.size)
+          if ($percent -ge $lastPercent + 5 -or $percent -eq 100) {
+            $lastPercent = $percent
+            Send-UpdateStatus 'downloading' "Baixando a versão ${publishedText}: ${percent}%." $percent
+          }
+        }
+        [void]$sha.TransformFinalBlock([byte[]]::new(0), 0, 0)
+        $downloadHash = [BitConverter]::ToString($sha.Hash).Replace('-', '')
+      } finally {
+        if ($outputStream) { $outputStream.Dispose() }
+        if ($inputStream) { $inputStream.Dispose() }
+        if ($response) { $response.Dispose() }
+        if ($client) { $client.Dispose() }
+        if ($deadline) { $deadline.Dispose() }
+        if ($sha) { $sha.Dispose() }
+      }
       Send-UpdateStatus 'verifying' 'Conferindo a integridade do arquivo baixado…'
-      if ((Get-Item -LiteralPath $temporary).Length -ne [long]$asset.size -or
-        (Get-FileHash -LiteralPath $temporary -Algorithm SHA256).Hash -ne $expectedHash) {
+      if ($received -ne [long]$asset.size -or $downloadHash -ne $expectedHash) {
         throw 'O instalador baixado não passou na verificação SHA-256.'
       }
       Move-Item -LiteralPath $temporary -Destination $destination -Force

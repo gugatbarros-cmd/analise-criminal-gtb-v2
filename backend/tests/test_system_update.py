@@ -29,7 +29,9 @@ def test_update_status_reads_only_known_phases(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "auth_manager", manager)
     status = tmp_path / "update-status.json"
     monkeypatch.setattr(main, "update_status_file", status)
-    status.write_text('{"phase":"downloading","message":"Baixando..."}', encoding="utf-8")
+    status.write_text('{"phase":"downloading","message":"Baixando...","progress":42}', encoding="utf-8")
     client = TestClient(main.app)
     assert client.get("/system/update/status", headers={"Authorization": f"Bearer {token}"}).json() == {
-        "phase": "downloading", "message": "Baixando..."}
+        "phase": "downloading", "message": "Baixando...", "progress": 42}
+    status.write_text('{"phase":"downloading","message":"Baixando...","progress":120}', encoding="utf-8")
+    assert client.get("/system/update/status", headers={"Authorization": f"Bearer {token}"}).json()["phase"] == "failed"

@@ -6,7 +6,7 @@ export const APP_VERSION = packageInfo.version
 export const ONLINE_VERSION_URL = 'https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/app-version.json'
 const localApi = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
-export type LocalUpdateStatus = { phase: string; message: string }
+export type LocalUpdateStatus = { phase: string; message: string; progress?: number | null }
 
 export async function localUpdateRequest(method: 'GET' | 'POST'): Promise<LocalUpdateStatus> {
   const response = await fetch(`${localApi}/system/update${method === 'GET' ? '/status' : ''}`, {
