@@ -1,6 +1,6 @@
 # Análise Criminal GTB 2.0
 
-Versão local 0.1.100. Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
+Sistema local com instalador Windows completo e consulta online autenticada. O instalador inclui programa e inicializador, cria atalhos e registra a desinstalação em Aplicativos do Windows, preservando contas e bases nas atualizações.
 
 Em **Relatórios e apresentações → MVI NEAC · Informe para o Comando**, prepare a prévia com o período desejado. Use **Imprimir ou salvar PDF** para o documento completo e **Abrir no WhatsApp** para compartilhar o resumo sem dados pessoais.
 
@@ -10,7 +10,7 @@ Na prévia do WhatsApp, confira os emojis e use **Abrir WhatsApp com emojis** pa
 
 Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte uma conta online ativa de administrador ou analista do GTB 2.0. A identidade online continua no Firebase Spark existente, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases históricas. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
 
-- Instalação: baixe `GTB2-Instalador-0.1.100.exe` em [Releases](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/tag/v0.1.100).
+- Instalação: baixe o instalador da [release mais recente](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest).
 - Para várias máquinas, siga [contas e operação em várias máquinas](docs/CONTAS-E-MULTIPLAS-MAQUINAS.md).
 - Sistema online: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/ — usa as contas online autorizadas no Firebase existente.
 - Demonstração fictícia: https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/?demo=1 — sem importações reais.
@@ -40,7 +40,7 @@ Na pasta deste projeto, execute `scripts\iniciar-backend.cmd` e `scripts\iniciar
 
 Para criar um executável independente do ambiente de desenvolvimento, siga [o empacotamento Windows](docs/EMPACOTAMENTO_WINDOWS.md). O `GTB2-Local.exe` abre a interface e a API na mesma porta local e oferece comandos de backup e restauração dos dados do projeto novo.
 
-O instalador pronto fica em **Releases**. Baixe e execute `GTB2-Instalador-0.1.100.exe`; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
+O instalador pronto fica em **Releases**. Baixe e execute o `GTB2-Instalador` da versão mais recente; não é necessário extrair ZIP nem executar comandos. A instalação não exige privilégios administrativos e preserva os dados locais durante atualizações.
 
 ### Ver a demonstração
 
@@ -50,7 +50,7 @@ Para gerar a prévia estática com as mesmas planilhas fictícias, execute `.ven
 
 A prévia privada anterior, versão 0.1.55, está em `https://gtb-analise-criminal-v2-demo.gugatbarros628864.chatgpt.site`. Ela contém apenas a interface estática e 31 registros sintéticos. Para a distribuição atual, utilize o pacote da página Releases e a demonstração do GitHub Pages.
 
-O código está em `https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2`. O GitHub Actions publica automaticamente a interface no GitHub Pages ao atualizar `main`. O endereço principal exige autenticação para consultar as bases sincronizadas no Firestore; `?demo=1` abre exclusivamente `frontend/public/demo-data.json`, com exemplos fictícios. Os arquivos públicos nunca contêm dados reais.
+O código está em `https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2`. Ao concluir uma alteração, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publicar-atualizacao.ps1`: o script detecta as mudanças, atualiza a versão, executa os testes, gera o instalador, publica a interface no GitHub Pages e confirma a release. O endereço principal exige autenticação para consultar as bases sincronizadas no Firestore; `?demo=1` abre exclusivamente `frontend/public/demo-data.json`, com exemplos fictícios. Os arquivos públicos nunca contêm dados reais.
 
 Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para comparar seis amostras anonimizadas com totais oficiais sem publicá-las, siga [a comparação local](docs/COMPARACAO_REFERENCIA.md). Para copiar e restaurar **todos os dados do sistema novo**, siga [o procedimento local](docs/BACKUP_LOCAL.md). O backup antigo de um único banco DuckDB continua disponível em `scripts\restore-local.py`.
 

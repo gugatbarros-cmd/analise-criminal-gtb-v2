@@ -1,8 +1,9 @@
 """A entrada CAD exige sessão local autorizada e período válido."""
 
-import pytest
 import threading
 from types import SimpleNamespace
+
+import pytest
 from fastapi.testclient import TestClient
 
 from gtb.api import main
@@ -320,9 +321,9 @@ def test_cad_clicks_baixar_inside_export_frame(tmp_path, monkeypatch):
             return None
     class Page(Events):
         url = "https://analisacad.seguranca.al.gov.br/consulta/"
-        frames = [Frame()]
         def __init__(self):
             super().__init__()
+            self.frames = [Frame()]
             self.context = Events()
             self.context.pages = [self]
         def is_closed(self):
@@ -354,9 +355,9 @@ def test_cad_waits_for_large_xls_beyond_two_minutes(tmp_path, monkeypatch):
 
     class Page(Events):
         url = "https://analisacad.seguranca.al.gov.br/consulta/"
-        frames = []
         def __init__(self):
             super().__init__()
+            self.frames = []
             self.context = Events()
             self.context.pages = [self]
         def is_closed(self):

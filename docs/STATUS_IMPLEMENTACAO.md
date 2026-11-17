@@ -1,4 +1,8 @@
-# Andamento da implantação — 12/11/2026
+# Andamento da implantação — 17/11/2026
+
+## Importação MVI NEAC e publicação automática — 0.1.111
+
+O relatório MDX NEAC também pode vir sem a coluna Ano. A data completa na célula anterior ao cabeçalho Data agora define o ano do fato; o campo Dia isolado não vira data de 1899/1900. A atualização reprocessa os registros NEAC já salvos com backup e transação, reconcilia as duas variantes de colunas de bairro e preserva o histórico. No ensaio com uma cópia do banco local, o painel, a análise, a série mensal e os relatórios foram conferidos para 2025 e 2026. A planilha de 17/11/2026 resultou em 48 vítimas elegíveis em 2025 e 29 em 2026. O publicador do GTB 2.0 identifica alterações, incrementa a versão, valida, gera o instalador e confirma site e release. Implementação funcional: **100% concluída** no escopo validado; validação operacional: **90% concluída, 10% restante** para paridade oficial e operação em duas máquinas.
 
 ## Importação CAD e andamento da atualização — 0.1.110
 

@@ -80,7 +80,9 @@ def pick(row: dict[str, str], field: str) -> str:
         if field == 'date':
             return model_date(normalized)
         if field == 'neighborhood':
-            return str(normalized.get('bairro') or normalized.get('neacbairroadjacente') or normalized.get('coluna1') or '').strip()
+            adjacent = ('coluna1', 'coluna3') if 'ano' in normalized else ('coluna3', 'coluna1')
+            return str(normalized.get('bairro') or normalized.get('neacbairroadjacente')
+                       or next((normalized[name] for name in adjacent if normalized.get(name)), '')).strip()
     for alias in ALIASES[field]:
         value = normalized.get(_column_key(alias))
         if value is not None and str(value).strip():

@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-12",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; entrega 0.1.110: importação automática do CAD acompanha a grade de resultados em abas e janelas internas, inclusive o controle Colunas; atualização local exibe o percentual real do download e calcula o SHA-256 enquanto recebe o instalador. O Firebase Spark existente continua necessário para contas e consulta online. Implementação funcional: 100% concluída; validação operacional: 90% concluída e 10% restante para conferência oficial das bases e ensaio com duas máquinas.",
+  "updatedAt": "2026-11-17",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; GTB 2.0 v0.1.111: relatório MDX NEAC sem Ano corrigido, registros históricos reconciliados e publicação de site/instalador automatizada. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para paridade oficial e operação em duas máquinas. Firebase Spark permanece sem custos.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -36,7 +36,7 @@
       "weight": 25,
       "completed": 9,
       "total": 10,
-      "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC; informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp com comparação do mesmo período do ano anterior, meses lado a lado e data da última importação NEAC; mensagem para WhatsApp organizada com emojis simples compatíveis, prévia visual, link codificado e cópia",
+      "done": "Regras e filtros separados, relações de vítimas com intervalo de datas, histórico anual/mensal, perfis, horário, ficha, versões e comparação conservadora de possíveis pares CAD/NEAC; informe MVI NEAC para o Comando em PDF e resumo agregado para WhatsApp com comparação do mesmo período do ano anterior, meses lado a lado e data da última importação NEAC; mensagem para WhatsApp organizada com emojis simples compatíveis, prévia visual, link codificado e cópia; importação MDX sem Ano, correção transacional das datas históricas e reconciliação das variantes de bairro validadas em cópia do banco",
       "remaining": "Paridade oficial e demais campos derivados"
     },
     {

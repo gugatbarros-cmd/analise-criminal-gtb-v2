@@ -24,6 +24,7 @@ if (-not $SkipInstall) {
 Push-Location $root
 try {
   & $python -m PyInstaller --noconfirm --clean --onefile --windowed --name GTB2-Local `
+    --paths 'backend\src' `
     --icon 'desktop\brasao.ico' `
     --add-data 'frontend\dist-local;web' `
     --add-data 'backend\src\gtb\cad\page_actions.js;gtb\cad' `

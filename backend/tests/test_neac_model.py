@@ -41,6 +41,39 @@ def file_bytes(kind, rows):
     return output.getvalue()
 
 
+def no_year_file(rows):
+    """Layout MDX sem Ano: a data fica na célula anterior ao cabeçalho Data."""
+    headers = ['' if name in {'Coluna1', 'Coluna2'} else name
+               for name in HEADERS if name != 'Ano']
+    values = [[value for name, value in zip(HEADERS, row) if name != 'Ano']
+              for row in rows]
+    output = io.BytesIO()
+    book = xlwt.Workbook(); sheet = book.add_sheet('Modelo')
+    for line, row in enumerate([headers, *values]):
+        for column, value in enumerate(row):
+            sheet.write(line, column, value)
+    book.save(output)
+    return output.getvalue()
+
+
+def test_neac_mdx_without_year_uses_explicit_adjacent_date(tmp_path):
+    content = no_year_file([cells(2025), cells(2026)])
+    rows = read_rows('modelo.xls', content)
+    assert [pick(row, 'date') for row in rows] == ['2025-11-03', '2026-11-03']
+    store = Store(tmp_path / 'data/gtb.duckdb')
+    report = store.import_file('mvi_neac', 'modelo.xls', content)
+    assert report['inserted'] == 2 and report['quarantined'] == 0
+    assert store.summary(2025)['mvi_neac'] == 1
+    assert store.summary(2026)['mvi_neac'] == 1
+    with store._connect() as db:
+        db.execute("UPDATE record_versions SET event_date='1900-01-03',year=1900 WHERE source='mvi_neac'")
+        db.execute("UPDATE source_types SET adapter_version='0.1.19' WHERE code='mvi_neac'")
+    upgraded = Store(tmp_path / 'data/gtb.duckdb')
+    assert upgraded.summary(1900)['mvi_neac'] == 0
+    assert upgraded.summary(2025)['mvi_neac'] == 1
+    assert upgraded.summary(2026)['mvi_neac'] == 1
+
+
 @pytest.mark.parametrize('kind', ['xls','xlsx','csv'])
 def test_neac_mdx_maps_shifted_fields_and_years_without_overwriting(tmp_path, kind):
     content = file_bytes(kind, [cells(2025), cells(2026), cells(2025,'Resistência com Resultado Morte','Outra Pessoa Sintética')])
