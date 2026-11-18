@@ -7,6 +7,7 @@ import { openDomesticPresentation } from '../services/domestic-presentation'
 import { exportReportWorkbook } from '../services/report-spreadsheet'
 import { buildMviNeacWhatsapp, whatsappShareUrl } from '../services/mvi-neac-share'
 import { SystemIcon } from './SystemIcon'
+import { measure, timed } from '../services/performance'
 import '../reports.css'
 
 function WhatsappMessagePreview({ message }: { message: string }) {
@@ -29,7 +30,7 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
   const [loadingAction, setLoadingAction] = useState<ReportId | 'summary' | null>(null)
   const requestId = useRef(0)
   const queryClient = useQueryClient()
-  const data = useQuery({ queryKey: ['report-dataset'], queryFn: getReportDataset, enabled: false, staleTime: Infinity })
+  const data = useQuery({ queryKey: ['report-dataset'], queryFn: () => timed('relatório: carregar dados', getReportDataset), enabled: false, staleTime: Infinity })
   const authorized = useRef(allowed)
   authorized.current = allowed
   useEffect(() => { authorized.current = allowed; return () => { authorized.current = false; document.querySelector<HTMLDialogElement>('.domestic-report-studio')?.close() } }, [allowed])
@@ -82,7 +83,12 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
       const dataset = await loadDataset()
       if (currentRequest !== requestId.current || !authorized.current) return
       if (id === 'domestica-apresentacao') await openDomesticPresentation(dataset, scope, version, options, () => authorized.current)
-      else setPreview(buildReportDocument(dataset, id, scope, options, version))
+      else {
+        const started = performance.now()
+        const document = buildReportDocument(dataset, id, scope, options, version)
+        measure('relatório: montar documento', started)
+        setPreview(document)
+      }
     } catch (failure) { if (currentRequest === requestId.current) setError(failure instanceof Error ? failure.message : 'Não foi possível preparar o relatório.') }
     finally { if (currentRequest === requestId.current) setLoadingAction(null) }
   }

@@ -43,6 +43,18 @@ def test_report_projection_preserves_sources_units_and_originals(tmp_path):
     assert snapshot['comparisons'] == comparison_dataset(store)
 
 
+def test_report_projection_cache_refreshes_after_import(tmp_path):
+    store = Store(tmp_path / 'data/gtb.duckdb')
+    first = report_dataset(store)
+    assert report_dataset(store) is first
+    source = Path(__file__).resolve().parents[2] / 'fixtures/synthetic/ocorrencias-demo.csv'
+    store.import_file('ocorrencias', source.name, source.read_bytes())
+    updated = report_dataset(store)
+    assert updated is not first
+    assert updated['rows']
+    assert report_dataset(store) is updated
+
+
 def test_report_dataset_restricts_access_to_admin(tmp_path, monkeypatch):
     manager = AuthManager(tmp_path / 'auth.sqlite3')
     manager.create_user('admin', 'Admin!Synthetic1', 'admin')

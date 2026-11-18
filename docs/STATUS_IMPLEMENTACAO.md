@@ -1,5 +1,9 @@
 # Andamento da implantação — 18/11/2026
 
+## Desempenho da abertura e dos relatórios — 0.1.113
+
+As análises, comparativos, municípios, tabela geral e auditoria de importações passam a consultar seus dados ao entrar na área correspondente. A abertura prioriza o resumo do painel. A geração de relatórios registra tempos locais de consulta e montagem no painel Performance do navegador, sem dados operacionais nas marcas. A projeção local dos relatórios é reaproveitada enquanto a assinatura dos registros e lotes não muda e é recalculada após importações. Testes sintéticos verificam a invalidação do cache. Implementação funcional: **100% concluída** no escopo validado; validação operacional: **90% concluída, 10% restante** para paridade oficial e operação em duas máquinas. A medição de ganho em bases operacionais ainda depende de ensaio autorizado. Firebase Spark permanece sem custos.
+
 ## Perfil de pessoas e relatórios por indicador — 0.1.112
 
 Os indicadores do GTB 2.0 apresentam, sob consulta, sexo e faixa etária das pessoas envolvidas quando a base contém campos estruturados. O vínculo informado separa vítimas, autores e outros envolvidos; campos sem vínculo ficam identificados sem atribuição à vítima. O sistema não deduz sexo pelo nome ou relato. Os relatórios individuais e consolidados incluem o perfil e cada seção de indicador oferece acesso direto à geração do seu relatório. Implementação funcional: **100% concluída** no escopo validado; validação operacional: **90% concluída, 10% restante** para paridade oficial e operação em duas máquinas. O Firebase Spark permanece sem custos.

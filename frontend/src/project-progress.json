@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-11-18",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; GTB 2.0 v0.1.112: perfil de sexo e idade por vínculo informado nos indicadores e relatórios, com atalho para gerar o relatório de cada indicador. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para paridade oficial e operação em duas máquinas. Firebase Spark permanece sem custos.",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; GTB 2.0 v0.1.113: abertura prioriza o painel, áreas secundárias carregam sob demanda e relatórios locais reutilizam a projeção até alteração dos dados; tempos de consulta e montagem podem ser medidos no navegador. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para paridade oficial e operação em duas máquinas. Firebase Spark permanece sem custos.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {

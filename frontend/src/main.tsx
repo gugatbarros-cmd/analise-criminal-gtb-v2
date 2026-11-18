@@ -1,7 +1,7 @@
 import { IndicatorComparisons } from './components/IndicatorComparisons'
 import './comparisons.css'
 import './system-icons.css'
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query'
 import { SourceTable } from './components/SourceTable'
@@ -44,6 +44,7 @@ import { currentYear, periodEndForYear } from './services/period-default'
 import { clearSession, getMe, getSessionToken, logout, saveSession } from './services/auth'
 import { getHealth } from './services/health'
 import { APP_VERSION } from './services/version-update'
+import { timed } from './services/performance'
 import './style.css'
 import './source-table.css'
 import './progress.css'
@@ -63,6 +64,20 @@ const MonthlyChart = lazy(() => import('./components/MonthlyChart').then(module 
 const SummaryReport = lazy(() => import('./components/SummaryReport').then(module => ({ default: module.SummaryReport })))
 const SpecializedReport = lazy(() => import('./components/SpecializedReport').then(module => ({ default: module.SpecializedReport })))
 const ReportCenter = lazy(() => import('./components/ReportCenter').then(module => ({ default: module.ReportCenter })))
+
+function DeferredRegion({ id, children }: { id: string; children: React.ReactNode }) {
+  const element = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(() => typeof window === 'undefined')
+  useEffect(() => {
+    if (!element.current || !('IntersectionObserver' in window)) { setVisible(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect() }
+    }, { rootMargin: '300px' })
+    observer.observe(element.current)
+    return () => observer.disconnect()
+  }, [])
+  return <div id={id} ref={element}>{visible ? children : <p className="muted" style={{ minHeight: 240 }}>Os dados serão carregados ao abrir esta área.</p>}</div>
+}
 const CrimeMap = lazy(() => import('./components/CrimeMap').then(module => ({ default: module.CrimeMap })))
 
 function App() {
@@ -77,6 +92,8 @@ function App() {
   const [reportRequest, setReportRequest] = useState<{ id: ReportId; sequence: number } | null>(null)
   const [specializedReport, setSpecializedReport] = useState<SpecializedReportRequest | null>(null)
   const [batchPage, setBatchPage] = useState(1)
+  const [importsVisible, setImportsVisible] = useState(false)
+  const [comparisonsReady, setComparisonsReady] = useState(false)
   const [activeSource, setActiveSource] = useState<'mvi_cad' | 'mvi_neac'>('mvi_cad')
   const navigateToIndicator = useCallback((target: string) => {
     if (target === 'mvi-cad') setActiveSource('mvi_cad')
@@ -94,7 +111,7 @@ function App() {
     return () => window.removeEventListener('gtb-report-request', open)
   }, [])
   const [token, setToken] = useState(getSessionToken)
-  const health = useQuery({ queryKey: ['health'], queryFn: () => getHealth(apiUrl), retry: 1 })
+  const health = useQuery({ queryKey: ['health'], queryFn: () => timed('abertura: saúde', () => getHealth(apiUrl)), retry: 1 })
   const demo = health.data?.mode === 'demo'
   const auth = useQuery({ queryKey: ['auth-me', token], queryFn: () => getMe(token),
     enabled: ['local', 'online'].includes(health.data?.mode || '') && !!token, retry: false })
@@ -110,9 +127,24 @@ function App() {
     }, 60000)
     return () => { clearInterval(timer); window.removeEventListener('gtb-cloud-updated', update) }
   }, [canRead])
-  const summary = useQuery({ queryKey: ['summary', token, year, municipality], queryFn: () => getSummary(year ? Number(year) : undefined, municipality || undefined), enabled: health.isSuccess && canRead })
-  const comparisons = useQuery({ queryKey: ['comparison-dataset'], queryFn: getComparisonDataset, enabled: health.isSuccess && canRead, staleTime: 60000 })
-  const batches = useQuery({ queryKey: ['batches', token, batchPage], queryFn: () => getBatches(batchPage), enabled: health.isSuccess && canRead })
+  const summary = useQuery({ queryKey: ['summary', token, year, municipality], queryFn: () => timed('abertura: indicadores', () => getSummary(year ? Number(year) : undefined, municipality || undefined)), enabled: health.isSuccess && canRead })
+  const comparisons = useQuery({ queryKey: ['comparison-dataset'], queryFn: () => timed('abertura: comparativos', getComparisonDataset), enabled: health.isSuccess && canRead && comparisonsReady, staleTime: 60000 })
+  useEffect(() => {
+    if (!canRead || comparisonsReady) return
+    const timer = window.setTimeout(() => setComparisonsReady(true), 1500)
+    return () => window.clearTimeout(timer)
+  }, [canRead, comparisonsReady])
+  const batches = useQuery({ queryKey: ['batches', token, batchPage], queryFn: () => timed('importações: lotes', () => getBatches(batchPage)), enabled: health.isSuccess && canRead && importsVisible })
+  useEffect(() => {
+    if (!canRead || importsVisible) return
+    const element = document.getElementById('importacoes')
+    if (!element || !('IntersectionObserver' in window)) { setImportsVisible(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setImportsVisible(true); observer.disconnect() }
+    }, { rootMargin: '500px' })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [canRead, importsVisible])
   useEffect(() => {
     const expired = () => { clearSession(); setToken(''); queryClient.removeQueries({ predicate: query => query.queryKey[0] !== 'health' }) }
     window.addEventListener('gtb-session-expired', expired)
@@ -181,8 +213,8 @@ function App() {
     <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="drogas"><IndicatorComparisons id="drogas" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><DrugsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
     <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="guarnicoes"><IndicatorComparisons id="guarnicoes" year={year ? Number(year) : undefined} municipality={municipality || undefined} lastImportedAt={summary.data?.last_imported_at} /><TeamsAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} onReport={request => { setReportOpen(false); setSpecializedReport(request) }} /></IndicatorSection>
     <div id="relatorios">{reportCenterOpen ? <Suspense fallback={<section className="panel" role="status">Carregando a Central de Relatórios…</section>}><ReportCenter key={reportRequest?.sequence || 'center'} initialReport={reportRequest?.id} year={year ? Number(year) : undefined} municipality={municipality || undefined} version={health.data?.version || APP_VERSION} allowed={!!demo || auth.data?.role === 'admin'} /></Suspense> : <section className="panel"><div className="section-head"><div><p className="eyebrow">Documentos e apresentações</p><h2>Central de Relatórios</h2></div></div><p className="muted">Os dados serão carregados somente quando você escolher um relatório para gerar.</p><button type="button" onClick={() => setReportCenterOpen(true)}>Abrir relatórios</button></section>}</div>
-    <div id="municipios"><MunicipalityOverview year={year ? Number(year) : undefined} /></div>
-    <div id="tabela-geral"><ConsolidatedTable year={year ? Number(year) : undefined} municipality={municipality || undefined} /></div>
+    <DeferredRegion id="municipios"><MunicipalityOverview year={year ? Number(year) : undefined} /></DeferredRegion>
+    <DeferredRegion id="tabela-geral"><ConsolidatedTable year={year ? Number(year) : undefined} municipality={municipality || undefined} /></DeferredRegion>
     <div id="assistente-local"><LocalAssistant summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} /></div>
     <div id="importacoes" className="section-anchor" />
     <div className="two-col"><section className="panel"><div className="section-head"><div><p className="eyebrow">Entrada de dados</p><h2>{isCloud ? 'Importe pelo sistema local' : demo ? 'Importação desativada na prévia' : auth.data?.role === 'viewer' ? 'Importação restrita ao perfil de consulta' : 'Importar base real'}</h2></div></div><p className="muted">A planilha é pré-validada antes da gravação. O arquivo bruto, o histórico e o backup automático anterior ao lote ficam somente neste computador, fora do Git e das prévias online.</p><form onSubmit={event => { event.preventDefault(); if (canImport && validationReady) importer.mutate() }}><label>Fonte<select value={source} onChange={event => { setSource(event.target.value as Source); setValidatedFile(''); validator.reset(); importer.reset() }}>{sources.map(item => <option key={item} value={item}>{labels[item]}</option>)}</select></label><label>Escopo<select value={scope} onChange={event => setScope(event.target.value as 'partial' | 'complete')}><option value="partial">Parcial — acrescenta e atualiza</option><option value="complete">Completo — também aponta ausências para revisão</option></select></label><label>Arquivo CSV, XLS ou XLSX<input type="file" accept=".csv,.xls,.xlsx" onChange={event => { setFile(event.target.files?.[0] || null); setValidatedFile(''); validator.reset(); importer.reset() }} required /></label><div className="import-actions"><button type="button" onClick={() => validator.mutate()} disabled={!canImport || !file || validator.isPending || importer.isPending || !health.isSuccess}>{validator.isPending ? 'Validando…' : '1. Pré-validar arquivo'}</button><button type="submit" className="primary" disabled={!canImport || !validationReady || importer.isPending || !health.isSuccess}>{importer.isPending ? 'Importando…' : '2. Importar base validada'}</button></div></form>{validator.isError && <p className="error" role="alert">{validator.error.message}</p>}{validator.data && <div className={validator.data.quarantined ? 'validation-result warning' : 'validation-result success'} role="status"><strong>{validationReady ? 'Arquivo pronto para importação' : 'Validação expirada; valide novamente'}</strong><span>{validator.data.row_count.toLocaleString('pt-BR')} linhas lidas · {validator.data.accepted.toLocaleString('pt-BR')} aceitas · {validator.data.quarantined.toLocaleString('pt-BR')} em quarentena · {validator.data.ineligible.toLocaleString('pt-BR')} fora da regra do indicador</span>{validator.data.reasons.slice(0, 4).map(item => <small key={item.reason}>{item.count.toLocaleString('pt-BR')} × {item.reason}</small>)}</div>}{importer.isError && <p className="error" role="alert">{importer.error.message}</p>}{importer.data && <p className="success" role="status">{importer.data.repeated ? 'Arquivo já importado.' : `Lote concluído: ${importer.data.inserted} novos, ${importer.data.updated} atualizados, ${importer.data.quarantined} em quarentena.`}</p>}</section><ImportAudit batches={batches.data?.items || []} total={batches.data?.total || 0} page={batchPage} size={batches.data?.size || 20} loading={batches.isPending} onPageChange={setBatchPage} /></div>

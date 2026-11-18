@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getComparisonDataset } from '../services/api'
 import { comparisonCsv, comparisonLabels, comparisonSource, indicatorFacts, monthRange, previousYearDay, rangeDays, rangeTotal, sourceFacts, validRange, variation, yearRange, type ComparisonMetric, type ComparisonValue } from '../services/comparison-model'
@@ -22,7 +22,17 @@ export function IndicatorComparisons(props: Props) {
 }
 function Comparisons({ id, year, municipality, lastImportedAt }: Props) {
   const uid = useId()
-  const query = useQuery({ queryKey: ['comparison-dataset'], queryFn: getComparisonDataset, staleTime: 60000 })
+  const section = useRef<HTMLElement>(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!section.current || !('IntersectionObserver' in window)) { setVisible(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect() }
+    }, { rootMargin: '500px' })
+    observer.observe(section.current)
+    return () => observer.disconnect()
+  }, [])
+  const query = useQuery({ queryKey: ['comparison-dataset'], queryFn: getComparisonDataset, enabled: visible, staleTime: 60000 })
   const source = useMemo(() => sourceFacts(query.data?.rows || [], id, municipality), [query.data, id, municipality])
   const availableYears = [...new Set(source.map(row => Number(row.date.slice(0, 4))))].sort((a, b) => b - a)
   const referenceYear = year || availableYears[0] || new Date().getFullYear()
@@ -53,7 +63,7 @@ function Comparisons({ id, year, municipality, lastImportedAt }: Props) {
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a'); link.href = url; link.download = `comparativo-${id}-${mode}.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
-  return <section className="panel indicator-comparisons" aria-label={`Comparativos de ${comparisonLabels[id]}`} data-comparison-indicator={id}>
+  return <section ref={section} className="panel indicator-comparisons" aria-label={`Comparativos de ${comparisonLabels[id]}`} data-comparison-indicator={id}>
     <div className="section-head"><div><p className="eyebrow">Evolução e comparação temporal</p><h2>{comparisonLabels[id]} · comparativos</h2></div><span>{municipality || '11 municípios do 10º BPM'}</span></div>
     <p className="muted">Seletores próprios para comparar todos os anos importados. O município segue o filtro do painel; os filtros das análises acima são independentes deste quadro.</p>
     {query.isPending && <p role="status">Carregando comparativos…</p>}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { iconForIndicator, SystemIcon } from './SystemIcon'
 import { getReportDataset } from '../services/api'
 import { filterReportRows, personProfile, selectReportRows, type ReportId, type ReportRow } from '../services/report-model'
@@ -79,10 +79,20 @@ function PersonProfile({ report, year, municipality }: { report: ReportId; year?
 
 export function IndicatorSection({ id, year, municipality, children }: { id: string; year?: number; municipality?: string; children: ReactNode }) {
   const report = (id === 'ocorrencias' ? 'geral' : id) as ReportId
-  return <IndicatorChartTargetContext.Provider value={id}><div id={id}>
+  const section = useRef<HTMLDivElement>(null)
+  const [visible, setVisible] = useState(() => typeof window === 'undefined')
+  useEffect(() => {
+    if (!section.current || !('IntersectionObserver' in window)) { setVisible(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setVisible(true); observer.disconnect() }
+    }, { rootMargin: '300px' })
+    observer.observe(section.current)
+    return () => observer.disconnect()
+  }, [])
+  return <IndicatorChartTargetContext.Provider value={id}><div id={id} ref={section}>
     <div className="indicator-report-shortcut"><button type="button" onClick={() => window.dispatchEvent(new CustomEvent('gtb-report-request', { detail: report }))}>Gerar relatório deste indicador ↗</button></div>
     <PersonProfile key={`${report}:${year || ''}:${municipality || ''}`} report={report} year={year} municipality={municipality} />
-    {children}</div></IndicatorChartTargetContext.Provider>
+    {visible ? children : <p className="muted" style={{ minHeight: 240 }}>A análise será carregada ao abrir esta área.</p>}</div></IndicatorChartTargetContext.Provider>
 }
 
 export function IndicatorCard({ target, label, children }: {
