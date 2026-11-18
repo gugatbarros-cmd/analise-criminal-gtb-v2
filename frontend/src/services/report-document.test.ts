@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ageBand, comparisonScopes, filterReportRows, reportCatalog, selectReportRows, type ReportDataset, type ReportRow } from './report-model'
+import { ageBand, comparisonScopes, filterReportRows, personProfile, reportCatalog, selectReportRows, type ReportDataset, type ReportRow } from './report-model'
 import { buildReportDocument, reportCsv } from './report-document'
 import { domesticPresentationData } from './domestic-presentation'
 import { mviConferences } from './report-spreadsheet'
@@ -9,6 +9,18 @@ const dataset = (rows: ReportRow[]): ReportDataset => ({ rows, updatedAt: '2026-
 const options = { author: 'Sintético', unit: 'Unidade de teste', notes: '', actions: '', referenceDate: '2026-03-02', issued: '01/03/2026' }
 afterEach(() => vi.unstubAllGlobals())
 describe('relatórios trazidos do legado', () => {
+  it('separa sexo e idade por vínculo sem inferir dados ausentes', () => {
+    vi.stubGlobal('location', { origin: 'http://localhost:5173' })
+    const rows = [fact({ people: [{ role: 'Vítima', sex: 'F', age: '24' }, { role: 'Autor(a)', sex: 'M', age: '44' }] }),
+      fact({ people: [{ role: 'Vítima', sex: '', age: '' }] })]
+    const profile = personProfile(rows)
+    expect(profile.get('Vítima')?.sex).toContainEqual(['Feminino', 1])
+    expect(profile.get('Vítima')?.sex).toContainEqual(['Não informado', 1])
+    expect(profile.get('Autor(a)')?.age).toContainEqual(['30–44 anos', 1])
+    const html = buildReportDocument(dataset(rows), 'geral', {}, options, 'test')
+    expect(html).toContain('Sexo e idade das pessoas envolvidas')
+    expect(html).toContain('Autor(a)')
+  })
   it('exporta possíveis pares sem confirmar vínculo e deixa colisões para revisão', () => {
     const cad = fact({ source: 'mvi_cad', victim: 'Pessoa Sintética' })
     const neac = fact({ source: 'mvi_neac', victim: 'Pessoa Sintética' })

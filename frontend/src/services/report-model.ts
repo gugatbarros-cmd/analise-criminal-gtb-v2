@@ -4,6 +4,7 @@ export type ReportRow = {
   source: Source; date: string; city: string; nature: string; category: string
   eligible: boolean; indicators: string[]; occurrence: string; victim: string
   hour: number | null; neighborhood: string; age: string; sex: string; instrument: string
+  people?: { role: string; sex: string; age: string }[]
   solution: string; relationship: string; aggression: string; quantity: number; seized: boolean
   restricted: boolean; caliber: string; brand: string; situation: string; grams: number | null
   location: string; team: string; teamGroup: string; points: number
@@ -62,9 +63,39 @@ export function count(rows: ReportRow[], group: (row: ReportRow) => string, weig
 export const weekday = (row: ReportRow) => ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][new Date(row.date + 'T12:00:00Z').getUTCDay()]
 export const hourBand = (row: ReportRow) => row.hour === null ? 'Não informado' : `${String(Math.floor(row.hour / 2) * 2).padStart(2, '0')}h–${String((Math.floor(row.hour / 2) * 2 + 2) % 24).padStart(2, '0')}h`
 export const ageBand = (row: ReportRow) => {
-  if (!/^\d{1,3}$/.test(row.age) || Number(row.age) > 120) return 'Não informado'
-  const age = Number(row.age)
+  const match = String(row.age || '').trim().match(/^(\d{1,3})(?:\s*anos?)?$/i)
+  if (!match || Number(match[1]) > 120) return 'Não informado'
+  const age = Number(match[1])
   return age < 12 ? '0–11 anos' : age < 18 ? '12–17 anos' : age < 30 ? '18–29 anos' : age < 45 ? '30–44 anos' : age < 60 ? '45–59 anos' : '60 anos ou mais'
+}
+export function sexLabel(value: string): string {
+  const normalized = fold(value)
+  if (['f', 'fem', 'feminino', 'feminina', 'mulher'].includes(normalized)) return 'Feminino'
+  if (['m', 'masc', 'masculino', 'masculina', 'homem'].includes(normalized)) return 'Masculino'
+  return value.trim() ? 'Não identificado' : 'Não informado'
+}
+export function personProfile(rows: ReportRow[]) {
+  const groups = new Map<string, { total: number; sex: Entry[]; age: Entry[] }>()
+  const counts = new Map<string, { total: number; sex: Map<string, number>; age: Map<string, number> }>()
+  for (const row of rows) {
+    const people = row.people?.length ? row.people : row.source.startsWith('mvi_') && (row.sex || row.age)
+      ? [{ role: 'Vítima', sex: row.sex, age: row.age }] : []
+    for (const person of people) {
+      const group = counts.get(person.role) || { total: 0, sex: new Map(), age: new Map() }
+      group.total += 1
+      const sex = sexLabel(person.sex)
+      const age = ageBand({ ...row, age: person.age })
+      group.sex.set(sex, (group.sex.get(sex) || 0) + 1)
+      group.age.set(age, (group.age.get(age) || 0) + 1)
+      counts.set(person.role, group)
+    }
+  }
+  for (const [role, group] of counts) groups.set(role, {
+    total: group.total,
+    sex: [...group.sex].sort((a, b) => b[1] - a[1]),
+    age: [...group.age].sort((a, b) => b[1] - a[1]),
+  })
+  return groups
 }
 export function comparisonScopes(rows: ReportRow[], scope: ReportScope): { current: ReportScope; previous: ReportScope; cutoff: string; year: number } | null {
   const available = filterReportRows(rows, { ...scope, year: undefined, start: undefined, end: undefined })

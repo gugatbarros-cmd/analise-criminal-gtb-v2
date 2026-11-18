@@ -1,4 +1,4 @@
-import { ageBand, bpmCities, comparisonScopes, count, filterReportRows, fold, hourBand, reportCatalog, scopeLabel, selectReportRows, weekday, type Entry, type ReportDataset, type ReportId, type ReportOptions, type ReportRow, type ReportScope } from './report-model'
+import { ageBand, bpmCities, comparisonScopes, count, filterReportRows, fold, hourBand, personProfile, reportCatalog, scopeLabel, selectReportRows, sexLabel, weekday, type Entry, type ReportDataset, type ReportId, type ReportOptions, type ReportRow, type ReportScope } from './report-model'
 
 import { mviConferences } from './report-spreadsheet'
 import { formatNeacImportDate, mviNeacComparison } from './mvi-neac-comparison'
@@ -51,6 +51,15 @@ function domesticContent(all: ReportRow[], rows: ReportRow[]): string {
     + distribution('Vínculo informado', count(rows, row => row.relationship))
     + distribution('Tipo de agressão informado', count(rows, row => row.aggression))
 }
+function peopleContent(rows: ReportRow[]): string {
+  const groups = personProfile(rows)
+  if (!groups.size) return '<h3>Sexo e idade das pessoas envolvidas</h3><p class="note">A fonte não informa sexo ou idade em campos estruturados para este recorte.</p>'
+  return '<h3>Sexo e idade das pessoas envolvidas</h3>'
+    + [...groups].map(([role, group]) => `<h4>${escapeHtml(role)} · ${n(group.total)} registro(s)</h4>`
+      + distribution('Sexo informado', group.sex)
+      + distribution('Faixas etárias', group.age)).join('')
+    + '<p class="note">Contagem por registro e vínculo declarado. Uma ocorrência pode ter mais de um vínculo. Dados ausentes e valores não reconhecidos são identificados; nomes e relatos não definem sexo.</p>'
+}
 function mviNeacCommandContent(data: ReportDataset, scope: ReportScope): string {
   const rows = selectReportRows(filterReportRows(data.rows, scope), 'mvi-neac')
   const annual = mviNeacComparison(data, scope)
@@ -74,7 +83,7 @@ function mviNeacCommandContent(data: ReportDataset, scope: ReportScope): string 
     + distribution('Vítimas por município', cities, 'vítimas'))
   const profile = page('4. Perfil e qualidade dos registros',
     distribution('Classificações', count(rows, row => row.category || row.nature), 'vítimas')
-    + distribution('Sexo informado', count(rows, row => row.sex), 'vítimas')
+    + distribution('Sexo informado', count(rows, row => sexLabel(row.sex)), 'vítimas')
     + distribution('Faixas etárias', count(rows, ageBand), 'vítimas')
     + distribution('Dia da semana', count(rows, weekday), 'vítimas')
     + distribution('Faixas de duas horas · horários válidos', count(validHours, hourBand), 'vítimas')
@@ -93,6 +102,7 @@ function moduleContent(data: ReportDataset, id: ReportId, scope: ReportScope, op
   if (arms) content += kpis([['Unidades informadas', rows.reduce((sum, row) => sum + row.quantity, 0)], ['Unidades apreendidas', rows.filter(row => row.seized).reduce((sum, row) => sum + row.quantity, 0)], ['Uso restrito', rows.filter(row => row.restricted).reduce((sum, row) => sum + row.quantity, 0)]])
   if (drugs) content += kpis([['Peso conhecido · g', rows.reduce((sum, row) => sum + (row.grams || 0), 0)], ['Peso conhecido · kg', rows.reduce((sum, row) => sum + (row.grams || 0), 0) / 1000], ['Sem peso reconhecido', rows.filter(row => row.grams === null).length]])
   if (id === 'domestica') content += domesticContent(all, rows)
+  content += peopleContent(rows)
   content += distribution(arms ? 'Evolução mensal · unidades apreendidas' : 'Evolução mensal', month)
     + distribution('Municípios', count(rows, row => row.city, weight))
     + distribution(arms || drugs ? 'Tipos' : 'Naturezas / classificações', count(rows, row => mvi || arms || drugs ? row.category || row.nature : row.nature || row.category, weight))
@@ -111,7 +121,7 @@ function moduleContent(data: ReportDataset, id: ReportId, scope: ReportScope, op
   if (mvi) {
     content += '<p>Unidade: vítimas elegíveis da fonte identificada. CAD e NEAC são independentes e não devem ser somados.</p>'
       + distribution('Histórico anual', count(selectReportRows(filterReportRows(data.rows, { ...scope, year: undefined, month: undefined, start: undefined, end: undefined }), id), row => row.date.slice(0, 4)).sort((a, b) => a[0].localeCompare(b[0])))
-      + distribution('Sexo informado', count(rows, row => row.sex)) + distribution('Faixas etárias', count(rows, ageBand))
+      + distribution('Sexo informado', count(rows, row => sexLabel(row.sex))) + distribution('Faixas etárias', count(rows, ageBand))
     const history = selectReportRows(filterReportRows(data.rows, { city: scope.city }), id)
     content += '<h3>Dias sem MVI por município</h3>' + table(['Município', 'Último MVI até a referência', 'Dias sem registro'], (scope.city ? [scope.city] : bpmCities).map(city => {
       const last = history.filter(row => fold(row.city) === fold(city) && row.date <= options.referenceDate).map(row => row.date).sort().at(-1)
@@ -125,7 +135,7 @@ function executiveContent(data: ReportDataset, scope: ReportScope): string {
   const ids: ReportId[] = ['geral', 'mvi-cad', 'mvi-neac', 'cvp', 'tentativas', 'tco', 'mandados', 'visitas', 'sossego', 'domestica', 'armas', 'drogas']
   return kpis(ids.map(id => [reportCatalog.find(item => item.id === id)!.title, selectReportRows(rows, id).length]))
     + '<p>Armas e drogas neste quadro indicam registros das bases próprias. Unidades e pesos constam nos relatórios específicos. Fontes sem importação são identificadas na memória das bases.</p>'
-    + ids.map(id => `<div class="comparison-block"><h3>${escapeHtml(reportCatalog.find(item => item.id === id)!.title)}</h3>${comparison(data, id, scope)}</div>`).join('')
+    + ids.map(id => `<div class="comparison-block"><h3>${escapeHtml(reportCatalog.find(item => item.id === id)!.title)}</h3>${comparison(data, id, scope)}${peopleContent(selectReportRows(rows, id))}</div>`).join('')
 }
 function tcoPages(data: ReportDataset, scope: ReportScope): string {
   const rows = selectReportRows(filterReportRows(data.rows, scope), 'tco')
@@ -133,7 +143,7 @@ function tcoPages(data: ReportDataset, scope: ReportScope): string {
     + page('2. TCO · evolução mensal', distribution('TCOs por mês', count(rows, row => row.date.slice(0, 7)).sort((a, b) => a[0].localeCompare(b[0]))))
     + page('3. TCO · municípios', distribution('TCOs por município', count(rows, row => row.city)))
     + page('4. TCO · naturezas', distribution('Naturezas registradas', count(rows, row => row.nature)))
-    + page('5. TCO · perfil municipal', table(['Município', 'TCOs', 'Naturezas identificadas'], count(rows, row => row.city).map(([city, total]) => [city, total, count(rows.filter(row => row.city === city), row => row.nature).map(([label, value]) => `${label} (${value})`).join('; ')])) + auditRows(rows, 'tco'))
+    + page('5. TCO · perfil municipal', table(['Município', 'TCOs', 'Naturezas identificadas'], count(rows, row => row.city).map(([city, total]) => [city, total, count(rows.filter(row => row.city === city), row => row.nature).map(([label, value]) => `${label} (${value})`).join('; ')])) + peopleContent(rows) + auditRows(rows, 'tco'))
 }
 export function buildReportDocument(data: ReportDataset, id: ReportId, scope: ReportScope, options: ReportOptions, version: string): string {
   const title = options.title?.trim() || reportCatalog.find(item => item.id === id)!.title

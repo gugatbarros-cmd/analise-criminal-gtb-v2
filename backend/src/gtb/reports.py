@@ -24,6 +24,38 @@ def field(row: dict, *aliases: str) -> str:
     return next((fields[key(alias)] for alias in aliases if fields.get(key(alias))), '')
 
 
+def people_fields(row: dict, source: str) -> list[dict[str, str]]:
+    """Retorna somente sexo e idade de campos estruturados, com o vínculo declarado."""
+    result: dict[str, dict[str, str]] = {}
+    aliases = {
+        'Vítima': (('sexo da vitima', 'sexo vitima', 'genero da vitima', 'genero vitima'),
+                   ('idade da vitima', 'idade vitima')),
+        'Autor(a)': (('sexo do autor', 'sexo da autora', 'sexo autor', 'genero do autor',
+                     'genero da autora', 'sexo do agressor', 'sexo da agressora'),
+                    ('idade do autor', 'idade da autora', 'idade autor', 'idade do agressor',
+                     'idade da agressora')),
+        'Envolvido(a)': (('sexo do envolvido', 'sexo da envolvida', 'genero do envolvido',
+                          'genero da envolvida', 'sexo do solicitante'),
+                         ('idade do envolvido', 'idade da envolvida', 'idade do solicitante')),
+    }
+    for role, (sex_aliases, age_aliases) in aliases.items():
+        sex, age = field(row, *sex_aliases), field(row, *age_aliases)
+        if sex or age:
+            result[role] = {'role': role, 'sex': sex, 'age': age}
+    generic_sex = field(row, 'sexo', 'genero', 'sexo/genero')
+    generic_age = field(row, 'idade')
+    if generic_sex or generic_age:
+        involvement = key(field(row, 'envolvimento', 'tipo de envolvimento', 'papel'))
+        role = ('Vítima' if source.startswith('mvi_') or involvement in {'vitima', 'ofendida', 'ofendido'}
+                else 'Autor(a)' if involvement in {'autor', 'autora', 'agressor', 'agressora'}
+                else 'Envolvido(a)' if involvement in {'envolvido', 'envolvida', 'solicitante'}
+                else 'Pessoa sem vínculo informado')
+        current = result.setdefault(role, {'role': role, 'sex': '', 'age': ''})
+        current['sex'] = current['sex'] or generic_sex
+        current['age'] = current['age'] or generic_age
+    return list(result.values())
+
+
 def report_dataset(store) -> dict:
     with store.lock, store._connect() as db:
         records = db.execute("""SELECT source,event_date,municipality,nature,category,
@@ -35,9 +67,9 @@ def report_dataset(store) -> dict:
     facts = []
     for source, day, city, nature, category, eligible, indicators, occurrence, victim, raw in records:
         row = json.loads(raw)
-        victim_role = source.startswith('mvi_') or key(field(row, 'envolvimento', 'tipo de envolvimento', 'papel')) in {'vitima', 'ofendida'}
-        age = field(row, 'idade da vitima', 'idade vitima') or (field(row, 'idade') if victim_role else '')
-        sex = field(row, 'sexo da vitima', 'genero da vitima', 'sexo vitima') or (field(row, 'sexo', 'genero') if victim_role else '')
+        people = people_fields(row, source)
+        victim_profile = next((item for item in people if item['role'] == 'Vítima'), {})
+        age, sex = victim_profile.get('age', ''), victim_profile.get('sex', '')
         facts.append({
             'source': source, 'date': day.isoformat(), 'city': city,
             'nature': nature or '', 'category': category or '', 'eligible': eligible,
@@ -45,6 +77,7 @@ def report_dataset(store) -> dict:
             'victim': victim if source.startswith('mvi_') else '',
             'hour': mvi_hour(row), 'neighborhood': pick(row, 'neighborhood'),
             'age': age, 'sex': sex, 'instrument': pick(row, 'instrument'),
+            'people': people,
             'solution': pick(row, 'solution'),
             'relationship': field(row, 'vinculo da vitima com o autor', 'vinculo', 'grau de parentesco', 'parentesco', 'relacao com o autor'),
             'aggression': field(row, 'tipo de agressao sofrida', 'tipo de agressao', 'agressao sofrida'),

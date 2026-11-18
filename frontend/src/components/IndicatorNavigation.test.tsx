@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
-import { IndicatorCard, IndicatorUpdateContext, indicatorUpdateSource } from './IndicatorNavigation'
+import { IndicatorCard, IndicatorSection, IndicatorUpdateContext, indicatorUpdateSource } from './IndicatorNavigation'
 import type { Summary } from '../services/api'
 
 it('preserva o valor do cartão e oferece navegação por botão nativo', () => {
@@ -26,4 +26,11 @@ it('mostra a data da fonte usada por cada indicador', () => {
   expect(render('cvp')).toContain('Última atualização: 04/11/2026')
   expect(render('mvi-cad')).toContain('Última atualização: sem importação')
   expect(indicatorUpdateSource('drogas', { drogas: 1 })).toBe('drogas')
+})
+
+it('oferece relatório direto e consulta de sexo e idade na seção do indicador', () => {
+  const html = renderToStaticMarkup(<IndicatorSection id="cvp" year={2026} municipality="Igaci"><p>Dados CVP</p></IndicatorSection>)
+  expect(html).toContain('Gerar relatório deste indicador')
+  expect(html).toContain('Sexo e idade das pessoas envolvidas')
+  expect(html).toContain('Mostrar perfil')
 })

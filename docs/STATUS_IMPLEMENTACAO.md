@@ -1,4 +1,8 @@
-# Andamento da implantação — 17/11/2026
+# Andamento da implantação — 18/11/2026
+
+## Perfil de pessoas e relatórios por indicador — 0.1.112
+
+Os indicadores do GTB 2.0 apresentam, sob consulta, sexo e faixa etária das pessoas envolvidas quando a base contém campos estruturados. O vínculo informado separa vítimas, autores e outros envolvidos; campos sem vínculo ficam identificados sem atribuição à vítima. O sistema não deduz sexo pelo nome ou relato. Os relatórios individuais e consolidados incluem o perfil e cada seção de indicador oferece acesso direto à geração do seu relatório. Implementação funcional: **100% concluída** no escopo validado; validação operacional: **90% concluída, 10% restante** para paridade oficial e operação em duas máquinas. O Firebase Spark permanece sem custos.
 
 ## Importação MVI NEAC e publicação automática — 0.1.111
 

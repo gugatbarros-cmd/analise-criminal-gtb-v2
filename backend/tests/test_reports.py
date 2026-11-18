@@ -7,7 +7,7 @@ from test_imports import cad, csv_bytes, neac
 from gtb.api import main
 from gtb.comparisons import comparison_dataset
 from gtb.db.store import Store
-from gtb.reports import report_dataset
+from gtb.reports import people_fields, report_dataset
 from gtb.security.local_auth import AuthManager
 from gtb.sync.snapshot import build_consistent_snapshot
 
@@ -55,3 +55,16 @@ def test_report_dataset_restricts_access_to_admin(tmp_path, monkeypatch):
         token = client.post('/auth/login', json={'username': username, 'password': password}).json()['token']
         response = client.get('/reports/dataset', headers={'Authorization': 'Bearer ' + token})
         assert response.status_code == status
+
+
+def test_people_fields_keep_roles_and_do_not_infer_from_names():
+    row = {'Sexo da vítima': 'Feminino', 'Idade da vítima': '31',
+           'Sexo do autor': 'Masculino', 'Idade do autor': '40',
+           'Nome da vítima': 'Pessoa Sintética'}
+    assert people_fields(row, 'ocorrencias') == [
+        {'role': 'Vítima', 'sex': 'Feminino', 'age': '31'},
+        {'role': 'Autor(a)', 'sex': 'Masculino', 'age': '40'},
+    ]
+    assert people_fields({'Nome da vítima': 'Pessoa Sintética'}, 'ocorrencias') == []
+    assert people_fields({'Sexo': 'F', 'Idade': '19'}, 'ocorrencias')[0]['role'] == 'Pessoa sem vínculo informado'
+    assert people_fields({'Sexo': 'M', 'Idade': '42'}, 'mvi_cad')[0]['role'] == 'Vítima'

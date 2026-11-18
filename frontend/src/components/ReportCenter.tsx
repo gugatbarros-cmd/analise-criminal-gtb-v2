@@ -18,10 +18,10 @@ function WhatsappMessagePreview({ message }: { message: string }) {
     </div>)}</div>
 }
 
-export function ReportCenter({ year, municipality, version, allowed }: { year?: number; municipality?: string; version: string; allowed: boolean }) {
+export function ReportCenter({ year, municipality, version, allowed, initialReport }: { year?: number; municipality?: string; version: string; allowed: boolean; initialReport?: ReportId }) {
   const [scope, setScope] = useState<ReportScope>({ year, city: municipality })
   const [options, setOptions] = useState<ReportOptions>({ author: '', unit: 'Polícia Militar de Alagoas · 10º BPM', notes: '', actions: '', referenceDate: new Date().toLocaleDateString('en-CA') })
-  const [selected, setSelected] = useState<ReportId>('executivo')
+  const [selected, setSelected] = useState<ReportId>(initialReport || 'executivo')
   const [preview, setPreview] = useState('')
   const [planning, setPlanning] = useState(false)
   const [error, setError] = useState('')
@@ -86,6 +86,7 @@ export function ReportCenter({ year, municipality, version, allowed }: { year?: 
     } catch (failure) { if (currentRequest === requestId.current) setError(failure instanceof Error ? failure.message : 'Não foi possível preparar o relatório.') }
     finally { if (currentRequest === requestId.current) setLoadingAction(null) }
   }
+  useEffect(() => { if (initialReport && allowed) void prepare(initialReport) }, [initialReport, allowed])
   const downloadCsv = (dataset: NonNullable<typeof data.data>, summary = false) => {
     const url = URL.createObjectURL(new Blob([summary ? summaryCsv(dataset, scope) : reportCsv(dataset, selected, scope)], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a'); link.href = url; link.download = `gtb-${selected}-${scope.year || 'todos'}-${new Date().toISOString().slice(0, 10)}.csv`; link.click()

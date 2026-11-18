@@ -33,3 +33,13 @@
 .location-review-inputs label{display:flex;flex-direction:column;gap:4px}
 .location-review-inputs input{width:130px}
 .legacy-workspace .period-cutoff{align-self:end;max-width:260px;padding:11px 13px;border:1px solid #cfe1d7;border-radius:9px;background:#f0faf3;color:#286343;font-size:.77rem;font-weight:700;line-height:1.35}
+.indicator-report-shortcut { display:flex; justify-content:flex-end; margin:12px 0; }
+.indicator-report-shortcut button { padding:9px 14px; border-radius:8px; }
+.indicator-person-profile { padding:16px; margin:12px 0 20px; background:var(--surface, #fff); border:1px solid var(--border, #d9e3ee); border-radius:12px; }
+.indicator-person-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.indicator-person-heading button { padding:8px 12px; }
+.indicator-person-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.indicator-person-grid > div { padding:12px; border:1px solid #d9e3ee; border-radius:8px; }
+.indicator-person-grid h4 { margin:0 0 10px; }
+.indicator-person-grid ul { margin:4px 0 12px; padding-left:20px; }
+@media print { .indicator-report-shortcut, .indicator-person-heading button { display:none!important; } }

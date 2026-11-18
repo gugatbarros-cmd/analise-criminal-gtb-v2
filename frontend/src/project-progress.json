@@ -1,6 +1,6 @@
 {
-  "updatedAt": "2026-11-17",
-  "implementationStatus": "Versão funcional finalizada no escopo validado; GTB 2.0 v0.1.111: relatório MDX NEAC sem Ano corrigido, registros históricos reconciliados e publicação de site/instalador automatizada. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para paridade oficial e operação em duas máquinas. Firebase Spark permanece sem custos.",
+  "updatedAt": "2026-11-18",
+  "implementationStatus": "Versão funcional finalizada no escopo validado; GTB 2.0 v0.1.112: perfil de sexo e idade por vínculo informado nos indicadores e relatórios, com atalho para gerar o relatório de cada indicador. Implementação funcional: 100% concluída no escopo validado; validação operacional: 90% concluída e 10% restante para paridade oficial e operação em duas máquinas. Firebase Spark permanece sem custos.",
   "method": "Estimativa por entregas verificadas; os pesos representam o esforço relativo de cada fase. Não é uma previsão de prazo.",
   "phases": [
     {
@@ -45,7 +45,7 @@
       "weight": 30,
       "completed": 19,
       "total": 20,
-      "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições com filtros e relatórios; tabela geral, painel municipal, perfil e assistente Stiven local baseado somente em agregados",
+      "done": "CVP, tentativas, TCO, mandados, visitas, sossego, triagem doméstica, armas, drogas e guarnições com filtros e relatórios; perfil de sexo e idade por vínculo estruturado nos indicadores e relatórios e acesso direto ao documento; tabela geral, painel municipal, perfil e assistente Stiven local baseado somente em agregados",
       "remaining": "Completar detalhes analíticos do legado e comprovar paridade com dados oficiais de referência"
     },
     {

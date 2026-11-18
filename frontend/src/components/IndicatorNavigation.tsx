@@ -1,5 +1,7 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { iconForIndicator, SystemIcon } from './SystemIcon'
+import { getReportDataset } from '../services/api'
+import { filterReportRows, personProfile, selectReportRows, type ReportId, type ReportRow } from '../services/report-model'
 import type { Source, Summary } from '../services/api'
 import type { ComparisonDataset } from '../services/comparison-model'
 import { indicatorVariation } from '../services/indicator-variation'
@@ -53,8 +55,34 @@ function updateDate(value?: string | null): string {
     : 'Última atualização: sem importação'
 }
 
-export function IndicatorSection({ id, children }: { id: string; children: ReactNode }) {
-  return <IndicatorChartTargetContext.Provider value={id}><div id={id}>{children}</div></IndicatorChartTargetContext.Provider>
+function PersonProfile({ report, year, municipality }: { report: ReportId; year?: number; municipality?: string }) {
+  const [rows, setRows] = useState<ReportRow[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const load = async () => {
+    setBusy(true); setError('')
+    try {
+      const data = await getReportDataset()
+      setRows(selectReportRows(filterReportRows(data.rows, { year, city: municipality }), report))
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Não foi possível consultar o perfil.') }
+    finally { setBusy(false) }
+  }
+  const groups = rows && personProfile(rows)
+  return <section className="indicator-person-profile" aria-label="Perfil por sexo e idade">
+    <div className="indicator-person-heading"><strong>Sexo e idade das pessoas envolvidas</strong><button type="button" disabled={busy} onClick={() => { void load() }}>{busy ? 'Carregando…' : rows ? 'Atualizar perfil' : 'Mostrar perfil'}</button></div>
+    {error && <p role="alert">{error}</p>}
+    {rows && <><p>{rows.length.toLocaleString('pt-BR')} registro(s) no recorte. Contagem por vínculo declarado; campos ausentes não são inferidos por nome ou relato.</p>
+      {groups?.size ? <div className="indicator-person-grid">{[...groups].map(([role, group]) => <div key={role}><h4>{role} · {group.total.toLocaleString('pt-BR')} registro(s)</h4><strong>Sexo</strong><ul>{group.sex.map(([label, total]) => <li key={label}>{label}: {total.toLocaleString('pt-BR')}</li>)}</ul><strong>Faixa etária</strong><ul>{group.age.map(([label, total]) => <li key={label}>{label}: {total.toLocaleString('pt-BR')}</li>)}</ul></div>)}</div>
+        : <p>A fonte não fornece sexo ou idade em campos estruturados neste recorte.</p>}</>}
+  </section>
+}
+
+export function IndicatorSection({ id, year, municipality, children }: { id: string; year?: number; municipality?: string; children: ReactNode }) {
+  const report = (id === 'ocorrencias' ? 'geral' : id) as ReportId
+  return <IndicatorChartTargetContext.Provider value={id}><div id={id}>
+    <div className="indicator-report-shortcut"><button type="button" onClick={() => window.dispatchEvent(new CustomEvent('gtb-report-request', { detail: report }))}>Gerar relatório deste indicador ↗</button></div>
+    <PersonProfile key={`${report}:${year || ''}:${municipality || ''}`} report={report} year={year} municipality={municipality} />
+    {children}</div></IndicatorChartTargetContext.Provider>
 }
 
 export function IndicatorCard({ target, label, children }: {
