@@ -43,3 +43,42 @@ export async function getPublishedVersion(): Promise<string> {
     throw new Error('Versão publicada inválida')
   return data.version
 }
+
+export type AutoUpdateStatus = { enabled: boolean; pending_version: string | null; idle_minutes_required: number | null;
+  seconds_until_install: number | null; installing: boolean }
+
+/** Situação da atualização automática do aplicativo local (qualquer conta logada). */
+export async function autoUpdateStatus(): Promise<AutoUpdateStatus> {
+  const response = await fetch(`${localApi}/system/auto-update`, {
+    headers: { Authorization: `Bearer ${getSessionToken()}` }, cache: 'no-store',
+  })
+  if (!response.ok) throw new Error('Estado da atualização automática indisponível')
+  return response.json() as Promise<AutoUpdateStatus>
+}
+
+/** Minutos sem uso antes de recarregar a página online com a versão nova. */
+export const IDLE_RELOAD_MINUTES = 10
+const ACTIVITY_REPORT_MS = 60 * 1000
+let lastInteraction = Date.now()
+let lastReport = 0
+
+export function millisecondsSinceInteraction(now = Date.now()): number {
+  return now - lastInteraction
+}
+
+/** Registra uso da interface e informa o aplicativo local, no máximo uma vez por minuto. */
+export function noteInteraction(now = Date.now()): boolean {
+  lastInteraction = now
+  if (isCloud || import.meta.env.VITE_STATIC_DEMO === '1' || !getSessionToken() || now - lastReport < ACTIVITY_REPORT_MS) return false
+  lastReport = now
+  void fetch(`${localApi}/system/activity`, { method: 'POST', headers: { Authorization: `Bearer ${getSessionToken()}` },
+    cache: 'no-store' }).catch(() => undefined)
+  return true
+}
+
+export function startInteractionTracking(): () => void {
+  const events = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'scroll', 'touchstart'] as const
+  const handler = () => { noteInteraction() }
+  for (const name of events) window.addEventListener(name, handler, { passive: true, capture: true })
+  return () => { for (const name of events) window.removeEventListener(name, handler, { capture: true }) }
+}

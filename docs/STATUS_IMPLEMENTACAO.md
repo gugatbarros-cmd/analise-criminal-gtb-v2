@@ -1,6 +1,14 @@
 # Andamento da implantação — 26/11/2026
 
-> **Resumo atual (0.1.115).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.116).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Atualização e reinício automáticos sem uso — 0.1.116
+
+O aplicativo local instalado passa a se atualizar sozinho. A cada 15 minutos, o próprio programa consulta a release estável mais recente no GitHub, considerando apenas versões com instalador publicado. Quando há versão nova, ele aguarda **10 minutos sem uso**, sem importação, sem sessão CAD em execução e sem outra atualização em andamento, e então instala e reinicia com o mesmo atualizador do botão “Atualizar agora”, que confere tamanho e SHA-256. Isso funciona com qualquer conta logada e também com a janela fechada.
+
+Contam como uso os movimentos do mouse, cliques, teclas e rolagem na interface (informados ao programa no máximo uma vez por minuto), além de importações e consultas ao CAD. O aviso de versão mostra quanto falta para a instalação automática. Durante o reinício, a página mostra o andamento e recarrega sozinha na mesma tela com a versão nova. Na consulta online, a página recarrega com a versão nova após 10 minutos sem uso. Se a rede falhar, nova consulta ocorre no ciclo seguinte; se a instalação falhar, nova tentativa ocorre após 30 minutos. A espera anterior de 90 segundos, que exigia administrador com a janela aberta, foi substituída por esse mecanismo.
+
+Testes automatizados cobrem a espera por ociosidade, o bloqueio durante importação ou CAD, versões iguais ou anteriores, a falha de rede e a nova tentativa após falha de instalação. A consulta real ao GitHub identificou a release 0.1.115. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Telas próprias no menu e abertura com o sistema ocupado — 0.1.115
 

@@ -8,6 +8,8 @@ O informe MVI NEAC e o texto para WhatsApp apresentam a comparação com o mesmo
 
 Na prévia do WhatsApp, confira os emojis e use **Abrir WhatsApp com emojis** para preencher a mensagem ou **Copiar mensagem com emojis** para colá-la diretamente na conversa. A cópia oferece um método alternativo quando a área de transferência moderna não está disponível no navegador.
 
+O aplicativo local instalado verifica novas versões a cada 15 minutos. Quando há uma, instala e reinicia sozinho depois de 10 minutos sem uso, sem interromper importações ou consultas ao CAD; a página recarrega na mesma tela.
+
 Depois de instalar, entre com sua conta local e abra **Administração → Sincronização online**. Conecte uma conta online ativa de administrador ou analista do GTB 2.0. A identidade online continua no Firebase Spark existente, sem cobrança ou upgrade automático. A senha online não é guardada; o token de renovação é protegido pelo Windows DPAPI. Cada importação e mudança de versão agenda uma cópia consistente dos dados processados para `sharedBases/gtb2-online`, separada das bases históricas. Falhas mantêm os dados locais e tentam novamente em até cinco minutos. A página online consulta mudanças a cada minuto enquanto visível.
 
 - Instalação: baixe o instalador da [release mais recente](https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest).

@@ -20,3 +20,19 @@ describe('indicador de atualização', () => {
     expect(String(request.mock.calls[0][0])).toContain('checked=')
   })
 })
+
+describe('uso do sistema para a atualização automática', () => {
+  it('avisa o aplicativo local no máximo uma vez por minuto', async () => {
+    const { noteInteraction, millisecondsSinceInteraction } = await import('./version-update')
+    const calls: string[] = []
+    vi.stubGlobal('localStorage', { getItem: () => 'token-sintetico' })
+    vi.stubGlobal('fetch', (url: string) => { calls.push(url); return Promise.resolve(new Response('{}')) })
+    const start = 10_000_000
+    expect(noteInteraction(start)).toBe(true)
+    expect(noteInteraction(start + 30_000)).toBe(false)
+    expect(noteInteraction(start + 61_000)).toBe(true)
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toContain('/system/activity')
+    expect(millisecondsSinceInteraction(start + 61_000 + 5_000)).toBe(5_000)
+  })
+})

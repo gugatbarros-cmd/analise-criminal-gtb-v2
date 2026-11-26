@@ -18,10 +18,11 @@ from pydantic import BaseModel
 from gtb.cad.automation import CadImportManager
 from gtb.db.store import MAX_UPLOAD_BYTES, Store
 from gtb.ingestion.adapters.normalize import SOURCES
+from gtb.ops.auto_update import AutoUpdater, latest_release_version
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.115"
+APP_VERSION = "0.1.116"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -179,6 +180,7 @@ async def authorize(request: Request, call_next):
         request.state.token = token
         data_operation = request.method == "POST" and path.startswith(("/imports/", "/cad/"))
         if data_operation:
+            auto_updater.touch()
             with update_lock:
                 if update_process is not None and update_process.poll() is None:
                     return JSONResponse({"detail": "Aguarde a atualização do sistema terminar."}, status_code=409)
@@ -247,21 +249,42 @@ def system_update_status() -> dict:
         return {"phase": "failed", "message": "Não foi possível ler o andamento da atualização."}
 
 
-@app.post("/system/update", dependencies=ADMIN_ONLY)
-def start_system_update() -> dict:
+class UpdateBlocked(RuntimeError):
+    def __init__(self, status_code: int, message: str):
+        super().__init__(message)
+        self.status_code = status_code
+
+
+def cad_busy() -> bool:
+    with cad_import.lock:
+        return cad_import.worker is not None and cad_import.worker.is_alive()
+
+
+def system_busy() -> bool:
+    """Importação, sessão CAD em execução ou atualização já em andamento."""
+    with update_lock:
+        running = update_process is not None and update_process.poll() is None
+    return running or bool(active_data_operations) or cad_busy()
+
+
+def updater_running() -> bool:
+    with update_lock:
+        return update_process is not None and update_process.poll() is None
+
+
+def launch_updater() -> bool:
+    """Inicia o atualizador que instala e reinicia. Retorna False se já estava em andamento."""
     global update_process
     script = installed_updater_path()
     if script is None:
-        raise HTTPException(409, "A instalação automática está disponível apenas no aplicativo Windows instalado.")
+        raise UpdateBlocked(409, "A instalação automática está disponível apenas no aplicativo Windows instalado.")
     if not script.is_file():
-        raise HTTPException(503, "O atualizador não foi encontrado nesta instalação.")
+        raise UpdateBlocked(503, "O atualizador não foi encontrado nesta instalação.")
     with update_lock:
         if update_process is not None and update_process.poll() is None:
-            return {"phase": "checking", "message": "Atualização já em andamento.", "progress": None}
-        with cad_import.lock:
-            cad_busy = cad_import.worker is not None and cad_import.worker.is_alive()
-        if cad_busy or active_data_operations:
-            raise HTTPException(409, "Conclua a importação e encerre a sessão do CAD antes de atualizar.")
+            return False
+        if cad_busy() or active_data_operations:
+            raise UpdateBlocked(409, "Conclua a importação e encerre a sessão do CAD antes de atualizar.")
         update_status_file.write_text(json.dumps({"phase": "checking", "message": "Verificando nova versão…"}), encoding="utf-8")
         powershell = Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "WindowsPowerShell" / "v1.0" / "powershell.exe"
         try:
@@ -271,8 +294,55 @@ def start_system_update() -> dict:
                 cwd=str(script.parent), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL, creationflags=subprocess.CREATE_NO_WINDOW)
         except OSError:
-            raise HTTPException(503, "Não foi possível iniciar o atualizador do Windows.") from None
+            raise UpdateBlocked(503, "Não foi possível iniciar o atualizador do Windows.") from None
+    return True
+
+
+@app.post("/system/update", dependencies=ADMIN_ONLY)
+def start_system_update() -> dict:
+    try:
+        started = launch_updater()
+    except UpdateBlocked as error:
+        raise HTTPException(error.status_code, str(error)) from None
+    if not started:
+        return {"phase": "checking", "message": "Atualização já em andamento.", "progress": None}
     return {"phase": "checking", "message": "Verificando nova versão…", "progress": None}
+
+
+def _auto_launch() -> None:
+    try:
+        launch_updater()
+    except UpdateBlocked as error:
+        raise RuntimeError(str(error)) from None
+
+
+auto_updater = AutoUpdater(APP_VERSION, fetch_latest=latest_release_version, is_busy=system_busy,
+                           launch=_auto_launch, still_installing=updater_running)
+auto_update_stop = threading.Event()
+
+
+@app.on_event("startup")
+def start_auto_update() -> None:
+    # Somente o aplicativo Windows instalado se atualiza sozinho; testes e desenvolvimento não.
+    if installed_updater_path() is None or demo_mode() or os.environ.get("GTB_AUTO_UPDATE") == "0":
+        return
+    threading.Thread(target=auto_updater.run_forever, args=(auto_update_stop,),
+                     name="gtb-auto-update", daemon=True).start()
+
+
+@app.post("/system/activity")
+def register_system_activity() -> dict:
+    """A interface informa uso recente; a instalação automática espera o sistema ficar ocioso."""
+    auto_updater.touch()
+    return {"status": "ok"}
+
+
+@app.get("/system/auto-update")
+def auto_update_status() -> dict:
+    if installed_updater_path() is None:
+        return {"enabled": False, "pending_version": None, "idle_minutes_required": None,
+                "seconds_until_install": None, "installing": False}
+    return auto_updater.status()
 
 
 @app.get('/reports/dataset', dependencies=ADMIN_ONLY)
