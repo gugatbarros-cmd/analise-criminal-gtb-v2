@@ -1,6 +1,12 @@
 # Andamento da implantação — 26/11/2026
 
-> **Resumo atual (0.1.114).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.115).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Telas próprias no menu e abertura com o sistema ocupado — 0.1.115
+
+**Navegação.** Cada item do menu lateral abre uma tela própria com somente o seu conteúdo, já no início dele, logo abaixo do cabeçalho. Antes, todas as áreas ficavam numa única página longa e o menu apenas rolava até a seção. O painel inicial reúne o dashboard, os cartões de indicadores e a disponibilidade das bases; cada indicador, o mapa, os relatórios, os municípios, a tabela geral, o assistente, as importações e as áreas de administração têm tela separada. Os filtros de ano e município aparecem nas telas de análise e ficam ocultos em importações e administração. O botão Voltar do navegador e os endereços com `#` continuam levando à tela correspondente. A navegação foi conferida no navegador com a demonstração de dados fictícios.
+
+**Atalho.** Ao abrir o atalho com o GTB já aberto e o computador ocupado, o inicializador podia exibir “O sistema não respondeu em 120 segundos”, embora o sistema estivesse funcionando. A verificação esperava só 1 segundo pela resposta da instância aberta; sem resposta, iniciava um segundo executável e continuava aguardando. Agora o atalho espera até 5 segundos, reconhece a instância aberta pela porta local 8000 e reabre a interface. Quando o segundo executável encontra a instância e encerra normalmente, isso deixa de ser tratado como falha, sem abrir duas janelas. A mensagem de erro permanece apenas quando nenhum GTB está aberto. A verificação de sintaxe e os casos de instância respondendo e instância ocupada foram testados no Windows. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Mapa, auditoria de relatórios e manutenção — 0.1.114
 

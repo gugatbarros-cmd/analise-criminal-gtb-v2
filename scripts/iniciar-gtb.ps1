@@ -10,13 +10,42 @@ if (Test-Path -LiteralPath $installedExecutable -PathType Leaf) {
 $address = 'http://127.0.0.1:8000'
 $log = Join-Path $env:LOCALAPPDATA 'GTB2\logs\launcher.log'
 
-function Test-GtbHealth {
+function Test-GtbHealth([int]$TimeoutSec = 5) {
+  # Com o computador ocupado, a instância aberta pode levar alguns segundos para responder.
   try {
-    $health = Invoke-RestMethod -Uri "$address/health" -TimeoutSec 1
+    $health = Invoke-RestMethod -Uri "$address/health" -TimeoutSec $TimeoutSec
     return $health.status -eq 'ok'
   } catch {
     return $false
   }
+}
+
+function Test-GtbListening {
+  # Reconhece o GTB já aberto pela porta local, mesmo quando /health demora a responder.
+  try {
+    $owners = Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 8000 -State Listen -ErrorAction Stop |
+      Select-Object -ExpandProperty OwningProcess -Unique
+    foreach ($owner in $owners) {
+      $name = (Get-Process -Id $owner -ErrorAction SilentlyContinue).ProcessName
+      if ($name -eq 'GTB2-Local') { return $true }
+    }
+  } catch { }
+  return $false
+}
+
+function Write-GtbLog([string]$Message) {
+  try { Add-Content -LiteralPath $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message" } catch { }
+}
+
+function Test-GtbRunning {
+  if (Test-GtbHealth) { return $true }
+  if (Test-GtbListening) {
+    # Dá mais uma chance à resposta antes de abrir a interface de uma instância ocupada.
+    if (Test-GtbHealth -TimeoutSec 15) { return $true }
+    Write-GtbLog 'Instância aberta ocupada; interface reaberta sem confirmação de /health'
+    return $true
+  }
+  return $false
 }
 
 function Show-GtbError([string]$Message) {
@@ -63,7 +92,8 @@ try {
     throw "Executável não encontrado: $executable"
   }
 
-  if (-not (Test-GtbHealth)) {
+  $interfaceOpened = $false
+  if (-not (Test-GtbRunning)) {
     $previousNoBrowser = $env:GTB_NO_BROWSER
     $env:GTB_NO_BROWSER = '1'
     try {
@@ -75,19 +105,31 @@ try {
     # A primeira abertura de uma atualização pode revisar os dados derivados.
     # O processo continua supervisionado enquanto preserva as bases originais.
     $deadline = (Get-Date).AddSeconds(120)
-    while (-not (Test-GtbHealth) -and (Get-Date) -lt $deadline) {
+    $ready = $false
+    while ((Get-Date) -lt $deadline) {
+      if (Test-GtbHealth -TimeoutSec 3) { $ready = $true; break }
+      $process.Refresh()
       if ($process.HasExited) {
+        # Código 0 com o GTB na porta: o executável encontrou a instância aberta e já reabriu a interface.
+        if ($process.ExitCode -eq 0 -and ((Test-GtbListening) -or (Test-GtbHealth))) {
+          $ready = $true
+          $interfaceOpened = $true
+          break
+        }
         throw "O executável encerrou antes de iniciar. Consulte o registro: $log"
       }
       Start-Sleep -Milliseconds 500
-      $process.Refresh()
     }
-    if (-not (Test-GtbHealth)) {
-      throw "O sistema não respondeu em 120 segundos. Consulte o registro: $log"
+    if (-not $ready) {
+      if (Test-GtbListening) {
+        Write-GtbLog 'O GTB está aberto, mas não respondeu em 120 segundos; interface reaberta'
+      } else {
+        throw "O sistema não respondeu em 120 segundos. Consulte o registro: $log"
+      }
     }
   }
 
-  Open-GtbInterface
+  if (-not $interfaceOpened) { Open-GtbInterface }
 } catch {
   Show-GtbError $_.Exception.Message
   exit 1

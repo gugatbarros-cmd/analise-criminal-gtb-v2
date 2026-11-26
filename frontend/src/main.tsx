@@ -2,6 +2,7 @@ import { IndicatorComparisons } from './components/IndicatorComparisons'
 import './comparisons.css'
 import './system-icons.css'
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { pageForTarget, pagesWithoutFilters } from './services/pages'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query'
 import { SourceTable } from './components/SourceTable'
@@ -70,6 +71,11 @@ const SummaryReport = lazy(() => import('./components/SummaryReport').then(modul
 const SpecializedReport = lazy(() => import('./components/SpecializedReport').then(module => ({ default: module.SpecializedReport })))
 const ReportCenter = lazy(() => import('./components/ReportCenter').then(module => ({ default: module.ReportCenter })))
 
+/** Mostra somente o conteúdo da tela escolhida no menu lateral. */
+function Page({ show, children }: { show: boolean; children: React.ReactNode }) {
+  return show ? <>{children}</> : null
+}
+
 function DeferredRegion({ id, children }: { id: string; children: React.ReactNode }) {
   const element = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(() => typeof window === 'undefined')
@@ -119,7 +125,15 @@ function App() {
   const [importsVisible, setImportsVisible] = useState(false)
   const [comparisonsReady, setComparisonsReady] = useState(false)
   const [activeSource, setActiveSource] = useState<'mvi_cad' | 'mvi_neac'>('mvi_cad')
+  const [page, setPage] = useState(() => pageForTarget(window.location.hash.slice(1)))
+  const filtersVisible = !pagesWithoutFilters.has(page)
+  useEffect(() => {
+    const follow = () => setPage(pageForTarget(window.location.hash.slice(1)))
+    window.addEventListener('hashchange', follow)
+    return () => window.removeEventListener('hashchange', follow)
+  }, [])
   const navigateToIndicator = useCallback((target: string) => {
+    setPage(pageForTarget(target))
     if (target === 'mvi-cad') setActiveSource('mvi_cad')
     if (target === 'mvi-neac') setActiveSource('mvi_neac')
     if (target === 'relatorios') setReportCenterOpen(true)
@@ -129,6 +143,7 @@ function App() {
       const id = (event as CustomEvent<ReportId>).detail
       setReportRequest({ id, sequence: Date.now() })
       setReportCenterOpen(true)
+      setPage('relatorios')
       requestAnimationFrame(() => document.getElementById('relatorios')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     }
     window.addEventListener('gtb-report-request', open)
@@ -311,229 +326,245 @@ function App() {
       }}
     >
       <main className="shell">
-        <CriminalOverview
-          summary={summary.data}
-          year={year}
-          municipality={municipality}
-          loading={summary.isFetching}
-          serviceAvailable={health.isSuccess && !summary.isError}
-          demo={!!demo}
-          cloud={isCloud}
-        />
-        {isCloud && (
-          <section className="notice" aria-label="Atualização online">
-            <p>
-              Última sincronização: {cloudInfo().syncedAt ? new Date(cloudInfo().syncedAt!).toLocaleString('pt-BR') : 'aguardando dados'} ·
-              Versão dos dados: {cloudInfo().version || '—'}
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                void refreshCloud()
-                  .then(() => {
-                    setCloudError('')
-                    void queryClient.invalidateQueries()
-                  })
-                  .catch(error => setCloudError(error instanceof Error ? error.message : 'Falha ao atualizar.'))
-              }}
-            >
-              Atualizar consulta
-            </button>
-            {(cloudError || summary.isError) && (
-              <p className="error" role="alert">
-                {cloudError || summary.error?.message}
+        <Page show={page === 'dashboard'}>
+          <CriminalOverview
+            summary={summary.data}
+            year={year}
+            municipality={municipality}
+            loading={summary.isFetching}
+            serviceAvailable={health.isSuccess && !summary.isError}
+            demo={!!demo}
+            cloud={isCloud}
+          />
+          {isCloud && (
+            <section className="notice" aria-label="Atualização online">
+              <p>
+                Última sincronização: {cloudInfo().syncedAt ? new Date(cloudInfo().syncedAt!).toLocaleString('pt-BR') : 'aguardando dados'}{' '}
+                · Versão dos dados: {cloudInfo().version || '—'}
               </p>
-            )}
-          </section>
-        )}
-        {demo && (
-          <nav className="quick-nav" aria-label="Explorar demonstração">
-            <a href="#andamento">Andamento</a>
-            <a href="#indicadores">Indicadores</a>
-            <a href="#mvi">MVI por fonte</a>
-            <a href="#operacoes">Outros indicadores</a>
-            <a href="#importacoes">Importações sintéticas</a>
-          </nav>
-        )}
+              <button
+                type="button"
+                onClick={() => {
+                  void refreshCloud()
+                    .then(() => {
+                      setCloudError('')
+                      void queryClient.invalidateQueries()
+                    })
+                    .catch(error => setCloudError(error instanceof Error ? error.message : 'Falha ao atualizar.'))
+                }}
+              >
+                Atualizar consulta
+              </button>
+              {(cloudError || summary.isError) && (
+                <p className="error" role="alert">
+                  {cloudError || summary.error?.message}
+                </p>
+              )}
+            </section>
+          )}
+        </Page>
+        <Page show={page === 'dashboard'}>
+          {demo && (
+            <nav className="quick-nav" aria-label="Explorar demonstração">
+              <a href="#andamento">Andamento</a>
+              <a href="#indicadores">Indicadores</a>
+              <a href="#mvi-cad">MVI por fonte</a>
+              <a href="#operacoes">Outros indicadores</a>
+              <a href="#importacoes">Importações sintéticas</a>
+            </nav>
+          )}
+        </Page>
         {demo && (
           <div className="demo-banner" role="status">
             <strong>Demonstração isolada</strong>
             <span>Os números abaixo vêm apenas de planilhas fictícias. A importação está bloqueada nesta prévia.</span>
           </div>
         )}
-        <details id="andamento" className="release-details">
-          <summary>Sobre esta versão e andamento da validação</summary>
-          <ProjectProgress />
-        </details>
-        <section className="filters" aria-label="Filtros de indicadores">
-          <label>
-            Ano
-            <input type="number" min="1900" max="2100" placeholder="Todos" value={year} onChange={event => setYear(event.target.value)} />
-          </label>
-          <label>
-            Município
-            <input
-              type="search"
-              placeholder="Todos os municípios"
-              value={municipality}
-              onChange={event => setMunicipality(event.target.value)}
-            />
-          </label>
-          <output className="period-cutoff">
-            {periodEndForYear(summary.data, year)
-              ? `Até ${periodEndForYear(summary.data, year)!.split('-').reverse().join('/')} · última importação`
-              : year === String(currentYear())
-                ? 'Sem importação no ano atual'
-                : 'Período anual selecionado'}
-          </output>
-          <button
-            type="button"
-            onClick={() => {
-              setYear(String(currentYear()))
-              setMunicipality('')
-            }}
+        <Page show={page === 'dashboard'}>
+          <details id="andamento" className="release-details">
+            <summary>Sobre esta versão e andamento da validação</summary>
+            <ProjectProgress />
+          </details>
+        </Page>
+        <Page show={filtersVisible}>
+          <section className="filters" aria-label="Filtros de indicadores">
+            <label>
+              Ano
+              <input type="number" min="1900" max="2100" placeholder="Todos" value={year} onChange={event => setYear(event.target.value)} />
+            </label>
+            <label>
+              Município
+              <input
+                type="search"
+                placeholder="Todos os municípios"
+                value={municipality}
+                onChange={event => setMunicipality(event.target.value)}
+              />
+            </label>
+            <output className="period-cutoff">
+              {periodEndForYear(summary.data, year)
+                ? `Até ${periodEndForYear(summary.data, year)!.split('-').reverse().join('/')} · última importação`
+                : year === String(currentYear())
+                  ? 'Sem importação no ano atual'
+                  : 'Período anual selecionado'}
+            </output>
+            <button
+              type="button"
+              onClick={() => {
+                setYear(String(currentYear()))
+                setMunicipality('')
+              }}
+            >
+              Restaurar padrão
+            </button>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                setSpecializedReport(null)
+                setReportOpen(true)
+              }}
+            >
+              Ver relatório
+            </button>
+          </section>
+        </Page>
+        <Page show={page === 'dashboard'}>
+          <IndicatorVariationContext.Provider
+            value={{ summary: summary.data, dataset: comparisons.data, year: Number(year), municipality }}
           >
-            Restaurar padrão
-          </button>
-          <button
-            type="button"
-            className="primary"
-            onClick={() => {
-              setSpecializedReport(null)
-              setReportOpen(true)
-            }}
-          >
-            Ver relatório
-          </button>
-        </section>
-        <IndicatorVariationContext.Provider value={{ summary: summary.data, dataset: comparisons.data, year: Number(year), municipality }}>
-          <IndicatorUpdateContext.Provider value={summary.data}>
-            <section id="indicadores" className="metrics five" aria-label="Indicadores">
-              <IndicatorCard target="ocorrencias" label="Ocorrências">
-                <span>Ocorrências</span>
-                <strong>{summary.data?.occurrences ?? '—'}</strong>
-                <small>Base geral · 10º BPM</small>
-              </IndicatorCard>
-              <IndicatorCard target="armas" label="Armas">
-                <span>{summary.data?.source_coverage?.armas ? 'Armas apreendidas' : 'Armas · base geral'}</span>
-                <strong>
-                  {summary.data
-                    ? ((summary.data.source_coverage?.armas ? summary.data.seized_arms : summary.data.general_arm_occurrences) ?? '—')
-                    : '—'}
-                </strong>
-                <small>
-                  {summary.data?.source_coverage?.armas ? 'Unidades · base de armas' : 'Ocorrências com menção · sem base de armas'}
-                </small>
-              </IndicatorCard>
-              <IndicatorCard target="drogas" label="Drogas">
-                <span>{summary.data?.source_coverage?.drogas ? 'Drogas' : 'Drogas · base geral'}</span>
-                <strong>
-                  {summary.data
-                    ? ((summary.data.source_coverage?.drogas ? summary.data.by_source.drogas : summary.data.general_drug_occurrences) ??
-                      '—')
-                    : '—'}
-                </strong>
-                <small>
-                  {summary.data?.source_coverage?.drogas ? 'Registros · base de drogas' : 'Ocorrências com menção · sem base de drogas'}
-                </small>
-              </IndicatorCard>
-              <IndicatorCard target="drogas" label="Peso de drogas">
-                <span>Peso de drogas</span>
-                <strong>
-                  {summary.data?.source_coverage?.drogas
-                    ? ((summary.data.drug_weight_grams || 0) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })
-                    : '—'}
-                </strong>
-                <small>kg · somente unidades reconhecidas</small>
-              </IndicatorCard>
-              <IndicatorCard target="mvi-cad" label="MVI CAD">
-                <span>MVI CAD</span>
-                <strong>{summary.data?.mvi_cad ?? '—'}</strong>
-                <small>Vítimas · fonte CAD</small>
-              </IndicatorCard>
-              <IndicatorCard target="mvi-neac" label="MVI NEAC">
-                <span>MVI NEAC</span>
-                <strong>{summary.data?.mvi_neac ?? '—'}</strong>
-                <small>Vítimas · fonte NEAC</small>
-              </IndicatorCard>
-              <IndicatorCard target="cvp" label="CVP">
-                <span>CVP</span>
-                <strong>{summary.data?.cvp ?? '—'}</strong>
-                <small>Ocorrências de roubo</small>
-              </IndicatorCard>
-              <IndicatorCard target="tentativas" label="Tentativas de homicídio">
-                <span>Tentativas</span>
-                <strong>{summary.data?.tentativas ?? '—'}</strong>
-                <small>Ocorrências de homicídio tentado</small>
-              </IndicatorCard>
-              <IndicatorCard target="tco" label="TCO">
-                <span>TCO</span>
-                <strong>{summary.data?.tco ?? '—'}</strong>
-                <small>Termos elaborados pela PM</small>
-              </IndicatorCard>
-              <IndicatorCard target="mandados" label="Mandados">
-                <span>Mandados</span>
-                <strong>{summary.data?.mandados ?? '—'}</strong>
-                <small>Cumprimentos reconhecidos</small>
-              </IndicatorCard>
-              <IndicatorCard target="visitas" label="Visitas">
-                <span>Visitas</span>
-                <strong>{summary.data?.visitas ?? '—'}</strong>
-                <small>Orientativas e preventivas</small>
-              </IndicatorCard>
-              <IndicatorCard target="sossego" label="Sossego">
-                <span>Sossego</span>
-                <strong>{summary.data?.sossego ?? '—'}</strong>
-                <small>Perturbação reconhecida</small>
-              </IndicatorCard>
-              <IndicatorCard target="domestica" label="Violência doméstica">
-                <span>Doméstica</span>
-                <strong>{summary.data?.domestica ?? '—'}</strong>
-                <small>Casos reconhecidos para revisão</small>
-              </IndicatorCard>
-            </section>
-          </IndicatorUpdateContext.Provider>
-        </IndicatorVariationContext.Provider>
-        <p className="muted">
-          Dashboard criminal: ano {year || 'todos os anos'} · {municipality || '11 municípios do 10º BPM'}. CAD e NEAC são contados
-          separadamente. Fiscalização isolada de medida protetiva permanece na auditoria e não entra nas ocorrências do painel.
-        </p>
-        <div className="source-coverage" aria-label="Disponibilidade das bases">
-          {sources.map(item => (
-            <span key={item}>
-              {labels[item]}:{' '}
-              {summary.data?.source_coverage?.[item]
-                ? `${summary.data.source_coverage[item].toLocaleString('pt-BR')} registros importados`
-                : 'sem base importada'}
-            </span>
-          ))}
-        </div>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="ocorrencias">
-          <IndicatorComparisons
-            id="ocorrencias"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          {summary.data?.occurrence_charts && (
-            <section className="panel">
-              <div className="section-head">
-                <h2>Ocorrências · gráficos do painel geral</h2>
-                <span>Mesmo recorte dos cartões</span>
-              </div>
-              <div className="analysis-grid">
-                <Ranking title="Evolução mensal de ocorrências" items={summary.data.occurrence_charts.monthly} />
-                <Ranking title="Ocorrências por município" items={summary.data.occurrence_charts.cities} />
-                <Ranking title="Ocorrências por natureza" items={summary.data.occurrence_charts.natures} />
-              </div>
-            </section>
-          )}
-        </IndicatorSection>
-        {summary.isError && (
-          <p className="error" role="alert">
-            Não foi possível consultar os indicadores.
+            <IndicatorUpdateContext.Provider value={summary.data}>
+              <section id="indicadores" className="metrics five" aria-label="Indicadores">
+                <IndicatorCard target="ocorrencias" label="Ocorrências">
+                  <span>Ocorrências</span>
+                  <strong>{summary.data?.occurrences ?? '—'}</strong>
+                  <small>Base geral · 10º BPM</small>
+                </IndicatorCard>
+                <IndicatorCard target="armas" label="Armas">
+                  <span>{summary.data?.source_coverage?.armas ? 'Armas apreendidas' : 'Armas · base geral'}</span>
+                  <strong>
+                    {summary.data
+                      ? ((summary.data.source_coverage?.armas ? summary.data.seized_arms : summary.data.general_arm_occurrences) ?? '—')
+                      : '—'}
+                  </strong>
+                  <small>
+                    {summary.data?.source_coverage?.armas ? 'Unidades · base de armas' : 'Ocorrências com menção · sem base de armas'}
+                  </small>
+                </IndicatorCard>
+                <IndicatorCard target="drogas" label="Drogas">
+                  <span>{summary.data?.source_coverage?.drogas ? 'Drogas' : 'Drogas · base geral'}</span>
+                  <strong>
+                    {summary.data
+                      ? ((summary.data.source_coverage?.drogas ? summary.data.by_source.drogas : summary.data.general_drug_occurrences) ??
+                        '—')
+                      : '—'}
+                  </strong>
+                  <small>
+                    {summary.data?.source_coverage?.drogas ? 'Registros · base de drogas' : 'Ocorrências com menção · sem base de drogas'}
+                  </small>
+                </IndicatorCard>
+                <IndicatorCard target="drogas" label="Peso de drogas">
+                  <span>Peso de drogas</span>
+                  <strong>
+                    {summary.data?.source_coverage?.drogas
+                      ? ((summary.data.drug_weight_grams || 0) / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+                      : '—'}
+                  </strong>
+                  <small>kg · somente unidades reconhecidas</small>
+                </IndicatorCard>
+                <IndicatorCard target="mvi-cad" label="MVI CAD">
+                  <span>MVI CAD</span>
+                  <strong>{summary.data?.mvi_cad ?? '—'}</strong>
+                  <small>Vítimas · fonte CAD</small>
+                </IndicatorCard>
+                <IndicatorCard target="mvi-neac" label="MVI NEAC">
+                  <span>MVI NEAC</span>
+                  <strong>{summary.data?.mvi_neac ?? '—'}</strong>
+                  <small>Vítimas · fonte NEAC</small>
+                </IndicatorCard>
+                <IndicatorCard target="cvp" label="CVP">
+                  <span>CVP</span>
+                  <strong>{summary.data?.cvp ?? '—'}</strong>
+                  <small>Ocorrências de roubo</small>
+                </IndicatorCard>
+                <IndicatorCard target="tentativas" label="Tentativas de homicídio">
+                  <span>Tentativas</span>
+                  <strong>{summary.data?.tentativas ?? '—'}</strong>
+                  <small>Ocorrências de homicídio tentado</small>
+                </IndicatorCard>
+                <IndicatorCard target="tco" label="TCO">
+                  <span>TCO</span>
+                  <strong>{summary.data?.tco ?? '—'}</strong>
+                  <small>Termos elaborados pela PM</small>
+                </IndicatorCard>
+                <IndicatorCard target="mandados" label="Mandados">
+                  <span>Mandados</span>
+                  <strong>{summary.data?.mandados ?? '—'}</strong>
+                  <small>Cumprimentos reconhecidos</small>
+                </IndicatorCard>
+                <IndicatorCard target="visitas" label="Visitas">
+                  <span>Visitas</span>
+                  <strong>{summary.data?.visitas ?? '—'}</strong>
+                  <small>Orientativas e preventivas</small>
+                </IndicatorCard>
+                <IndicatorCard target="sossego" label="Sossego">
+                  <span>Sossego</span>
+                  <strong>{summary.data?.sossego ?? '—'}</strong>
+                  <small>Perturbação reconhecida</small>
+                </IndicatorCard>
+                <IndicatorCard target="domestica" label="Violência doméstica">
+                  <span>Doméstica</span>
+                  <strong>{summary.data?.domestica ?? '—'}</strong>
+                  <small>Casos reconhecidos para revisão</small>
+                </IndicatorCard>
+              </section>
+            </IndicatorUpdateContext.Provider>
+          </IndicatorVariationContext.Provider>
+          <p className="muted">
+            Dashboard criminal: ano {year || 'todos os anos'} · {municipality || '11 municípios do 10º BPM'}. CAD e NEAC são contados
+            separadamente. Fiscalização isolada de medida protetiva permanece na auditoria e não entra nas ocorrências do painel.
           </p>
-        )}
+          <div className="source-coverage" aria-label="Disponibilidade das bases">
+            {sources.map(item => (
+              <span key={item}>
+                {labels[item]}:{' '}
+                {summary.data?.source_coverage?.[item]
+                  ? `${summary.data.source_coverage[item].toLocaleString('pt-BR')} registros importados`
+                  : 'sem base importada'}
+              </span>
+            ))}
+          </div>
+        </Page>
+        <Page show={page === 'ocorrencias'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="ocorrencias">
+            <IndicatorComparisons
+              id="ocorrencias"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            {summary.data?.occurrence_charts && (
+              <section className="panel">
+                <div className="section-head">
+                  <h2>Ocorrências · gráficos do painel geral</h2>
+                  <span>Mesmo recorte dos cartões</span>
+                </div>
+                <div className="analysis-grid">
+                  <Ranking title="Evolução mensal de ocorrências" items={summary.data.occurrence_charts.monthly} />
+                  <Ranking title="Ocorrências por município" items={summary.data.occurrence_charts.cities} />
+                  <Ranking title="Ocorrências por natureza" items={summary.data.occurrence_charts.natures} />
+                </div>
+              </section>
+            )}
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'dashboard'}>
+          {summary.isError && (
+            <p className="error" role="alert">
+              Não foi possível consultar os indicadores.
+            </p>
+          )}
+        </Page>
         {reportOpen && (
           <Suspense fallback={<p role="status">Carregando relatório…</p>}>
             <SummaryReport
@@ -549,427 +580,471 @@ function App() {
             <SpecializedReport request={specializedReport} onClose={() => setSpecializedReport(null)} />
           </Suspense>
         )}
-        <section className="panel">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Evolução mensal</p>
-              <h2>MVI por fonte</h2>
-            </div>
-            <span>CAD e NEAC permanecem independentes</span>
-          </div>
-          <Suspense fallback={<p className="empty">Carregando gráfico…</p>}>
-            <MonthlyChart monthly={summary.data?.monthly || {}} />
-          </Suspense>
-        </section>
-        <div id="mvi" className="section-anchor" />
-        <IndicatorSection
-          year={year ? Number(year) : undefined}
-          municipality={municipality || undefined}
-          id={activeSource === 'mvi_cad' ? 'mvi-cad' : 'mvi-neac'}
-        >
-          <IndicatorComparisons
-            id={activeSource === 'mvi_cad' ? 'mvi-cad' : 'mvi-neac'}
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
+        <Page show={page === 'mvi'}>
           <section className="panel">
             <div className="section-head">
               <div>
-                <p className="eyebrow">Relação individual</p>
-                <h2>Vítimas elegíveis</h2>
+                <p className="eyebrow">Evolução mensal</p>
+                <h2>MVI por fonte</h2>
               </div>
+              <span>CAD e NEAC permanecem independentes</span>
             </div>
-            <div className="tabs" role="tablist" aria-label="Fonte MVI">
-              <button type="button" role="tab" aria-selected={activeSource === 'mvi_cad'} onClick={() => setActiveSource('mvi_cad')}>
-                MVI CAD
-              </button>
-              <button type="button" role="tab" aria-selected={activeSource === 'mvi_neac'} onClick={() => setActiveSource('mvi_neac')}>
-                MVI NEAC
-              </button>
-            </div>
-            <SourceTable source="mvi_cad" active={activeSource === 'mvi_cad'} />
-            <SourceTable source="mvi_neac" active={activeSource === 'mvi_neac'} />
-          </section>
-          <MviAnalysis source={activeSource} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-          {activeSource === 'mvi_cad' && !isCloud && !demo && auth.data?.role === 'admin' && <CadNarrativeReview />}
-          <MviComparison year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <div id="mapa-criminal">
-          <Suspense
-            fallback={
-              <section className="panel" role="status">
-                Preparando mapa criminal…
-              </section>
-            }
-          >
-            <CrimeMap
-              year={Number(year) || currentYear()}
-              municipality={municipality || undefined}
-              cutoff={periodEndForYear(summary.data, year)}
-            />
-          </Suspense>
-          {!isCloud && !demo && auth.data?.role === 'admin' && <LocationReview />}
-        </div>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="cvp">
-          <IndicatorComparisons
-            id="cvp"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <CvpAnalysis summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="tentativas">
-          <IndicatorComparisons
-            id="tentativas"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <AttemptAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="tco">
-          <IndicatorComparisons
-            id="tco"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <TcoAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <div id="operacoes" className="section-anchor" />
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="mandados">
-          <IndicatorComparisons
-            id="mandados"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <OperationalAnalysis kind="Mandados" year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="visitas">
-          <IndicatorComparisons
-            id="visitas"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <OperationalAnalysis kind="Visitas" year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="sossego">
-          <IndicatorComparisons
-            id="sossego"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <OperationalAnalysis kind="Sossego" year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="domestica">
-          <IndicatorComparisons
-            id="domestica"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <DomesticAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="armas">
-          <IndicatorComparisons
-            id="armas"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <ArmsAnalysis
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            onReport={request => {
-              setReportOpen(false)
-              setSpecializedReport(request)
-            }}
-          />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="drogas">
-          <IndicatorComparisons
-            id="drogas"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <DrugsAnalysis
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            onReport={request => {
-              setReportOpen(false)
-              setSpecializedReport(request)
-            }}
-          />
-        </IndicatorSection>
-        <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="guarnicoes">
-          <IndicatorComparisons
-            id="guarnicoes"
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            lastImportedAt={summary.data?.last_imported_at}
-          />
-          <TeamsAnalysis
-            year={year ? Number(year) : undefined}
-            municipality={municipality || undefined}
-            onReport={request => {
-              setReportOpen(false)
-              setSpecializedReport(request)
-            }}
-          />
-        </IndicatorSection>
-        <div id="relatorios">
-          {reportCenterOpen ? (
-            <Suspense
-              fallback={
-                <section className="panel" role="status">
-                  Carregando a Central de Relatórios…
-                </section>
-              }
-            >
-              <ReportCenter
-                key={reportRequest?.sequence || 'center'}
-                initialReport={reportRequest?.id}
-                year={year ? Number(year) : undefined}
-                municipality={municipality || undefined}
-                version={health.data?.version || APP_VERSION}
-                allowed={!!demo || auth.data?.role === 'admin'}
-              />
+            <Suspense fallback={<p className="empty">Carregando gráfico…</p>}>
+              <MonthlyChart monthly={summary.data?.monthly || {}} />
             </Suspense>
-          ) : (
+          </section>
+          <div id="mvi" className="section-anchor" />
+          <IndicatorSection
+            year={year ? Number(year) : undefined}
+            municipality={municipality || undefined}
+            id={activeSource === 'mvi_cad' ? 'mvi-cad' : 'mvi-neac'}
+          >
+            <IndicatorComparisons
+              id={activeSource === 'mvi_cad' ? 'mvi-cad' : 'mvi-neac'}
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
             <section className="panel">
               <div className="section-head">
                 <div>
-                  <p className="eyebrow">Documentos e apresentações</p>
-                  <h2>Central de Relatórios</h2>
+                  <p className="eyebrow">Relação individual</p>
+                  <h2>Vítimas elegíveis</h2>
                 </div>
               </div>
-              <p className="muted">Os dados serão carregados somente quando você escolher um relatório para gerar.</p>
-              <button type="button" onClick={() => setReportCenterOpen(true)}>
-                Abrir relatórios
-              </button>
+              <div className="tabs" role="tablist" aria-label="Fonte MVI">
+                <button type="button" role="tab" aria-selected={activeSource === 'mvi_cad'} onClick={() => setActiveSource('mvi_cad')}>
+                  MVI CAD
+                </button>
+                <button type="button" role="tab" aria-selected={activeSource === 'mvi_neac'} onClick={() => setActiveSource('mvi_neac')}>
+                  MVI NEAC
+                </button>
+              </div>
+              <SourceTable source="mvi_cad" active={activeSource === 'mvi_cad'} />
+              <SourceTable source="mvi_neac" active={activeSource === 'mvi_neac'} />
             </section>
-          )}
-        </div>
-        <DeferredRegion id="municipios">
-          <MunicipalityOverview year={year ? Number(year) : undefined} />
-        </DeferredRegion>
-        <DeferredRegion id="tabela-geral">
-          <ConsolidatedTable year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </DeferredRegion>
-        <div id="assistente-local">
-          <LocalAssistant summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
-        </div>
-        <div id="importacoes" className="section-anchor" />
-        <div className="two-col">
-          <section className="panel">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Entrada de dados</p>
-                <h2>
-                  {isCloud
-                    ? 'Importe pelo sistema local'
-                    : demo
-                      ? 'Importação desativada na prévia'
-                      : auth.data?.role === 'viewer'
-                        ? 'Importação restrita ao perfil de consulta'
-                        : 'Importar base real'}
-                </h2>
-              </div>
-            </div>
-            <p className="muted">
-              A planilha é pré-validada antes da gravação. O arquivo bruto, o histórico e o backup automático anterior ao lote ficam somente
-              neste computador, fora do Git e das prévias online.
-            </p>
-            <form
-              onSubmit={event => {
-                event.preventDefault()
-                if (canImport && validationReady) importer.mutate()
-              }}
+            <MviAnalysis source={activeSource} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+            {activeSource === 'mvi_cad' && !isCloud && !demo && auth.data?.role === 'admin' && <CadNarrativeReview />}
+            <MviComparison year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'mapa-criminal'}>
+          <div id="mapa-criminal">
+            <Suspense
+              fallback={
+                <section className="panel" role="status">
+                  Preparando mapa criminal…
+                </section>
+              }
             >
-              <label>
-                Fonte
-                <select
-                  value={source}
-                  onChange={event => {
-                    setSource(event.target.value as Source)
-                    setValidatedFile('')
-                    validator.reset()
-                    importer.reset()
-                  }}
-                >
-                  {sources.map(item => (
-                    <option key={item} value={item}>
-                      {labels[item]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Escopo
-                <select value={scope} onChange={event => setScope(event.target.value as 'partial' | 'complete')}>
-                  <option value="partial">Parcial — acrescenta e atualiza</option>
-                  <option value="complete">Completo — também aponta ausências para revisão</option>
-                </select>
-              </label>
-              <label>
-                Arquivo CSV, XLS ou XLSX
-                <input
-                  type="file"
-                  accept=".csv,.xls,.xlsx"
-                  onChange={event => {
-                    setFile(event.target.files?.[0] || null)
-                    setValidatedFile('')
-                    validator.reset()
-                    importer.reset()
-                  }}
-                  required
-                />
-              </label>
-              <div className="import-actions">
-                <button
-                  type="button"
-                  onClick={() => validator.mutate()}
-                  disabled={!canImport || !file || validator.isPending || importer.isPending || !health.isSuccess}
-                >
-                  {validator.isPending ? 'Validando…' : '1. Pré-validar arquivo'}
-                </button>
-                <button
-                  type="submit"
-                  className="primary"
-                  disabled={!canImport || !validationReady || importer.isPending || !health.isSuccess}
-                >
-                  {importer.isPending ? 'Importando…' : '2. Importar base validada'}
-                </button>
-              </div>
-            </form>
-            {validator.isError && (
-              <p className="error" role="alert">
-                {validator.error.message}
-              </p>
-            )}
-            {validator.data && (
-              <div className={validator.data.quarantined ? 'validation-result warning' : 'validation-result success'} role="status">
-                <strong>{validationReady ? 'Arquivo pronto para importação' : 'Validação expirada; valide novamente'}</strong>
-                <span>
-                  {validator.data.row_count.toLocaleString('pt-BR')} linhas lidas · {validator.data.accepted.toLocaleString('pt-BR')}{' '}
-                  aceitas · {validator.data.quarantined.toLocaleString('pt-BR')} em quarentena ·{' '}
-                  {validator.data.ineligible.toLocaleString('pt-BR')} fora da regra do indicador
-                </span>
-                {validator.data.reasons.slice(0, 4).map(item => (
-                  <small key={item.reason}>
-                    {item.count.toLocaleString('pt-BR')} × {item.reason}
-                  </small>
-                ))}
-              </div>
-            )}
-            {importer.isError && (
-              <p className="error" role="alert">
-                {importer.error.message}
-              </p>
-            )}
-            {importer.data && (
-              <p className="success" role="status">
-                {importer.data.repeated
-                  ? 'Arquivo já importado.'
-                  : `Lote concluído: ${importer.data.inserted} novos, ${importer.data.updated} atualizados, ${importer.data.quarantined} em quarentena.`}
-              </p>
-            )}
-          </section>
-          <ImportAudit
-            batches={batches.data?.items || []}
-            total={batches.data?.total || 0}
-            page={batchPage}
-            size={batches.data?.size || 20}
-            loading={batches.isPending}
-            onPageChange={setBatchPage}
-          />
-        </div>
-        {!isCloud && !demo && auth.data?.role === 'admin' && (
-          <RestorePoints
-            key={source}
-            source={source}
-            label={labels[source]}
-            onRestored={() => {
-              setValidatedFile('')
-              setBatchPage(1)
-              importer.reset()
-              validator.reset()
-            }}
-          />
-        )}
-        {canImport && (
-          <CadImport
-            onComplete={() => {
-              setBatchPage(1)
-              void queryClient.invalidateQueries()
-            }}
-          />
-        )}
-        {isCloud && (
-          <section className="panel" aria-labelledby="cad-online-title">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Alternativa de importação</p>
-                <h2 id="cad-online-title">Importar bases do CAD</h2>
-              </div>
-            </div>
-            <p className="muted">
-              No aplicativo local, em Importações, marque Ocorrências, Drogas e/ou Armas e escolha o período. O aplicativo local acessa o
-              CAD e envia as bases processadas para consulta aqui após a sincronização. A página online não acessa o CAD deste computador.
-            </p>
-            <fieldset className="cad-sources" disabled>
-              <legend>Bases disponíveis no aplicativo local</legend>
-              <label>
-                <input type="checkbox" checked readOnly /> Ocorrências
-              </label>
-              <label>
-                <input type="checkbox" checked readOnly /> Drogas
-              </label>
-              <label>
-                <input type="checkbox" checked readOnly /> Armas
-              </label>
-            </fieldset>
-          </section>
-        )}
-        {auth.data && (
-          <div id="perfil">
-            <ProfilePanel
-              user={auth.data}
-              token={token}
-              local={!isCloud}
-              onPasswordChanged={() => {
-                void queryClient.invalidateQueries({ queryKey: ['auth-me', token] })
+              <CrimeMap
+                year={Number(year) || currentYear()}
+                municipality={municipality || undefined}
+                cutoff={periodEndForYear(summary.data, year)}
+              />
+            </Suspense>
+            {!isCloud && !demo && auth.data?.role === 'admin' && <LocationReview />}
+          </div>
+        </Page>
+        <Page show={page === 'cvp'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="cvp">
+            <IndicatorComparisons
+              id="cvp"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <CvpAnalysis summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'tentativas'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="tentativas">
+            <IndicatorComparisons
+              id="tentativas"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <AttemptAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'tco'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="tco">
+            <IndicatorComparisons
+              id="tco"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <TcoAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'mandados'}>
+          <div id="operacoes" className="section-anchor" />
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="mandados">
+            <IndicatorComparisons
+              id="mandados"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <OperationalAnalysis kind="Mandados" year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'visitas'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="visitas">
+            <IndicatorComparisons
+              id="visitas"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <OperationalAnalysis kind="Visitas" year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'sossego'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="sossego">
+            <IndicatorComparisons
+              id="sossego"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <OperationalAnalysis kind="Sossego" year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'domestica'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="domestica">
+            <IndicatorComparisons
+              id="domestica"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <DomesticAnalysis year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'armas'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="armas">
+            <IndicatorComparisons
+              id="armas"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <ArmsAnalysis
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              onReport={request => {
+                setReportOpen(false)
+                setSpecializedReport(request)
               }}
             />
-          </div>
-        )}
-        <div id="online-sync">{auth.data?.role === 'admin' && !isCloud && <OnlineSync />}</div>
-        <div id="usuarios">
-          {auth.data?.role === 'admin' &&
-            (isCloud ? (
-              <CloudUserManagement />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'drogas'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="drogas">
+            <IndicatorComparisons
+              id="drogas"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <DrugsAnalysis
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              onReport={request => {
+                setReportOpen(false)
+                setSpecializedReport(request)
+              }}
+            />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'guarnicoes'}>
+          <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="guarnicoes">
+            <IndicatorComparisons
+              id="guarnicoes"
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              lastImportedAt={summary.data?.last_imported_at}
+            />
+            <TeamsAnalysis
+              year={year ? Number(year) : undefined}
+              municipality={municipality || undefined}
+              onReport={request => {
+                setReportOpen(false)
+                setSpecializedReport(request)
+              }}
+            />
+          </IndicatorSection>
+        </Page>
+        <Page show={page === 'relatorios'}>
+          <div id="relatorios">
+            {reportCenterOpen ? (
+              <Suspense
+                fallback={
+                  <section className="panel" role="status">
+                    Carregando a Central de Relatórios…
+                  </section>
+                }
+              >
+                <ReportCenter
+                  key={reportRequest?.sequence || 'center'}
+                  initialReport={reportRequest?.id}
+                  year={year ? Number(year) : undefined}
+                  municipality={municipality || undefined}
+                  version={health.data?.version || APP_VERSION}
+                  allowed={!!demo || auth.data?.role === 'admin'}
+                />
+              </Suspense>
             ) : (
-              <>
-                <UserManagement token={token} />
-                <ActivityLog />
-              </>
-            ))}
-        </div>
-        <div id="armazenamento">
-          <StorageStatus />
-        </div>
-        {!!batches.data?.items.some(batch => batch.differences > 0) && (
-          <p className="notice" role="status">
-            Há registros ausentes em arquivo completo nesta página. Abra “Conferir lote” na auditoria para revisar; nenhum registro foi
-            apagado.
-          </p>
-        )}
+              <section className="panel">
+                <div className="section-head">
+                  <div>
+                    <p className="eyebrow">Documentos e apresentações</p>
+                    <h2>Central de Relatórios</h2>
+                  </div>
+                </div>
+                <p className="muted">Os dados serão carregados somente quando você escolher um relatório para gerar.</p>
+                <button type="button" onClick={() => setReportCenterOpen(true)}>
+                  Abrir relatórios
+                </button>
+              </section>
+            )}
+          </div>
+        </Page>
+        <Page show={page === 'municipios'}>
+          <DeferredRegion id="municipios">
+            <MunicipalityOverview year={year ? Number(year) : undefined} />
+          </DeferredRegion>
+        </Page>
+        <Page show={page === 'tabela-geral'}>
+          <DeferredRegion id="tabela-geral">
+            <ConsolidatedTable year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </DeferredRegion>
+        </Page>
+        <Page show={page === 'assistente-local'}>
+          <div id="assistente-local">
+            <LocalAssistant summary={summary.data} year={year ? Number(year) : undefined} municipality={municipality || undefined} />
+          </div>
+        </Page>
+        <Page show={page === 'importacoes'}>
+          <div id="importacoes" className="section-anchor" />
+          <div className="two-col">
+            <section className="panel">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Entrada de dados</p>
+                  <h2>
+                    {isCloud
+                      ? 'Importe pelo sistema local'
+                      : demo
+                        ? 'Importação desativada na prévia'
+                        : auth.data?.role === 'viewer'
+                          ? 'Importação restrita ao perfil de consulta'
+                          : 'Importar base real'}
+                  </h2>
+                </div>
+              </div>
+              <p className="muted">
+                A planilha é pré-validada antes da gravação. O arquivo bruto, o histórico e o backup automático anterior ao lote ficam
+                somente neste computador, fora do Git e das prévias online.
+              </p>
+              <form
+                onSubmit={event => {
+                  event.preventDefault()
+                  if (canImport && validationReady) importer.mutate()
+                }}
+              >
+                <label>
+                  Fonte
+                  <select
+                    value={source}
+                    onChange={event => {
+                      setSource(event.target.value as Source)
+                      setValidatedFile('')
+                      validator.reset()
+                      importer.reset()
+                    }}
+                  >
+                    {sources.map(item => (
+                      <option key={item} value={item}>
+                        {labels[item]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Escopo
+                  <select value={scope} onChange={event => setScope(event.target.value as 'partial' | 'complete')}>
+                    <option value="partial">Parcial — acrescenta e atualiza</option>
+                    <option value="complete">Completo — também aponta ausências para revisão</option>
+                  </select>
+                </label>
+                <label>
+                  Arquivo CSV, XLS ou XLSX
+                  <input
+                    type="file"
+                    accept=".csv,.xls,.xlsx"
+                    onChange={event => {
+                      setFile(event.target.files?.[0] || null)
+                      setValidatedFile('')
+                      validator.reset()
+                      importer.reset()
+                    }}
+                    required
+                  />
+                </label>
+                <div className="import-actions">
+                  <button
+                    type="button"
+                    onClick={() => validator.mutate()}
+                    disabled={!canImport || !file || validator.isPending || importer.isPending || !health.isSuccess}
+                  >
+                    {validator.isPending ? 'Validando…' : '1. Pré-validar arquivo'}
+                  </button>
+                  <button
+                    type="submit"
+                    className="primary"
+                    disabled={!canImport || !validationReady || importer.isPending || !health.isSuccess}
+                  >
+                    {importer.isPending ? 'Importando…' : '2. Importar base validada'}
+                  </button>
+                </div>
+              </form>
+              {validator.isError && (
+                <p className="error" role="alert">
+                  {validator.error.message}
+                </p>
+              )}
+              {validator.data && (
+                <div className={validator.data.quarantined ? 'validation-result warning' : 'validation-result success'} role="status">
+                  <strong>{validationReady ? 'Arquivo pronto para importação' : 'Validação expirada; valide novamente'}</strong>
+                  <span>
+                    {validator.data.row_count.toLocaleString('pt-BR')} linhas lidas · {validator.data.accepted.toLocaleString('pt-BR')}{' '}
+                    aceitas · {validator.data.quarantined.toLocaleString('pt-BR')} em quarentena ·{' '}
+                    {validator.data.ineligible.toLocaleString('pt-BR')} fora da regra do indicador
+                  </span>
+                  {validator.data.reasons.slice(0, 4).map(item => (
+                    <small key={item.reason}>
+                      {item.count.toLocaleString('pt-BR')} × {item.reason}
+                    </small>
+                  ))}
+                </div>
+              )}
+              {importer.isError && (
+                <p className="error" role="alert">
+                  {importer.error.message}
+                </p>
+              )}
+              {importer.data && (
+                <p className="success" role="status">
+                  {importer.data.repeated
+                    ? 'Arquivo já importado.'
+                    : `Lote concluído: ${importer.data.inserted} novos, ${importer.data.updated} atualizados, ${importer.data.quarantined} em quarentena.`}
+                </p>
+              )}
+            </section>
+            <ImportAudit
+              batches={batches.data?.items || []}
+              total={batches.data?.total || 0}
+              page={batchPage}
+              size={batches.data?.size || 20}
+              loading={batches.isPending}
+              onPageChange={setBatchPage}
+            />
+          </div>
+          {!isCloud && !demo && auth.data?.role === 'admin' && (
+            <RestorePoints
+              key={source}
+              source={source}
+              label={labels[source]}
+              onRestored={() => {
+                setValidatedFile('')
+                setBatchPage(1)
+                importer.reset()
+                validator.reset()
+              }}
+            />
+          )}
+          {canImport && (
+            <CadImport
+              onComplete={() => {
+                setBatchPage(1)
+                void queryClient.invalidateQueries()
+              }}
+            />
+          )}
+          {isCloud && (
+            <section className="panel" aria-labelledby="cad-online-title">
+              <div className="section-head">
+                <div>
+                  <p className="eyebrow">Alternativa de importação</p>
+                  <h2 id="cad-online-title">Importar bases do CAD</h2>
+                </div>
+              </div>
+              <p className="muted">
+                No aplicativo local, em Importações, marque Ocorrências, Drogas e/ou Armas e escolha o período. O aplicativo local acessa o
+                CAD e envia as bases processadas para consulta aqui após a sincronização. A página online não acessa o CAD deste computador.
+              </p>
+              <fieldset className="cad-sources" disabled>
+                <legend>Bases disponíveis no aplicativo local</legend>
+                <label>
+                  <input type="checkbox" checked readOnly /> Ocorrências
+                </label>
+                <label>
+                  <input type="checkbox" checked readOnly /> Drogas
+                </label>
+                <label>
+                  <input type="checkbox" checked readOnly /> Armas
+                </label>
+              </fieldset>
+            </section>
+          )}
+        </Page>
+        <Page show={page === 'perfil'}>
+          {auth.data && (
+            <div id="perfil">
+              <ProfilePanel
+                user={auth.data}
+                token={token}
+                local={!isCloud}
+                onPasswordChanged={() => {
+                  void queryClient.invalidateQueries({ queryKey: ['auth-me', token] })
+                }}
+              />
+            </div>
+          )}
+        </Page>
+        <Page show={page === 'online-sync'}>
+          <div id="online-sync">{auth.data?.role === 'admin' && !isCloud && <OnlineSync />}</div>
+        </Page>
+        <Page show={page === 'usuarios'}>
+          <div id="usuarios">
+            {auth.data?.role === 'admin' &&
+              (isCloud ? (
+                <CloudUserManagement />
+              ) : (
+                <>
+                  <UserManagement token={token} />
+                  <ActivityLog />
+                </>
+              ))}
+          </div>
+        </Page>
+        <Page show={page === 'armazenamento'}>
+          <div id="armazenamento">
+            <StorageStatus />
+          </div>
+        </Page>
+        <Page show={page === 'importacoes'}>
+          {!!batches.data?.items.some(batch => batch.differences > 0) && (
+            <p className="notice" role="status">
+              Há registros ausentes em arquivo completo nesta página. Abra “Conferir lote” na auditoria para revisar; nenhum registro foi
+              apagado.
+            </p>
+          )}
+        </Page>
         <footer>
           {isCloud
             ? 'Consulta protegida · atualização automática após sincronização local · Firebase gratuito.'

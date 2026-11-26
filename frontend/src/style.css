@@ -79,3 +79,6 @@ body{background:var(--legacy-bg);color:var(--legacy-text)}
 .activity-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .activity-table th, .activity-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid rgba(82, 106, 130, .2); vertical-align: top; }
 .activity-pages { display: flex; gap: 12px; align-items: center; margin-top: 10px; }
+
+/* Cada tela do menu abre no início do conteúdo, logo abaixo do cabeçalho fixo. */
+.legacy-workspace main.shell{scroll-margin-top:calc(var(--legacy-header) + 4px)}

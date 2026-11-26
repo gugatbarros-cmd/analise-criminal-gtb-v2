@@ -50,7 +50,10 @@ const menuGroups: MenuGroup[] = [
   ] },
 ]
 
-const alagoasClock = new Intl.DateTimeFormat('pt-BR', {
+/** Destinos que ficam dentro de uma tela e não no início dela. */
+const sectionAnchors = new Set(['indicadores', 'andamento'])
+
+const alagoasClock =new Intl.DateTimeFormat('pt-BR', {
   timeZone: 'America/Maceio',
   hour: '2-digit',
   minute: '2-digit',
@@ -100,14 +103,18 @@ export function LegacyLayout({ children, version, demo, username, onLogout, onNa
     setMobileOpen(false)
     onNavigate?.(target)
     if (updateHistory && window.location.hash !== `#${target}`) window.history.pushState(null, '', `#${target}`)
-    // Aguarda a troca da fonte CAD/NEAC antes de localizar o destino.
-    window.requestAnimationFrame(() => {
+    // Cada item abre sua própria tela: aguarda a troca de conteúdo e abre no início dela.
+    // Âncoras internas do painel (cartões e andamento) continuam levando ao trecho indicado.
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
       const destination = document.getElementById(target)
-      if (!destination) return
-      destination.setAttribute('tabindex', '-1')
-      destination.focus({ preventScroll: true })
-      destination.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    })
+      const content = document.querySelector<HTMLElement>('.legacy-workspace main')
+      if (destination) {
+        destination.setAttribute('tabindex', '-1')
+        destination.focus({ preventScroll: true })
+      }
+      const anchor = sectionAnchors.has(target) ? destination : content || destination
+      anchor?.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }))
   }, [onNavigate])
   useEffect(() => {
     const restore = () => navigateTarget(window.location.hash.slice(1), undefined, false)
