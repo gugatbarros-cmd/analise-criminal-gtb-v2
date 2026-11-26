@@ -134,7 +134,7 @@ export function VersionUpdateIndicator() {
           if (status.phase === 'ready') setMessage('O instalador desta versão ainda não está disponível. Tente novamente em alguns minutos.')
         }
       } catch { setMessage('Instalando e reiniciando o sistema…') }
-      if (Date.now() - started > 10 * 60 * 1000) {
+      if (Date.now() - started > 60 * 60 * 1000) {
         window.clearInterval(timer)
         updating.current = false
         setMessage('A atualização demorou mais que o esperado. Confira o estado do programa e tente novamente.')
