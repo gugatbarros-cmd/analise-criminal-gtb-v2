@@ -39,6 +39,14 @@ function Send-UpdateStatus([string]$Phase, [string]$Message, [int]$Progress = -1
   }
 }
 
+# SHA-256 pelo .NET: não depende do módulo Utility, ausente quando o PowerShell 7 altera o PSModulePath.
+function Get-Sha256([string]$Path) {
+  $stream = [System.IO.File]::OpenRead($Path)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try { return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '') }
+  finally { $sha.Dispose(); $stream.Dispose() }
+}
+
 # Baixa para "$Temporary", retomando de onde parou (cabeçalho Range) quando a conexão cai.
 # Só desiste quando nenhum dado chega por $StallSeconds em $DownloadAttempts tentativas seguidas.
 function Receive-Installer([string]$Url, [string]$Temporary, [long]$ExpectedSize, [string]$Version) {
@@ -170,14 +178,14 @@ try {
   $destination = Join-Path $UpdatesDirectory $expectedName
   $valid = (Test-Path -LiteralPath $destination -PathType Leaf) -and
     ((Get-Item -LiteralPath $destination).Length -eq [long]$asset.size) -and
-    ((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash -eq $expectedHash)
+    ((Get-Sha256 $destination) -eq $expectedHash)
   if (-not $valid) {
     $temporary = Join-Path $UpdatesDirectory "$expectedName.download"
     Send-UpdateStatus 'downloading' "Baixando a versão ${publishedText}…" 0
     Receive-Installer $expectedUrl $temporary ([long]$asset.size) $publishedText
     Send-UpdateStatus 'verifying' 'Conferindo a integridade do arquivo baixado…'
     if ((Get-Item -LiteralPath $temporary).Length -ne [long]$asset.size -or
-        (Get-FileHash -LiteralPath $temporary -Algorithm SHA256).Hash -ne $expectedHash) {
+        (Get-Sha256 $temporary) -ne $expectedHash) {
       # Arquivo completo mas corrompido: descarta para baixar de novo do zero.
       Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
       throw 'O instalador baixado não passou na verificação SHA-256.'

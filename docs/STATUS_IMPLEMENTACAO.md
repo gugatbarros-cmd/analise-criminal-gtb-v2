@@ -1,14 +1,14 @@
 # Andamento da implantação — 26/11/2026
 
-> **Resumo atual (0.1.117).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.118).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
 
-## Download da atualização com retomada — 0.1.117
+## Download da atualização com retomada — 0.1.118
 
 Na instalação da 0.1.116, o servidor de downloads do GitHub oscilou entre 2 KB/s e 1,6 MB/s enquanto o restante da internet funcionava normalmente. O atualizador tinha prazo fixo de 5 minutos para os 79 MB e recomeçava do zero a cada tentativa; por isso falhou duas vezes, como já havia ocorrido com a 0.1.108 e a 0.1.113.
 
 Agora o download continua de onde parou (cabeçalho `Range`), na mesma tentativa e nas seguintes, aproveitando a parte já baixada. O prazo fixo deu lugar a um limite de 1 minuto sem receber dados, com até 5 retomadas seguidas sem avanço por tentativa. Se o servidor não aceitar a retomada, o download recomeça do início. O instalador continua conferido por tamanho e SHA-256 antes de instalar, e um arquivo completo com SHA-256 divergente é descartado. Apenas um atualizador roda por vez: uma segunda chamada é ignorada sem alterar o andamento da primeira. Downloads parciais de versões antigas são removidos. Na interface, a espera pela atualização iniciada pelo administrador passou de 10 para 60 minutos.
 
-Testes com servidor local sintético cobrem conexão derrubada no meio do download, download travado sem fechar a conexão, servidor sem suporte a retomada e segunda chamada simultânea. Um teste real baixou e conferiu o instalador 0.1.116 do GitHub em pasta temporária. A própria 0.1.117 ainda é baixada pelo atualizador anterior; as versões seguintes já usam a retomada. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
+Testes com servidor local sintético cobrem conexão derrubada no meio do download, download travado sem fechar a conexão, servidor sem suporte a retomada e segunda chamada simultânea. Um teste real baixou e conferiu o instalador 0.1.116 do GitHub em pasta temporária. A versão 0.1.117 não foi publicada: no GitHub Actions, o PowerShell do Windows chamado a partir do ambiente do PowerShell 7 não encontrou o comando `Get-FileHash`. O cálculo do SHA-256 passou a usar diretamente o .NET, sem depender desse comando. A própria 0.1.118 ainda é baixada pelo atualizador anterior; as versões seguintes já usam a retomada. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Atualização e reinício automáticos sem uso — 0.1.116
 
