@@ -16,6 +16,15 @@ ROLES = {"admin", "analyst", "viewer"}
 SESSION_HOURS = 8
 LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 300
+ACTIVITY_ACTIONS = {
+    "report_generated": "Relatório gerado",
+    "report_printed": "Relatório impresso ou salvo em PDF",
+    "csv_exported": "CSV exportado",
+    "xlsx_exported": "Planilha XLSX exportada",
+    "whatsapp_shared": "Mensagem de WhatsApp compartilhada",
+    "map_printed": "Mapa impresso ou salvo em PDF",
+}
+ACTIVITY_KEEP = 5000
 
 
 class AuthManager:
@@ -36,6 +45,10 @@ class AuthManager:
                 db.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
             if "must_change_password" not in columns:
                 db.execute("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0")
+            # Registro local de consultas e exportações; não é enviado à sincronização online.
+            db.execute("""CREATE TABLE IF NOT EXISTS activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, username TEXT NOT NULL,
+                action TEXT NOT NULL, detail TEXT NOT NULL)""")
 
     @staticmethod
     def _validate_password(password: str) -> None:
@@ -120,6 +133,14 @@ class AuthManager:
                     "must_change_password": bool(must_change),
                     "expires_at": expires.isoformat()}
 
+    def is_locked(self, username: str) -> bool:
+        """Informa se a conta atingiu o limite de tentativas na janela atual."""
+        now = time.monotonic()
+        with self.lock:
+            attempts = [timepoint for timepoint in self.failed_logins.get(username, [])
+                        if now - timepoint < LOGIN_WINDOW_SECONDS]
+        return len(attempts) >= LOGIN_ATTEMPTS
+
     def user_for_token(self, token: str) -> dict | None:
         if not token or len(token) > 256:
             return None
@@ -186,6 +207,25 @@ class AuthManager:
                        (salt, self._digest(new, salt), username))
             db.execute("DELETE FROM sessions WHERE username = ? AND token_hash != ?",
                        (username, self._token_hash(token)))
+
+    def log_activity(self, username: str, action: str, detail: str = "") -> None:
+        if action not in ACTIVITY_ACTIONS:
+            raise ValueError("Ação de auditoria desconhecida")
+        detail = " ".join(str(detail).split())[:300]
+        with self.lock, self._connect() as db:
+            db.execute("INSERT INTO activity_log (at, username, action, detail) VALUES (?, ?, ?, ?)",
+                       (datetime.now(UTC).isoformat(), username, action, detail))
+            db.execute("DELETE FROM activity_log WHERE id <= (SELECT MAX(id) FROM activity_log) - ?",
+                       (ACTIVITY_KEEP,))
+
+    def activity(self, limit: int = 100, offset: int = 0) -> tuple[list[dict], int]:
+        with self.lock, self._connect() as db:
+            rows = db.execute("SELECT at, username, action, detail FROM activity_log "
+                              "ORDER BY id DESC LIMIT ? OFFSET ?", (limit, offset)).fetchall()
+            total = db.execute("SELECT COUNT(*) FROM activity_log").fetchone()[0]
+        return [{"at": at, "username": user, "action": action,
+                 "label": ACTIVITY_ACTIONS.get(action, action), "detail": detail}
+                for at, user, action, detail in rows], total
 
     @staticmethod
     def _token_hash(token: str) -> str:

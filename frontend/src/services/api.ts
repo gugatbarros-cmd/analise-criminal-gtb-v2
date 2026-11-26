@@ -274,3 +274,17 @@ export async function validateUpload(source: Source, file: File): Promise<Import
     method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) }, body: file,
   }))
 }
+
+export type ActivityAction = 'report_generated' | 'report_printed' | 'csv_exported' | 'xlsx_exported' | 'whatsapp_shared' | 'map_printed'
+export type ActivityItem = { at: string; username: string; action: ActivityAction; label: string; detail: string }
+
+/** Registra no aplicativo local quem gerou ou exportou documentos. Falhas não interrompem a exportação. */
+export function logActivity(action: ActivityAction, detail = ''): void {
+  if (isCloud || import.meta.env.VITE_STATIC_DEMO === '1' || !getSessionToken()) return
+  void apiFetch(`${baseUrl}/audit/activity`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, detail: detail.slice(0, 300) }) }).catch(() => undefined)
+}
+
+export async function getActivity(page = 1): Promise<AuditPage<ActivityItem>> {
+  return json(await apiFetch(`${baseUrl}/audit/activity?page=${page}&size=50`))
+}

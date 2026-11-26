@@ -25,7 +25,7 @@ export const mapLayers = [
   { id: 'outros', label: 'Outras ocorrências', color: '#48b8a8' },
 ] as const
 export type MapLayerId = typeof mapLayers[number]['id']
-export type MapFact = { date: string; city: string; layer: MapLayerId; count: number; nature: string; address?: string; street?: string; latitude?: number; longitude?: number }
+export type MapFact = { date: string; city: string; layer: MapLayerId; count: number; nature: string; indicators: string[]; address?: string; street?: string; latitude?: number; longitude?: number }
 export function nearMunicipality(latitude: number, longitude: number, city: string): boolean {
   const center = municipalityPoints[city]
   if (!center || !Number.isFinite(latitude) || !Number.isFinite(longitude)) return false
@@ -41,7 +41,7 @@ export function mapFacts(rows: ComparisonFact[]): MapFact[] {
   return rows.flatMap<MapFact>(row => {
     const city = cityNames.get(fold(row.city))
     if (!city || !row.eligible || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)) return []
-    const location = { address: row.address || undefined, street: row.street || undefined,
+    const location = { address: row.address || undefined, street: row.street || undefined, indicators: row.indicators,
       latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }
     if (row.source === 'mvi_neac') return [{ date: row.date, city, layer: 'mvi' as const, count: row.records, nature: row.category || row.nature, ...location }]
     if (row.source === 'mvi_cad') return [{ date: row.date, city, layer: 'cad' as const, count: row.records, nature: row.category || row.nature,

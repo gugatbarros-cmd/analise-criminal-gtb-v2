@@ -9,7 +9,7 @@ from datetime import date
 from pathlib import Path
 from urllib.parse import unquote
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -21,7 +21,7 @@ from gtb.ingestion.adapters.normalize import SOURCES
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.113"
+APP_VERSION = "0.1.114"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")
@@ -46,6 +46,27 @@ LOCAL_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173",
 
 def demo_mode() -> bool:
     return os.environ.get("GTB_DEMO_MODE") == "1"
+
+
+def require_admin(request: Request) -> None:
+    """Permissão declarada na rota; a autenticação continua no middleware."""
+    if demo_mode():
+        return
+    user = getattr(request.state, "user", None)
+    if not user or user["role"] != "admin":
+        raise HTTPException(403, "Acesso restrito ao administrador")
+
+
+def require_writer(request: Request) -> None:
+    if demo_mode():
+        return
+    user = getattr(request.state, "user", None)
+    if not user or user["role"] == "viewer":
+        raise HTTPException(403, "Perfil somente para consulta")
+
+
+ADMIN_ONLY = [Depends(require_admin)]
+WRITERS_ONLY = [Depends(require_writer)]
 
 
 class HealthResponse(BaseModel):
@@ -102,6 +123,11 @@ class MviCadReviewRequest(BaseModel):
     death_date: str | None = None
 
 
+class ActivityRequest(BaseModel):
+    action: str
+    detail: str = ""
+
+
 class MapLocationReviewRequest(BaseModel):
     row_hash: str
     latitude: float | None = None
@@ -133,7 +159,7 @@ async def authorize(request: Request, call_next):
                               or path.startswith("/assets/"))):
         response = await call_next(request)
     elif demo_mode():
-        if request.method != "GET" or path.startswith(("/auth/", "/mvi/cad/reviews", "/map/location-reviews")):
+        if request.method != "GET" or path.startswith(("/auth/", "/audit/", "/mvi/cad/reviews", "/map/location-reviews")):
             return JSONResponse({"detail": "Demonstração somente para consulta"}, status_code=403)
         response = await call_next(request)
     elif path in {"/auth/login", "/auth/setup"}:
@@ -149,11 +175,6 @@ async def authorize(request: Request, call_next):
             return JSONResponse({"detail": "Sessão inválida ou expirada"}, status_code=401)
         if user.get("must_change_password") and path not in {"/auth/me", "/auth/password", "/auth/logout"}:
             return JSONResponse({"detail": "Troque a senha temporária antes de continuar"}, status_code=403)
-        if (path.startswith(("/auth/users", "/online/", "/reports/", "/imports/checkpoints", "/mvi/cad/reviews", "/map/location-reviews", "/system/update"))
-                and user["role"] != "admin"):
-            return JSONResponse({"detail": "Acesso restrito ao administrador"}, status_code=403)
-        if request.method == "POST" and path.startswith(("/imports/", "/cad/")) and user["role"] == "viewer":
-            return JSONResponse({"detail": "Perfil somente para consulta"}, status_code=403)
         request.state.user = user
         request.state.token = token
         data_operation = request.method == "POST" and path.startswith(("/imports/", "/cad/"))
@@ -173,13 +194,13 @@ async def authorize(request: Request, call_next):
     return response
 
 
-@app.get('/online/status')
+@app.get('/online/status', dependencies=ADMIN_ONLY)
 def online_status() -> dict:
     cloud_sync.start()
     return cloud_sync.status()
 
 
-@app.post('/online/connect')
+@app.post('/online/connect', dependencies=ADMIN_ONLY)
 def online_connect(credentials: OnlineCredentials) -> dict:
     try:
         cloud_sync.connect(credentials.email, credentials.password)
@@ -188,7 +209,7 @@ def online_connect(credentials: OnlineCredentials) -> dict:
         raise HTTPException(400, 'Não foi possível conectar. Confira o e-mail, a senha e a permissão de administrador ou analista da conta online.') from None
 
 
-@app.post('/online/sync')
+@app.post('/online/sync', dependencies=ADMIN_ONLY)
 def online_sync_now() -> dict:
     if not cloud_sync.credential.exists():
         raise HTTPException(409, 'Conecte a conta online primeiro.')
@@ -197,7 +218,7 @@ def online_sync_now() -> dict:
     return cloud_sync.status()
 
 
-@app.post('/online/disconnect')
+@app.post('/online/disconnect', dependencies=ADMIN_ONLY)
 def online_disconnect() -> dict:
     cloud_sync.disconnect()
     return cloud_sync.status()
@@ -210,7 +231,7 @@ def health() -> HealthResponse:
                           else "setup")
 
 
-@app.get("/system/update/status")
+@app.get("/system/update/status", dependencies=ADMIN_ONLY)
 def system_update_status() -> dict:
     if not update_status_file.is_file():
         return {"phase": "idle", "message": "Nenhuma atualização em andamento."}
@@ -226,7 +247,7 @@ def system_update_status() -> dict:
         return {"phase": "failed", "message": "Não foi possível ler o andamento da atualização."}
 
 
-@app.post("/system/update")
+@app.post("/system/update", dependencies=ADMIN_ONLY)
 def start_system_update() -> dict:
     global update_process
     script = installed_updater_path()
@@ -254,7 +275,7 @@ def start_system_update() -> dict:
     return {"phase": "checking", "message": "Verificando nova versão…", "progress": None}
 
 
-@app.get('/reports/dataset')
+@app.get('/reports/dataset', dependencies=ADMIN_ONLY)
 def reports_dataset() -> dict:
     from gtb.reports import report_dataset
     return report_dataset(store)
@@ -269,6 +290,8 @@ def comparisons_dataset() -> dict:
 @app.post("/auth/login")
 def login(body: LoginRequest) -> dict:
     result = auth_manager.authenticate(body.username, body.password)
+    if not result and auth_manager.is_locked(body.username):
+        raise HTTPException(429, "Muitas tentativas sem sucesso. Aguarde alguns minutos e tente novamente.")
     if not result:
         raise HTTPException(401, "Usuário ou senha inválidos")
     return result
@@ -305,12 +328,12 @@ def logout(request: Request) -> dict:
     return {"status": "ok"}
 
 
-@app.get("/auth/users")
+@app.get("/auth/users", dependencies=ADMIN_ONLY)
 def users() -> dict:
     return {"items": auth_manager.users()}
 
 
-@app.post("/auth/users")
+@app.post("/auth/users", dependencies=ADMIN_ONLY)
 def create_user(body: CreateUserRequest, request: Request) -> dict:
     try:
         auth_manager.create_user(body.username, body.password, body.role, request.state.user)
@@ -319,7 +342,7 @@ def create_user(body: CreateUserRequest, request: Request) -> dict:
     return {"status": "created", "username": body.username, "role": body.role}
 
 
-@app.post("/auth/users/{username}/profile")
+@app.post("/auth/users/{username}/profile", dependencies=ADMIN_ONLY)
 def update_user(username: str, body: UpdateUserRequest, request: Request) -> dict:
     try:
         auth_manager.update_user(username, body.role, body.status, request.state.user)
@@ -328,7 +351,7 @@ def update_user(username: str, body: UpdateUserRequest, request: Request) -> dic
     return {"status": "updated"}
 
 
-@app.post("/auth/users/{username}/reset")
+@app.post("/auth/users/{username}/reset", dependencies=ADMIN_ONLY)
 def reset_user_password(username: str, body: PasswordResetRequest, request: Request) -> dict:
     try:
         auth_manager.reset_password(username, body.password, request.state.user)
@@ -347,6 +370,24 @@ def change_password(body: PasswordChangeRequest, request: Request) -> dict:
     return {"status": "changed"}
 
 
+@app.post("/audit/activity")
+def register_activity(body: ActivityRequest, request: Request) -> dict:
+    if demo_mode():
+        return {"status": "ignored"}
+    try:
+        auth_manager.log_activity(request.state.user["username"], body.action, body.detail)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    return {"status": "ok"}
+
+
+@app.get("/audit/activity", dependencies=ADMIN_ONLY)
+def list_activity(page: int = Query(1, ge=1, le=100_000),
+                  size: int = Query(50, ge=1, le=200)) -> dict:
+    items, total = auth_manager.activity(size, (page - 1) * size)
+    return {"items": items, "total": total, "page": page, "size": size}
+
+
 @app.get("/sources")
 def sources() -> dict:
     return {"items": list(SOURCES)}
@@ -357,7 +398,7 @@ def cad_status(request: Request) -> dict:
     return cad_import.status(request.state.user["username"])
 
 
-@app.post("/cad/start")
+@app.post("/cad/start", dependencies=WRITERS_ONLY)
 def cad_start(body: CadStartRequest, request: Request) -> dict:
     if demo_mode():
         raise HTTPException(403, "Demonstração somente para consulta")
@@ -368,7 +409,7 @@ def cad_start(body: CadStartRequest, request: Request) -> dict:
         raise HTTPException(422, str(error)) from error
 
 
-@app.post("/cad/token")
+@app.post("/cad/token", dependencies=WRITERS_ONLY)
 def cad_token(body: CadTokenRequest) -> dict:
     try:
         return cad_import.submit_token(body.token)
@@ -376,7 +417,7 @@ def cad_token(body: CadTokenRequest) -> dict:
         raise HTTPException(422, str(error)) from error
 
 
-@app.post("/cad/disconnect")
+@app.post("/cad/disconnect", dependencies=WRITERS_ONLY)
 def cad_disconnect(request: Request) -> dict:
     try:
         return cad_import.disconnect(request.state.user["username"])
@@ -384,7 +425,7 @@ def cad_disconnect(request: Request) -> dict:
         raise HTTPException(422, str(error)) from error
 
 
-@app.post("/cad/cancel")
+@app.post("/cad/cancel", dependencies=WRITERS_ONLY)
 def cad_cancel(request: Request) -> dict:
     try:
         return cad_import.cancel(request.state.user["username"])
@@ -392,7 +433,7 @@ def cad_cancel(request: Request) -> dict:
         raise HTTPException(422, str(error)) from error
 
 
-@app.post("/imports/{source}")
+@app.post("/imports/{source}", dependencies=WRITERS_ONLY)
 async def import_source(source: str, request: Request, scope: str = "partial") -> dict:
     if demo_mode():
         raise HTTPException(403, "Demonstração somente para consulta")
@@ -411,7 +452,7 @@ async def import_source(source: str, request: Request, scope: str = "partial") -
         raise HTTPException(422, str(error)) from error
 
 
-@app.post("/imports/{source}/validate")
+@app.post("/imports/{source}/validate", dependencies=WRITERS_ONLY)
 async def validate_import(source: str, request: Request) -> dict:
     if demo_mode():
         raise HTTPException(403, "Demonstração somente para consulta")
@@ -434,7 +475,7 @@ def imports(page: int = Query(1, ge=1, le=1_000_000),
             "total": store.batch_count(), "page": page, "size": size}
 
 
-@app.get("/imports/checkpoints/{source}")
+@app.get("/imports/checkpoints/{source}", dependencies=ADMIN_ONLY)
 def import_checkpoints(source: str) -> dict:
     try:
         return {"items": store.restore_points_for_source(source)}
@@ -442,7 +483,7 @@ def import_checkpoints(source: str) -> dict:
         raise HTTPException(422, str(error)) from error
 
 
-@app.post("/imports/checkpoints/{source}/{point_id}/restore")
+@app.post("/imports/checkpoints/{source}/{point_id}/restore", dependencies=ADMIN_ONLY)
 def restore_import_checkpoint(source: str, point_id: str) -> dict:
     if demo_mode():
         raise HTTPException(403, "Demonstração somente para consulta")
@@ -556,7 +597,7 @@ def mvi_comparison(year: int | None = None, municipality: str | None = None) -> 
     return store.mvi_comparison(year, municipality)
 
 
-@app.get('/mvi/cad/reviews')
+@app.get('/mvi/cad/reviews', dependencies=ADMIN_ONLY)
 def mvi_cad_reviews(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100),
                     status: str = 'pending', focus: str = 'all') -> dict:
     try:
@@ -565,7 +606,7 @@ def mvi_cad_reviews(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=1
         raise HTTPException(422, str(error)) from error
 
 
-@app.post('/mvi/cad/reviews/{natural_key}')
+@app.post('/mvi/cad/reviews/{natural_key}', dependencies=ADMIN_ONLY)
 def review_mvi_cad(natural_key: str, body: MviCadReviewRequest, request: Request) -> dict:
     try:
         result = store.review_mvi_cad(natural_key, body.row_hash, body.decision,
@@ -578,7 +619,7 @@ def review_mvi_cad(natural_key: str, body: MviCadReviewRequest, request: Request
     return result
 
 
-@app.get('/map/location-reviews')
+@app.get('/map/location-reviews', dependencies=ADMIN_ONLY)
 def map_location_reviews(page: int = Query(1, ge=1), size: int = Query(20, ge=1, le=100),
                          status: str = 'pending') -> dict:
     try:
@@ -587,7 +628,7 @@ def map_location_reviews(page: int = Query(1, ge=1), size: int = Query(20, ge=1,
         raise HTTPException(422, str(error)) from error
 
 
-@app.post('/map/location-reviews/{source}/{natural_key}')
+@app.post('/map/location-reviews/{source}/{natural_key}', dependencies=ADMIN_ONLY)
 def review_map_location(source: str, natural_key: str, body: MapLocationReviewRequest,
                         request: Request) -> dict:
     try:

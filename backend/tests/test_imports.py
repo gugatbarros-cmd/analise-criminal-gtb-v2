@@ -197,7 +197,7 @@ def test_repeated_import_skips_spreadsheet_parsing(tmp_path, monkeypatch):
     store = Store(tmp_path / "data" / "gtb.duckdb")
     content = csv_bytes([cad()])
     first = store.import_file("mvi_cad", "cad.csv", content, require_accepted=True)
-    monkeypatch.setattr("gtb.db.store.read_rows", lambda *_args: pytest.fail("repeated file was parsed"))
+    monkeypatch.setattr("gtb.db.store_imports.read_rows", lambda *_args: pytest.fail("repeated file was parsed"))
     repeated = store.import_file("mvi_cad", "cad.csv", content, require_accepted=True)
     assert repeated["repeated"] is True
     assert repeated["id"] == first["id"]

@@ -21,7 +21,9 @@ Arquivos originais, backups, contas locais, quarentena e divergências permanece
 
 Na aplicação **local**, em Importações, use **Importar bases do CAD**. Marque Ocorrências, Drogas ou ambas e escolha as datas. O navegador oficial do CAD abre no computador e baixa cada XLS para a base correspondente, após selecionar o 10º BPM e todas as colunas. Para drogas, a consulta usa Unidade de Despacho 10º BPM e Titular. O perfil local do navegador preserva a sessão CAD válida entre aberturas; quando ela expira, informe novamente a senha e o token solicitado. A última conta fica preenchida, sem guardar senha no GTB. Os XLS ficam em `data/cad-downloads`, fora do Git. O Chrome ou Edge precisa estar instalado. A consulta online informa que a importação é feita no aplicativo local. A conferência oficial das bases permanece pendente.
 
-Na Visão Executiva, cada indicador mostra abaixo do valor a data da última importação concluída da fonte usada no cálculo. Quando ainda não há lote dessa fonte, aparece “sem importação”.
+Na Visão Executiva, cada indicador mostra abaixo do valor a data da última importação concluída da fonte usada no cálculo. Quando ainda não há lote dessa fonte, aparece “sem importação”; com 15 dias ou mais sem nova importação, o cartão avisa que a base está desatualizada.
+
+O aplicativo local registra quem gerou, imprimiu ou exportou relatórios e o mapa. O administrador consulta esse registro em **Central de Acesso → Relatórios e exportações**; ele não é sincronizado online.
 
 ### Restaurar uma importação
 
@@ -52,7 +54,7 @@ A prévia privada anterior, versão 0.1.55, está em `https://gtb-analise-crimin
 
 O código está em `https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2`. Ao concluir uma alteração, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publicar-atualizacao.ps1`: o script detecta as mudanças, atualiza a versão, executa os testes, gera o instalador, publica a interface no GitHub Pages e confirma a release. O endereço principal exige autenticação para consultar as bases sincronizadas no Firestore; `?demo=1` abre exclusivamente `frontend/public/demo-data.json`, com exemplos fictícios. Os arquivos públicos nunca contêm dados reais.
 
-Para conferir, execute `scripts\testar.cmd`. Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para comparar seis amostras anonimizadas com totais oficiais sem publicá-las, siga [a comparação local](docs/COMPARACAO_REFERENCIA.md). Para copiar e restaurar **todos os dados do sistema novo**, siga [o procedimento local](docs/BACKUP_LOCAL.md). O backup antigo de um único banco DuckDB continua disponível em `scripts\restore-local.py`.
+Para conferir, execute `scripts\testar.cmd`. O GitHub Actions executa as mesmas verificações (ruff, pytest em Windows, formatação e vitest) antes de publicar o site. As regras do Firestore estão descritas em [docs/FIRESTORE_REGRAS.md](docs/FIRESTORE_REGRAS.md). Se a instalação de pacotes estiver bloqueada, consulte `docs/ARQUITETURA.md` e rode ao menos `python -m compileall backend/src`. A verificação TypeScript depende da instalação das dependências do frontend. Para comparar seis amostras anonimizadas com totais oficiais sem publicá-las, siga [a comparação local](docs/COMPARACAO_REFERENCIA.md). Para copiar e restaurar **todos os dados do sistema novo**, siga [o procedimento local](docs/BACKUP_LOCAL.md). O backup antigo de um único banco DuckDB continua disponível em `scripts\restore-local.py`.
 
 ## Estado
 

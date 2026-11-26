@@ -48,5 +48,6 @@ describe('mapa criminal', () => {
     ])
     expect(facts.map(item => item.layer)).toEqual(['cvp', 'mvi'])
     expect(facts.every(hasExactCoordinates)).toBe(true)
+    expect(facts[0].indicators).toEqual(['CVP'])
   })
 })

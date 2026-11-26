@@ -195,3 +195,54 @@ def test_packaged_browser_still_blocks_untrusted_origins(tmp_path, monkeypatch, 
                                      json={"username": "admin", "password": "long-password-123"})
     assert result.status_code == 403
     assert not manager.has_users()
+
+
+def test_lockout_is_reported_separately_from_wrong_password(tmp_path):
+    manager = AuthManager(tmp_path / "auth.sqlite3")
+    manager.create_user("admin", "Abcdefg!2345", "admin")
+    assert not manager.is_locked("admin")
+    for _ in range(5):
+        manager.authenticate("admin", "wrong-password")
+    assert manager.is_locked("admin")
+    assert not manager.is_locked("other")
+
+
+def test_every_restricted_route_declares_its_permission():
+    """Rotas novas sob prefixos restritos precisam declarar a permissão na própria rota."""
+    from fastapi.routing import APIRoute
+    admin_prefixes = ("/auth/users", "/online/", "/reports/", "/imports/checkpoints",
+                      "/audit/",
+                      "/mvi/cad/reviews", "/map/location-reviews", "/system/update")
+    for route in main.app.routes:
+        if not isinstance(route, APIRoute):
+            continue
+        checks = {dependency.call for dependency in route.dependant.dependencies}
+        if route.path.startswith(admin_prefixes) and not (route.path == "/audit/activity"
+                                                          and "POST" in route.methods):
+            assert main.require_admin in checks, route.path
+        elif "POST" in route.methods and route.path.startswith(("/imports/", "/cad/")):
+            assert main.require_writer in checks, route.path
+
+
+def test_activity_log_records_actions_and_is_admin_only(tmp_path, monkeypatch):
+    manager = AuthManager(tmp_path / "auth.sqlite3")
+    monkeypatch.setattr(main, "auth_manager", manager)
+    manager.create_user("admin", "Admin!123456", "admin")
+    admin = manager.authenticate("admin", "Admin!123456")
+    manager.create_user("reader", "Reader!12345", "viewer", admin)
+    manager.change_password("reader", "Reader!12345", "Reader!123456", "")
+    reader = manager.authenticate("reader", "Reader!123456")
+    client = TestClient(main.app)
+    admin_headers = {"Authorization": f"Bearer {admin['token']}"}
+    reader_headers = {"Authorization": f"Bearer {reader['token']}"}
+    sent = client.post("/audit/activity", headers=reader_headers,
+                       json={"action": "csv_exported", "detail": "Resumo  2026\n Arapiraca"})
+    assert sent.status_code == 200
+    assert client.post("/audit/activity", headers=reader_headers,
+                       json={"action": "apagar_tudo"}).status_code == 422
+    assert client.get("/audit/activity", headers=reader_headers).status_code == 403
+    listed = client.get("/audit/activity", headers=admin_headers).json()
+    assert listed["total"] == 1
+    assert listed["items"][0]["username"] == "reader"
+    assert listed["items"][0]["label"] == "CSV exportado"
+    assert listed["items"][0]["detail"] == "Resumo 2026 Arapiraca"

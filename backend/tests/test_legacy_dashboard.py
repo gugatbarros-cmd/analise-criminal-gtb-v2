@@ -6,7 +6,7 @@ from test_arms import arm
 from test_drugs import drug
 from test_imports import csv_bytes
 
-import gtb.db.store as store_module
+import gtb.db.store_analysis as store_module
 from gtb.api import main
 from gtb.db.store import Store
 from gtb.indicators.rules import domestic_triage

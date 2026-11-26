@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
-import { IndicatorCard, IndicatorSection, IndicatorUpdateContext, indicatorUpdateSource } from './IndicatorNavigation'
+import { IndicatorCard, IndicatorSection, IndicatorUpdateContext, indicatorUpdateSource, updateStatus } from './IndicatorNavigation'
 import type { Summary } from '../services/api'
 
 it('preserva o valor do cartão e oferece navegação por botão nativo', () => {
@@ -33,4 +33,11 @@ it('oferece relatório direto e consulta de sexo e idade na seção do indicador
   expect(html).toContain('Gerar relatório deste indicador')
   expect(html).toContain('Sexo e idade das pessoas envolvidas')
   expect(html).toContain('Mostrar perfil')
+})
+
+it('sinaliza fonte sem importação recente', () => {
+  const now = new Date(2026, 10, 26)
+  expect(updateStatus('2026-11-20 10:00:00', now)).toEqual({ text: 'Última atualização: 20/11/2026', staleDays: null })
+  expect(updateStatus('2026-11-01 10:00:00', now)).toEqual({ text: 'Última atualização: 01/11/2026 · base desatualizada há 25 dias', staleDays: 25 })
+  expect(updateStatus(null, now).staleDays).toBeNull()
 })

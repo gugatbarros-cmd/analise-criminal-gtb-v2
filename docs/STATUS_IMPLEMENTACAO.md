@@ -1,4 +1,20 @@
-# Andamento da implantação — 18/11/2026
+# Andamento da implantação — 26/11/2026
+
+> **Resumo atual (0.1.114).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Mapa, auditoria de relatórios e manutenção — 0.1.114
+
+**Mapa criminal.** Os pontos com coordenadas válidas podem ser filtrados pelo indicador original e ampliados até o nível de rua, pelo mapa ou pela relação de locais. A imagem de satélite é uma camada do próprio mapa (botão **Satélite** ou no popup do ponto), sem abrir serviço externo com a coordenada do fato; as camadas base recebem somente a área visível. **Imprimir ou salvar PDF** gera o mapa com o resumo dos filtros aplicados.
+
+**Visão Executiva.** Quando uma fonte está há 15 dias ou mais sem importação, o cartão do indicador mostra “base desatualizada há N dias”.
+
+**Auditoria de relatórios.** O aplicativo local registra quem gerou, imprimiu ou exportou relatórios, CSV, XLSX, mensagens de WhatsApp e o mapa, com o recorte usado. O administrador consulta o registro na Central de Acesso. Os eventos ficam no banco local de contas, não são sincronizados online e se limitam aos 5.000 mais recentes.
+
+**Segurança.** As permissões de administrador e de escrita passaram das listas de caminhos do middleware para cada rota, e um teste falha se uma rota sob prefixo restrito não declarar a permissão. O login informa quando a conta está bloqueada temporariamente após cinco tentativas. As regras do Firestore e um risco de escrita de analistas em bases históricas foram documentados em [FIRESTORE_REGRAS.md](FIRESTORE_REGRAS.md); a regra proposta não foi publicada.
+
+**Manutenção.** O `store.py` foi dividido em módulos por área (`store_schema`, `store_reviews`, `store_imports`, `store_analysis`, `store_records`), sem mudar a interface pública. `main.tsx` e `CrimeMap.tsx` passaram a ter formatação automática (Prettier). O GitHub Actions executa ruff, pytest em Windows, verificação de formato e vitest antes de publicar o site. As pastas temporárias de testes foram removidas e passaram a ser ignoradas.
+
+Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Desempenho da abertura e dos relatórios — 0.1.113
 

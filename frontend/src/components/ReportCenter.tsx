@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getReportDataset } from '../services/api'
+import { getReportDataset, logActivity } from '../services/api'
 import { bpmCities, reportCatalog, type ReportId, type ReportOptions, type ReportScope } from '../services/report-model'
 import { buildReportDocument, printReport, reportCsv, summaryCsv } from '../services/report-document'
 import { openDomesticPresentation } from '../services/domestic-presentation'
@@ -45,6 +45,8 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
   const update = (patch: Partial<ReportScope>) => { requestId.current += 1; setScope(value => ({ ...value, ...patch })); setPreview(''); setError(''); setCopied(false); setLoadingAction(null) }
   const customize = (patch: Partial<ReportOptions>) => { requestId.current += 1; setOptions(value => ({ ...value, ...patch })); setPreview(''); setLoadingAction(null) }
   const chosen = reportCatalog.find(item => item.id === selected)!
+  const scopeText = (id: string) => [reportCatalog.find(item => item.id === id)?.title || id, scope.year || 'todos os anos', scope.city || 'todos os municípios',
+    scope.month ? `mês ${scope.month}` : '', scope.start || scope.end ? `${scope.start || '…'} a ${scope.end || '…'}` : ''].filter(Boolean).join(' · ')
   const whatsappText = preview && selected === 'mvi-neac' && data.data ? buildMviNeacWhatsapp(data.data, scope) : ''
   const copyWhatsapp = async () => {
     try {
@@ -62,6 +64,7 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
       }
       setCopied(true)
       setError('')
+      logActivity('whatsapp_shared', scopeText('mvi-neac'))
     } catch { setError('Não foi possível copiar automaticamente. Selecione a mensagem na prévia e copie manualmente.') }
   }
   const loadDataset = async () => {
@@ -88,6 +91,7 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
         const document = buildReportDocument(dataset, id, scope, options, version)
         measure('relatório: montar documento', started)
         setPreview(document)
+        logActivity('report_generated', scopeText(id))
       }
     } catch (failure) { if (currentRequest === requestId.current) setError(failure instanceof Error ? failure.message : 'Não foi possível preparar o relatório.') }
     finally { if (currentRequest === requestId.current) setLoadingAction(null) }
@@ -97,6 +101,7 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
     const url = URL.createObjectURL(new Blob([summary ? summaryCsv(dataset, scope) : reportCsv(dataset, selected, scope)], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a'); link.href = url; link.download = `gtb-${selected}-${scope.year || 'todos'}-${new Date().toISOString().slice(0, 10)}.csv`; link.click()
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    logActivity('csv_exported', summary ? `Resumo · ${scopeText(selected)}` : scopeText(selected))
   }
   const downloadSummary = async () => {
     const currentRequest = ++requestId.current
@@ -108,7 +113,7 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
     finally { if (currentRequest === requestId.current) setLoadingAction(null) }
   }
   const exportCsv = () => { if (data.data) downloadCsv(data.data) }
-  const exportWorkbook = () => { if (data.data) void exportReportWorkbook(data.data, selected, scope, () => authorized.current).catch(failure => setError(String(failure.message))) }
+  const exportWorkbook = () => { if (!data.data) return; logActivity('xlsx_exported', scopeText(selected)); void exportReportWorkbook(data.data, selected, scope, () => authorized.current).catch(failure => setError(String(failure.message))) }
   const unique = (field: 'nature' | 'category' | 'situation' | 'team') => [...new Set((data.data?.rows || []).map(row => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
   return <section className="panel report-center" aria-label="Central de relatórios e apresentações">
     <div className="section-head"><div><p className="eyebrow">Documentos e apresentações</p><h2>Relatórios do sistema anterior</h2></div><span>{reportCatalog.length} opções · PDF, CSV e apresentação temática</span></div>
@@ -139,7 +144,7 @@ export function ReportCenter({ year, municipality, version, allowed, initialRepo
       {preview && <button type="button" onClick={exportWorkbook}>Exportar relatório selecionado em Excel (XLSX)</button>}
       <div className="report-catalog">{reportCatalog.map(item => <button type="button" data-report-id={item.id} key={item.id} className={selected === item.id ? 'report-choice selected' : 'report-choice'} disabled={!!loadingAction} onClick={() => { void prepare(item.id) }}><SystemIcon name={item.icon} /><strong>{item.title}</strong><span>{item.description}</span><small>{item.id === 'domestica-apresentacao' ? 'Abrir editor · PDF e PPTX →' : item.id === 'planejamento' ? 'Abrir tabuleiro · PDF e PNG →' : 'Gerar relatório →'}</small></button>)}</div>
       {error && <p className="error" role="alert">{error}</p>}
-      {preview && <div className="report-preview" aria-label="Prévia do relatório selecionado"><div className="section-head"><h3>{chosen.title}</h3><div className="report-toolbar"><button type="button" className="primary" onClick={() => { void printReport(preview).catch(failure => setError(String(failure.message))) }}>Imprimir ou salvar PDF</button><button type="button" onClick={exportCsv}>Exportar CSV</button><button type="button" onClick={() => setPreview('')}>Fechar prévia</button></div></div><iframe title={`Prévia: ${chosen.title}`} srcDoc={preview} sandbox="allow-same-origin" />{whatsappText && <div className="whatsapp-report"><h4>Mensagem para WhatsApp</h4><p className="muted">Confira a mensagem com emojis antes de compartilhar. Ela contém somente dados agregados.</p><WhatsappMessagePreview message={whatsappText} /><div className="report-toolbar"><a className="whatsapp-share" href={whatsappShareUrl(whatsappText)} target="_blank" rel="noopener noreferrer">Abrir WhatsApp com emojis</a><button type="button" onClick={() => { void copyWhatsapp() }}>Copiar mensagem com emojis</button></div>{copied && <p className="success" role="status">Mensagem com emojis copiada. Cole na conversa desejada.</p>}</div>}</div>}
+      {preview && <div className="report-preview" aria-label="Prévia do relatório selecionado"><div className="section-head"><h3>{chosen.title}</h3><div className="report-toolbar"><button type="button" className="primary" onClick={() => { logActivity('report_printed', scopeText(selected)); void printReport(preview).catch(failure => setError(String(failure.message))) }}>Imprimir ou salvar PDF</button><button type="button" onClick={exportCsv}>Exportar CSV</button><button type="button" onClick={() => setPreview('')}>Fechar prévia</button></div></div><iframe title={`Prévia: ${chosen.title}`} srcDoc={preview} sandbox="allow-same-origin" />{whatsappText && <div className="whatsapp-report"><h4>Mensagem para WhatsApp</h4><p className="muted">Confira a mensagem com emojis antes de compartilhar. Ela contém somente dados agregados.</p><WhatsappMessagePreview message={whatsappText} /><div className="report-toolbar"><a className="whatsapp-share" href={whatsappShareUrl(whatsappText)} target="_blank" rel="noopener noreferrer" onClick={() => logActivity('whatsapp_shared', scopeText('mvi-neac'))}>Abrir WhatsApp com emojis</a><button type="button" onClick={() => { void copyWhatsapp() }}>Copiar mensagem com emojis</button></div>{copied && <p className="success" role="status">Mensagem com emojis copiada. Cole na conversa desejada.</p>}</div>}</div>}
       {planning && <div className="report-preview"><div className="section-head"><h3>Tabuleiro do planejamento operacional</h3><button type="button" onClick={() => setPlanning(false)}>Fechar tabuleiro</button></div><p className="muted">Cenários salvos neste navegador. Mapa de ruas depende de conexão; a exportação PNG é uma prancha esquemática.</p><iframe title="Planejamento operacional com PDF e PNG" src={`${import.meta.env.BASE_URL}assets/reports/planning.html`} /></div>}
     </>}
   </section>

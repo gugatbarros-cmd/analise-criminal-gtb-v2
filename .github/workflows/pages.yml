@@ -3,23 +3,37 @@ name: Publicar demonstração no GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  backend:
+    name: Testes do backend (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: Instalar dependências
+        run: python -m pip install -e "./backend[dev]"
+      - name: Ruff
+        run: python -m ruff check backend
+      - name: Pytest
+        run: python -m pytest backend/tests -q
+
+  frontend:
+    name: Testes e compilação do frontend
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,16 +44,37 @@ jobs:
       - name: Instalar dependências
         working-directory: frontend
         run: npm ci
+      - name: Formatação
+        working-directory: frontend
+        run: npm run format:check
+      - name: Vitest
+        working-directory: frontend
+        run: npm test
+      # O prebuild falha se frontend, backend e API declararem versões diferentes.
       - name: Compilar demonstração sintética
         working-directory: frontend
         env:
           VITE_STATIC_DEMO: '1'
           VITE_CLOUD_ONLINE: '1'
         run: npm run build -- --mode github
-      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: frontend/dist
+
+  deploy:
+    name: Publicar
+    needs: [backend, frontend]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4

@@ -43,3 +43,4 @@
 .indicator-person-grid h4 { margin:0 0 10px; }
 .indicator-person-grid ul { margin:4px 0 12px; padding-left:20px; }
 @media print { .indicator-report-shortcut, .indicator-person-heading button { display:none!important; } }
+.legacy-workspace .indicator-card-button .indicator-update-stale{color:#a8461d;font-weight:700}

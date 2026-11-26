@@ -48,11 +48,19 @@ export function indicatorUpdateSource(target: string, coverage?: Record<string, 
   return 'ocorrencias'
 }
 
-function updateDate(value?: string | null): string {
+/** Dias sem nova importação a partir dos quais a fonte é sinalizada como desatualizada. */
+export const STALE_SOURCE_DAYS = 15
+
+export function updateStatus(value?: string | null, now = new Date()): { text: string; staleDays: number | null } {
   const day = value?.slice(0, 10)
-  return day && /^\d{4}-\d{2}-\d{2}$/.test(day)
-    ? `Última atualização: ${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`
-    : 'Última atualização: sem importação'
+  if (!day || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return { text: 'Última atualização: sem importação', staleDays: null }
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  const imported = Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)))
+  const age = Math.floor((today - imported) / 86400000)
+  const text = `Última atualização: ${day.slice(8, 10)}/${day.slice(5, 7)}/${day.slice(0, 4)}`
+  return age >= STALE_SOURCE_DAYS
+    ? { text: `${text} · base desatualizada há ${age} dias`, staleDays: age }
+    : { text, staleDays: null }
 }
 
 function PersonProfile({ report, year, municipality }: { report: ReportId; year?: number; municipality?: string }) {
@@ -102,6 +110,7 @@ export function IndicatorCard({ target, label, children }: {
   const summary = useContext(IndicatorUpdateContext)
   const comparison = useContext(IndicatorVariationContext)
   const updatedAt = summary?.last_imported_at?.[indicatorUpdateSource(target, summary.source_coverage)]
+  const update = updateStatus(updatedAt)
   const change = comparison && indicatorVariation(target, label, comparison.summary, comparison.dataset, comparison.year, comparison.municipality)
   return <article className="indicator-card"><button type="button" className="indicator-card-button"
     data-indicator-target={target} aria-label={`Ver análise de ${label}`} onClick={() => navigate(target)}>
@@ -110,6 +119,8 @@ export function IndicatorCard({ target, label, children }: {
     <small className="indicator-calculation">Como é calculado: {label === 'Peso de drogas' ? 'Soma dos pesos com unidade reconhecida, convertida para kg.' : calculation[target]}</small>
     {change && <small className={`indicator-variation indicator-variation-${change.tone}`}>{change.text}</small>}
     {change?.tone === 'bad' && <small className="indicator-action">Ação sugerida: {action[target] || 'Avaliar a causa da mudança e ajustar a atuação local.'}</small>}
-    <small className="indicator-update">{updateDate(updatedAt)}</small>
+    <small className={update.staleDays === null ? 'indicator-update' : 'indicator-update indicator-update-stale'}>
+      {update.staleDays !== null && '⚠ '}{update.text}
+    </small>
   </button></article>
 }

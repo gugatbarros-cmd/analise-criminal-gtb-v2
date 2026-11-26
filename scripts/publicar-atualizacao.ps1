@@ -60,7 +60,7 @@ Confirm-Exit 'Commit'
 Confirm-Exit 'Envio ao GitHub'
 
 $commit = (& git rev-parse HEAD).Trim()
-$deadline = (Get-Date).AddMinutes(10)
+$deadline = (Get-Date).AddMinutes(25)
 $run = $null
 do {
   $runs = & gh run list --repo gugatbarros-cmd/analise-criminal-gtb-v2 --workflow pages.yml --branch main --limit 10 --json headSha,status,conclusion,url | ConvertFrom-Json
