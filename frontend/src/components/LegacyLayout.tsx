@@ -27,6 +27,7 @@ const menuGroups: MenuGroup[] = [
     { label: 'Análise de armas', target: 'armas' },
     { label: 'Estimativa de drogas', target: 'drogas' },
     { label: 'Produtividade das guarnições', target: 'guarnicoes' },
+    { label: 'Materiais apreendidos 10º BPM', target: 'materiais-apreendidos' },
     { label: 'Planejamento operacional', target: 'municipios', icon: 'compass' },
     { label: 'Municípios do 10º BPM', target: 'municipios' },
   ] },

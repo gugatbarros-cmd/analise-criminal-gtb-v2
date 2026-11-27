@@ -19,13 +19,18 @@ type Workbook = object
 type XlsxLibrary = { utils: { book_new(): Workbook; aoa_to_sheet(rows: unknown[][]): object; book_append_sheet(book: Workbook, sheet: object, name: string): void }; writeFile(book: Workbook, name: string): void }
 declare global { interface Window { XLSX?: XlsxLibrary } }
 let loading: Promise<void> | undefined
-export async function exportReportWorkbook(data: ReportDataset, id: ReportId, scope: ReportScope, authorized: () => boolean = () => true): Promise<void> {
+/** Carrega o exportador Excel local apenas quando um arquivo é gerado. */
+export async function loadXlsx(): Promise<XlsxLibrary> {
   if (!window.XLSX) {
     loading ??= new Promise<void>((resolve, reject) => { const script = document.createElement('script'); script.src = `${import.meta.env.BASE_URL}assets/reports/xlsx.full.min.js`; script.onload = () => resolve(); script.onerror = () => { loading = undefined; script.remove(); reject(Error('Não foi possível carregar o exportador Excel.')) }; document.head.appendChild(script) })
     await loading
   }
+  return window.XLSX!
+}
+export async function exportReportWorkbook(data: ReportDataset, id: ReportId, scope: ReportScope, authorized: () => boolean = () => true): Promise<void> {
+  const library = await loadXlsx()
   if (!authorized()) throw Error('Acesso restrito ao administrador.')
-  const library = window.XLSX!, book = library.utils.book_new(), all = filterReportRows(data.rows, scope)
+  const book = library.utils.book_new(), all = filterReportRows(data.rows, scope)
   const sheet = (name: string, values: unknown[][]) => library.utils.book_append_sheet(book, library.utils.aoa_to_sheet(values), name)
   const headers = ['Fonte', 'Data', 'Hora', 'Município', 'Bairro', 'Ocorrência', 'Vítima MVI', 'Natureza', 'Classificação', 'Elegível', 'Unidades armas', 'Peso drogas g', 'Calibre', 'Situação', 'Instrumento']
   const values = (rows: ReportRow[]) => [headers, ...rows.map(row => [row.source, row.date, row.hour === null ? '' : `${row.hour}h`, row.city, row.neighborhood, row.occurrence, row.victim, row.nature, row.category, row.eligible ? 'Sim' : 'Não', row.source === 'armas' ? row.quantity : '', row.source === 'drogas' ? row.grams : '', row.caliber, row.situation, row.instrument])]

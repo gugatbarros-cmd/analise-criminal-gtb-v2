@@ -109,6 +109,7 @@ function DeferredRegion({ id, children }: { id: string; children: React.ReactNod
   )
 }
 const CrimeMap = lazy(() => import('./components/CrimeMap').then(module => ({ default: module.CrimeMap })))
+const SeizedMaterials = lazy(() => import('./components/SeizedMaterials').then(module => ({ default: module.SeizedMaterials })))
 
 function App() {
   const [source, setSource] = useState<Source>('mvi_cad')
@@ -644,6 +645,19 @@ function App() {
               />
             </Suspense>
             {!isCloud && !demo && auth.data?.role === 'admin' && <LocationReview />}
+          </div>
+        </Page>
+        <Page show={page === 'materiais-apreendidos'}>
+          <div id="materiais-apreendidos">
+            <Suspense
+              fallback={
+                <section className="panel" role="status">
+                  Preparando materiais apreendidos…
+                </section>
+              }
+            >
+              <SeizedMaterials demo={!!demo} username={auth.data?.username} version={health.data?.version || APP_VERSION} />
+            </Suspense>
           </div>
         </Page>
         <Page show={page === 'cvp'}>

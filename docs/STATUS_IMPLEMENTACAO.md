@@ -1,6 +1,16 @@
 # Andamento da implantação — 27/11/2026
 
-> **Resumo atual (0.1.119).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.120).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Materiais apreendidos do 10º BPM — 0.1.120
+
+Nova aba **Materiais apreendidos 10º BPM** (Gestão operacional), com endereço próprio para compartilhar: `…/analise-criminal-gtb-v2/#materiais-apreendidos`. Quem abre o link precisa entrar com a conta do GTB. A aba lê ao vivo a planilha de controle de materiais apreendidos (aba PLAN DADOS COMPLETOS do Google Sheets) somente para consulta: o sistema nunca grava na planilha e não copia os dados para o Git, o GitHub Pages ou o Firestore. Autor, CPF, RG, telefone, endereço e peticionador são descartados durante a leitura e não aparecem na tela, nos relatórios nem no cache.
+
+A tela traz os cartões Geral, Depósito 10º BPM · CISP Palmeira e Depósito GCM Palmeira dos Índios, com apreendidos e devolvidos. Ao clicar em um cartão, o recorte é filtrado por aquele depósito. O mini dashboard mostra registros, apreendidos, devolvidos, a média de dias em depósito e o item apreendido mais antigo, além de gráficos por depósito, categoria, entradas por mês, tempo em depósito, município do fato e andamento no ESAJ. Há filtros por depósito, situação, categoria, município e busca por ocorrência, processo ou bem, e uma relação paginada.
+
+O botão **Gerar relatório dos materiais apreendidos** permite escolher os depósitos e a situação (apreendidos e/ou devolvidos) e gerar PDF ou planilha Excel, com Nº do processo (ESAJ), data da ocorrência, Nº da ocorrência, categoria, bem apreendido, depósito, situação, andamento, data de depósito e dias em depósito. No aplicativo local, a geração fica registrada na auditoria de relatórios. A demonstração pública usa somente itens fictícios. Se a planilha deixar de estar compartilhada pelo link, a aba informa que a leitura não é possível.
+
+Testes com planilha sintética cobrem a leitura de CSV com aspas e quebras de linha, o descarte das colunas pessoais, datas inválidas, a classificação dos depósitos, os filtros, a seleção do relatório, as séries do dashboard, o escape de HTML no PDF e a planilha sem compartilhamento. A leitura da planilha real conferiu 659 itens: 372 na CISP Palmeira, 286 na GCM Palmeira e 1 na CISP Maribondo. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Retomada da publicação do instalador — 0.1.119
 

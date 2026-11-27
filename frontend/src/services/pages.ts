@@ -7,4 +7,4 @@ export function pageForTarget(target: string): string {
 }
 
 /** Telas sem os filtros de ano e município do painel. */
-export const pagesWithoutFilters = new Set(['importacoes', 'perfil', 'online-sync', 'usuarios', 'armazenamento'])
+export const pagesWithoutFilters = new Set(['importacoes', 'perfil', 'online-sync', 'usuarios', 'armazenamento', 'materiais-apreendidos'])
