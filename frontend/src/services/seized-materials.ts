@@ -210,8 +210,8 @@ export function monthlyDeposits(items: SeizedItem[], months = 18) {
   return series
 }
 
-export type SeizedFilters = { depot: string; situation: string; category: string; city: string; search: string }
-export const emptyFilters: SeizedFilters = { depot: '', situation: '', category: '', city: '', search: '' }
+export type SeizedFilters = { depot: string; situation: string; category: string; city: string; comarca: string; search: string }
+export const emptyFilters: SeizedFilters = { depot: '', situation: '', category: '', city: '', comarca: '', search: '' }
 
 export function filterItems(items: SeizedItem[], filters: SeizedFilters): SeizedItem[] {
   const search = fold(filters.search)
@@ -219,18 +219,21 @@ export function filterItems(items: SeizedItem[], filters: SeizedFilters): Seized
     && (!filters.situation || item.situation === filters.situation)
     && (!filters.category || item.category === filters.category)
     && (!filters.city || item.city === filters.city)
+    && (!filters.comarca || item.comarca === filters.comarca)
     && (!search || fold([item.occurrence, item.process, item.description, item.category, item.city].join(' ')).includes(search)))
 }
 
-export type ReportSelection = { depots: string[]; situations: Situation[] }
+/** comarcas ausente = todas as comarcas. */
+export type ReportSelection = { depots: string[]; situations: Situation[]; comarcas?: string[] }
 export function selectForReport(items: SeizedItem[], selection: ReportSelection): SeizedItem[] {
-  return items.filter(item => selection.depots.includes(item.depotKey) && selection.situations.includes(item.situation))
+  return items.filter(item => selection.depots.includes(item.depotKey) && selection.situations.includes(item.situation)
+    && (!selection.comarcas || selection.comarcas.includes(item.comarca)))
     .sort((a, b) => a.depot.localeCompare(b.depot, 'pt-BR') || (b.days ?? -1) - (a.days ?? -1))
 }
 
-export const REPORT_HEADERS = ['Nº do processo (ESAJ)', 'Data da ocorrência', 'Nº da ocorrência', 'Categoria', 'Bem apreendido', 'Depósito', 'Situação', 'Andamento ESAJ', 'Data de depósito', 'Dias em depósito']
+export const REPORT_HEADERS = ['Nº do processo (ESAJ)', 'Data da ocorrência', 'Nº da ocorrência', 'Categoria', 'Bem apreendido', 'Depósito', 'Comarca', 'Situação', 'Andamento ESAJ', 'Data de depósito', 'Dias em depósito']
 export const reportRow = (item: SeizedItem): (string | number)[] => [item.process || '—', brDate(item.occurrenceDate), item.occurrence, item.category, item.description,
-  item.depot, item.situationLabel, item.processStatus, brDate(item.depositDate), item.days ?? '']
+  item.depot, item.comarca, item.situationLabel, item.processStatus, brDate(item.depositDate), item.days ?? '']
 
 /** Dados fictícios usados apenas na demonstração pública. */
 export function demoSeizedItems(today = new Date().toISOString().slice(0, 10)): SeizedItem[] {

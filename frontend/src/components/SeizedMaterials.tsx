@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { AnalysisChart } from './AnalysisChart'
+import { useSeizedMaterials } from './useSeizedMaterials'
 import { logActivity } from '../services/api'
 import { printReport } from '../services/report-document'
 import {
-  ageDistribution, brDate, countBy, demoSeizedItems, emptyFilters, fetchSeizedMaterials, filterItems, monthlyDeposits,
+  ageDistribution, brDate, countBy, emptyFilters, filterItems, monthlyDeposits,
   processStage, selectForReport, SEIZED_SHARE_URL, summarizeDepots, type SeizedFilters, type SeizedItem, type Situation,
 } from '../services/seized-materials'
 import { buildSeizedReportHtml, exportSeizedWorkbook } from '../services/seized-report'
@@ -28,18 +28,14 @@ function DepotCard({ title, total, seized, returned, featured, onSelect, active 
 }
 
 export function SeizedMaterials({ demo, username, version }: { demo: boolean; username?: string; version: string }) {
-  const query = useQuery({
-    queryKey: ['seized-materials', demo],
-    queryFn: () => demo ? Promise.resolve(demoSeizedItems()) : fetchSeizedMaterials(),
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  })
+  const query = useSeizedMaterials(demo)
   const items = useMemo(() => query.data || [], [query.data])
   const [filters, setFilters] = useState<SeizedFilters>(emptyFilters)
   const [page, setPage] = useState(1)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportDepots, setReportDepots] = useState<string[]>([])
   const [reportSituations, setReportSituations] = useState<Situation[]>(['apreendido'])
+  const [reportComarcas, setReportComarcas] = useState<string[]>([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -49,6 +45,8 @@ export function SeizedMaterials({ demo, username, version }: { demo: boolean; us
   const filtered = useMemo(() => filterItems(items, filters), [items, filters])
   const categories = useMemo(() => countBy(items, item => item.category).map(item => item.name), [items])
   const cities = useMemo(() => countBy(items, item => item.city).map(item => item.name), [items])
+  const comarcas = useMemo(() => countBy(items, item => item.comarca), [items])
+  useEffect(() => setReportComarcas(comarcas.map(item => item.name)), [comarcas])
   const readAt = query.dataUpdatedAt ? new Date(query.dataUpdatedAt).toLocaleString('pt-BR') : ''
 
   const seized = filtered.filter(item => item.situation === 'apreendido')
@@ -59,11 +57,13 @@ export function SeizedMaterials({ demo, username, version }: { demo: boolean; us
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const set = (key: keyof SeizedFilters) => (value: string) => setFilters(current => ({ ...current, [key]: value }))
 
-  const reportItems = useMemo(() => selectForReport(items, { depots: reportDepots, situations: reportSituations }), [items, reportDepots, reportSituations])
+  const reportItems = useMemo(() => selectForReport(items, { depots: reportDepots, situations: reportSituations, comarcas: reportComarcas }),
+    [items, reportDepots, reportSituations, reportComarcas])
   const reportScope = () => {
     const depotNames = depots.filter(depot => reportDepots.includes(depot.key)).map(depot => depot.label)
     const situationNames = situations.filter(item => reportSituations.includes(item.value)).map(item => item.label.toLowerCase())
-    return `Depósitos: ${depotNames.join(', ') || 'nenhum'} · Situação: ${situationNames.join(' e ') || 'nenhuma'}`
+    const comarcaNames = reportComarcas.length === comarcas.length ? 'todas' : reportComarcas.join(', ') || 'nenhuma'
+    return `Depósitos: ${depotNames.join(', ') || 'nenhum'} · Situação: ${situationNames.join(' e ') || 'nenhuma'} · Comarcas: ${comarcaNames}`
   }
   const toggle = <T,>(list: T[], value: T) => list.includes(value) ? list.filter(item => item !== value) : [...list, value]
   const generate = async (format: 'pdf' | 'xlsx') => {
@@ -112,8 +112,13 @@ export function SeizedMaterials({ demo, username, version }: { demo: boolean; us
             onChange={() => setReportDepots(list => toggle(list, depot.key))} /> {depot.label} <small>({n(depot.total)})</small></label>)}</div>
           <div><strong>Situação</strong>{situations.map(item => <label key={item.value}><input type="checkbox" checked={reportSituations.includes(item.value)}
             onChange={() => setReportSituations(list => toggle(list, item.value))} /> {item.label}</label>)}</div>
+          <div className="seized-report-comarcas"><strong>Comarcas <button type="button" className="seized-link-button"
+            onClick={() => setReportComarcas(reportComarcas.length === comarcas.length ? [] : comarcas.map(item => item.name))}>
+            {reportComarcas.length === comarcas.length ? 'Desmarcar todas' : 'Marcar todas'}</button></strong>
+            {comarcas.map(item => <label key={item.name}><input type="checkbox" checked={reportComarcas.includes(item.name)}
+              onChange={() => setReportComarcas(list => toggle(list, item.name))} /> {item.name} <small>({n(item.total)})</small></label>)}</div>
         </div>
-        <p className="muted">{n(reportItems.length)} item(ns) selecionado(s). Colunas: Nº do processo (ESAJ), data da ocorrência, Nº da ocorrência, bem apreendido, depósito, situação, andamento e dias em depósito.</p>
+        <p className="muted">{n(reportItems.length)} item(ns) selecionado(s). Colunas: Nº do processo (ESAJ), data da ocorrência, Nº da ocorrência, bem apreendido, depósito, comarca, situação, andamento e dias em depósito.</p>
         <div className="report-actions">
           <button type="button" disabled={busy || !reportItems.length} onClick={() => void generate('pdf')}>Gerar PDF</button>
           <button type="button" disabled={busy || !reportItems.length} onClick={() => void generate('xlsx')}>Gerar planilha (Excel)</button>
@@ -124,6 +129,7 @@ export function SeizedMaterials({ demo, username, version }: { demo: boolean; us
         <label>Depósito<select value={filters.depot} onChange={event => set('depot')(event.target.value)}><option value="">Todos</option>{depots.map(depot => <option key={depot.key} value={depot.key}>{depot.label}</option>)}</select></label>
         <label>Situação<select value={filters.situation} onChange={event => set('situation')(event.target.value)}><option value="">Todas</option>{situations.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
         <label>Categoria<select value={filters.category} onChange={event => set('category')(event.target.value)}><option value="">Todas</option>{categories.map(name => <option key={name}>{name}</option>)}</select></label>
+        <label>Comarca<select value={filters.comarca} onChange={event => set('comarca')(event.target.value)}><option value="">Todas</option>{comarcas.map(item => <option key={item.name}>{item.name}</option>)}</select></label>
         <label>Município do fato<select value={filters.city} onChange={event => set('city')(event.target.value)}><option value="">Todos</option>{cities.map(name => <option key={name}>{name}</option>)}</select></label>
         <label>Buscar<input type="search" value={filters.search} onChange={event => set('search')(event.target.value)} placeholder="Ocorrência, processo ou bem" /></label>
         {JSON.stringify(filters) !== JSON.stringify(emptyFilters) && <button type="button" onClick={() => setFilters(emptyFilters)}>Limpar filtros</button>}
@@ -142,17 +148,18 @@ export function SeizedMaterials({ demo, username, version }: { demo: boolean; us
         <article><h3>Por categoria</h3><AnalysisChart title="Itens por categoria" items={countBy(filtered, item => item.category, 6)} /></article>
         <article className="wide"><h3>Entradas no depósito por mês</h3><AnalysisChart kind="line" title="Entradas no depósito por mês" items={monthlyDeposits(filtered)} /></article>
         <article><h3>Tempo em depósito (apreendidos)</h3><AnalysisChart title="Tempo em depósito" items={ageDistribution(filtered)} /></article>
+        <article><h3>Por comarca</h3><AnalysisChart title="Itens por comarca" items={countBy(filtered, item => item.comarca, 8)} /></article>
         <article><h3>Município do fato</h3><AnalysisChart title="Itens por município do fato" items={countBy(filtered, item => item.city, 8)} /></article>
-        <article className="wide"><h3>Andamento no ESAJ</h3><AnalysisChart title="Andamento no ESAJ" items={countBy(filtered, item => processStage(item.processStatus), 8)} /></article>
+        <article><h3>Andamento no ESAJ</h3><AnalysisChart title="Andamento no ESAJ" items={countBy(filtered, item => processStage(item.processStatus), 8)} /></article>
       </div>
 
       <h3 className="seized-list-title">Relação de materiais <small>{n(filtered.length)} registro(s)</small></h3>
       {!filtered.length ? <p className="empty">Nenhum material neste recorte.</p> : <>
         <div className="table-scroll"><table className="seized-table"><thead><tr>
-          <th>Nº do processo (ESAJ)</th><th>Data ocorrência</th><th>Nº ocorrência</th><th>Categoria</th><th>Bem apreendido</th><th>Depósito</th><th>Situação e andamento</th><th>Dias</th>
+          <th>Nº do processo (ESAJ)</th><th>Data ocorrência</th><th>Nº ocorrência</th><th>Categoria</th><th>Bem apreendido</th><th>Depósito</th><th>Comarca</th><th>Situação e andamento</th><th>Dias</th>
         </tr></thead><tbody>{visible.map((item: SeizedItem) => <tr key={`${item.id}-${item.occurrence}`}>
           <td className="seized-process">{item.process || '—'}</td><td>{brDate(item.occurrenceDate)}</td><td>{item.occurrence}</td><td>{item.category}</td>
-          <td className="seized-description">{item.description}</td><td title={item.depot}>{shortDepot(item.depot)}</td>
+          <td className="seized-description">{item.description}</td><td title={item.depot}>{shortDepot(item.depot)}</td><td>{item.comarca}</td>
           <td><span className={`seized-status ${item.situation}`}>{item.situationLabel}</span>{item.returnDate && <small> em {brDate(item.returnDate)}</small>}
             {item.processStatus && <small className="seized-stage">{item.processStatus}</small>}</td>
          <td>{item.days ?? '—'}</td>

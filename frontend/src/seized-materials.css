@@ -62,3 +62,16 @@
   .seized-dashboard { grid-template-columns: 1fr; }
   .seized-report-groups { gap: 14px 24px; }
 }
+
+.seized-report-comarcas strong { display: flex; align-items: center; gap: 10px; }
+.legacy-workspace .seized-link-button { padding: 2px 8px; border: 0; background: none; color: #1767b1; font-size: .78rem; font-weight: 700; text-decoration: underline; }
+
+/* Bloco no dashboard geral */
+.seized-overview { margin-top: 20px; }
+.seized-overview .section-head { align-items: center; flex-wrap: wrap; }
+.seized-overview-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: 16px; align-items: center; margin-top: 14px; }
+.seized-overview .seized-cards { margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.seized-overview a.primary { display: inline-block; padding: 10px 14px; border-radius: 9px; background: #062f60; color: #fff; font-weight: 700; text-decoration: none; }
+@media (max-width: 900px) { .seized-overview-body { grid-template-columns: 1fr; } }
+a.seized-card { text-decoration: none; }
+.seized-overview-chart-title { margin: 0 0 6px; color: #0a315e; font-size: .95rem; }

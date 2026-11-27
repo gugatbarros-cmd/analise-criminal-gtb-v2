@@ -19,6 +19,7 @@ import { OperationalAnalysis } from './components/OperationalAnalysis'
 import { DomesticAnalysis } from './components/DomesticAnalysis'
 import type { SpecializedReportRequest } from './components/SpecializedReport'
 import { LoginScreen } from './components/LoginScreen'
+import { SeizedMaterialsOverview } from './components/SeizedMaterialsOverview'
 import { UserManagement } from './components/UserManagement'
 import { ActivityLog } from './components/ActivityLog'
 import { CloudUserManagement } from './components/CloudUserManagement'
@@ -535,6 +536,9 @@ function App() {
               </span>
             ))}
           </div>
+        </Page>
+        <Page show={page === 'dashboard'}>
+          <SeizedMaterialsOverview demo={!!demo} />
         </Page>
         <Page show={page === 'ocorrencias'}>
           <IndicatorSection year={year ? Number(year) : undefined} municipality={municipality || undefined} id="ocorrencias">

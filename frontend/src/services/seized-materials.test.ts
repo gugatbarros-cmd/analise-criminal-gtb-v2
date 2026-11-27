@@ -80,3 +80,15 @@ describe('relatório de materiais apreendidos', () => {
     expect(html).not.toContain('FULANO')
   })
 })
+
+describe('filtro por comarca', () => {
+  it('filtra a relação e limita o relatório às comarcas escolhidas', () => {
+    const items = normalizeRows(parseCsv(csv), '2025-03-01')
+    expect(filterItems(items, { ...emptyFilters, comarca: 'Igaci' }).map(item => item.occurrence)).toEqual(['111'])
+    const all = { depots: ['cisp-palmeira', 'gcm-palmeira', 'cisp-maribondo'], situations: ['apreendido', 'devolvido'] as ('apreendido' | 'devolvido')[] }
+    expect(selectForReport(items, all)).toHaveLength(3)
+    expect(selectForReport(items, { ...all, comarcas: ['Palmeira dos Índios'] }).map(item => item.occurrence)).toEqual(['222'])
+    expect(selectForReport(items, { ...all, comarcas: [] })).toHaveLength(0)
+    expect(reportRow(items[0])).toContain('Igaci')
+  })
+})

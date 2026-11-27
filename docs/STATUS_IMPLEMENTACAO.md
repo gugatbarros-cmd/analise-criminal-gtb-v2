@@ -1,6 +1,14 @@
 # Andamento da implantação — 27/11/2026
 
-> **Resumo atual (0.1.121).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.122).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Materiais apreendidos no dashboard e filtro por comarca — 0.1.122
+
+O **Dashboard criminal** passa a ter o bloco **Materiais apreendidos · 10º BPM**, com os cartões Geral, Depósito 10º BPM · CISP Palmeira e Depósito GCM Palmeira dos Índios (apreendidos, devolvidos e total) e o gráfico de apreendidos por comarca. Cada cartão e o botão do bloco abrem a aba completa. O bloco usa a mesma leitura somente de consulta da planilha que a aba, sem baixá-la duas vezes.
+
+Na aba, há o filtro **Comarca** e o gráfico **Por comarca** no mini dashboard; a relação ganhou a coluna Comarca. No **Gerar relatório dos materiais apreendidos**, além dos depósitos e da situação, é possível marcar as comarcas (todas marcadas por padrão, com atalho para marcar ou desmarcar todas). O PDF e a planilha Excel trazem a coluna Comarca, e a seleção de comarcas aparece no cabeçalho e na memória do relatório.
+
+Testes com planilha sintética cobrem o filtro por comarca, a seleção do relatório por comarca, inclusive sem nenhuma comarca marcada, e a coluna Comarca. A tela foi conferida no navegador com dados fictícios. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Consulta de versão sem o limite da API do GitHub — 0.1.121
 
