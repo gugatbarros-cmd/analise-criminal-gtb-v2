@@ -21,7 +21,7 @@ function UserRow({ user, token, refresh }: { user: LocalUser; token: string; ref
       <button type="button" onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? 'Salvando…' : 'Salvar perfil'}</button>
     </div>
     <form className="user-account-fields" onSubmit={event => { event.preventDefault(); reset.mutate() }}>
-      <label>Nova senha temporária<input type="password" value={temporary} minLength={12} maxLength={256} autoComplete="new-password" required onChange={event => setTemporary(event.target.value)} /></label>
+      <label>Nova senha temporária<input type="password" value={temporary} minLength={6} maxLength={256} autoComplete="new-password" required onChange={event => setTemporary(event.target.value)} /></label>
       <button type="submit" disabled={reset.isPending}>{reset.isPending ? 'Redefinindo…' : 'Redefinir senha'}</button>
     </form>
     {(save.isError || reset.isError) && <p className="error" role="alert">{(save.error || reset.error)?.message}</p>}
@@ -46,8 +46,8 @@ export function UserManagement({ token }: { token: string }) {
     <h3>Criar conta local</h3>
     <form onSubmit={event => { event.preventDefault(); creation.mutate() }}>
       <label>Novo usuário<input value={username} minLength={3} maxLength={32} autoComplete="off" required onChange={event => setUsername(event.target.value)} /></label>
-      <label>Senha inicial<input type="password" value={password} minLength={12} maxLength={256} autoComplete="new-password" aria-describedby="password-rules" required onChange={event => setPassword(event.target.value)} /></label>
-      <p id="password-rules" className="muted password-rules">Mínimo de 12 caracteres, com letra maiúscula, letra minúscula e caractere especial.</p>
+      <label>Senha inicial<input type="password" value={password} minLength={6} maxLength={256} autoComplete="new-password" aria-describedby="password-rules" required onChange={event => setPassword(event.target.value)} /></label>
+      <p id="password-rules" className="muted password-rules">Mínimo de 6 caracteres, com letra maiúscula, letra minúscula e caractere especial.</p>
       <label>Perfil<select value={role} onChange={event => setRole(event.target.value as LocalUser['role'])}><option value="viewer">Consulta</option><option value="analyst">Analista</option><option value="admin">Administrador</option></select></label>
       <button type="submit" className="primary" disabled={creation.isPending}>Criar conta</button>
       {creation.isError && <p className="error" role="alert">{creation.error.message}</p>}

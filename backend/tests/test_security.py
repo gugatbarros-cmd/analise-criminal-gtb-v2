@@ -37,13 +37,13 @@ def test_repeated_wrong_passwords_throttle_login(tmp_path):
     assert manager.authenticate("admin", "Abcdefg!2345") is None
 
 
-def test_new_password_policy_requires_twelve_characters_and_preserves_old_login(tmp_path):
+def test_new_password_policy_requires_six_characters_and_preserves_old_login(tmp_path):
     manager = AuthManager(tmp_path / "auth.sqlite3")
-    for password in ("Short!1", "lowercase!1", "UPPERCASE!1", "NoSpecial1", "Abc def12"):
+    for password in ("Ab!1c", "lowercase!1", "UPPERCASE!1", "NoSpecial1", "Abc def12"):
         with pytest.raises(ValueError):
             manager.create_user("admin", password, "admin")
-    manager.create_user("admin", "Abcdef!12345", "admin")
-    assert manager.authenticate("admin", "Abcdef!12345") is not None
+    manager.create_user("admin", "Ab!123", "admin")
+    assert manager.authenticate("admin", "Ab!123") is not None
     # Uma conta criada antes da nova regra continua autenticando pela hash armazenada.
     old_password = "legacy-password-123"
     with sqlite3.connect(manager.path) as db:

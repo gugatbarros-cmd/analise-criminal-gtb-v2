@@ -46,7 +46,10 @@ def manifest_version(manifest: dict) -> str | None:
 def latest_release_version(timeout: float = 15, *, manifest_url: str = MANIFEST_URL,
                            releases_url: str = RELEASES_URL) -> str | None:
     """Versão da release estável mais recente que já tem o instalador anexado."""
-    request = Request(manifest_url, headers={"User-Agent": "GTB2-AutoUpdate"})
+    # Parâmetro único evita receber de cache o redirecionamento de uma release anterior.
+    separator = "&" if "?" in manifest_url else "?"
+    request = Request(f"{manifest_url}{separator}t={time.time_ns()}",
+                      headers={"User-Agent": "GTB2-AutoUpdate", "Cache-Control": "no-cache"})
     try:
         with urlopen(request, timeout=timeout) as response:
             return manifest_version(json.loads(response.read().decode("utf-8-sig")))

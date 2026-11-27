@@ -22,7 +22,7 @@ from gtb.ops.auto_update import AutoUpdater, latest_release_version
 from gtb.security.local_auth import AuthManager
 from gtb.sync.cloud import CloudSync
 
-APP_VERSION = "0.1.122"
+APP_VERSION = "0.1.123"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = Path(os.environ.get("GTB_DATA_DIR", PROJECT_ROOT / "data"))
 store = Store(DATA_DIR / "gtb.duckdb")

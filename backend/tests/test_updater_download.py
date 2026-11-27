@@ -30,7 +30,7 @@ def serve(drop_first: bool, honor_range: bool = True, hang_first: bool = False, 
 
         def do_GET(self):
             base = f"http://127.0.0.1:{self.server.server_port}"
-            if self.path == "/manifest":
+            if self.path.split("?")[0] == "/manifest":
                 if manifest is None:
                     self.send_error(404)
                     return

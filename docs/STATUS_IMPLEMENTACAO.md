@@ -1,6 +1,16 @@
 # Andamento da implantação — 27/11/2026
 
-> **Resumo atual (0.1.122).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.123).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Relatório completo de materiais apreendidos, senha mínima de 6 caracteres e cache do atualizador — 0.1.123
+
+**Relatório.** O PDF de materiais apreendidos foi refeito como relatório completo em A4 paisagem: capa institucional com os números principais; visão executiva com seis indicadores (itens, apreendidos, devolvidos, média e mediana de dias em depósito, item mais antigo e processos encerrados com bem apreendido) e leituras automáticas em texto; painel gráfico por categoria, comarca, situação, entradas no depósito por mês (18 meses), município do fato, andamento no ESAJ e tipicidade; página de pontos de atenção com os itens ainda apreendidos cujo processo consta como arquivado, julgado ou devolvido no ESAJ (candidatos a restituição ou destinação) e os itens há mais tempo em depósito; uma seção por depósito com indicadores, gráfico de categorias e a relação completa ordenada pelo tempo em depósito; e metodologia com campos de assinatura. As páginas são numeradas no rodapé. A planilha Excel ganhou as abas Resumo, Indicadores e Pontos de atenção, além de todos os itens e uma aba por depósito. Com os dados reais, o relatório apontou 129 itens apreendidos com processo encerrado no ESAJ.
+
+**Senhas.** O mínimo para novas contas, senhas temporárias e trocas de senha passou de 12 para 6 caracteres, mantendo a exigência de letra maiúscula, letra minúscula e caractere especial, o bloqueio temporário após cinco tentativas e o limite de 256 caracteres. Senhas atuais continuam válidas.
+
+**Atualizador.** Na instalação da 0.1.122, o Windows PowerShell recebeu de cache o redirecionamento de `releases/latest` e leu o manifesto da 0.1.121, concluindo que não havia versão nova. A consulta do manifesto passa a usar um parâmetro único por chamada e o cabeçalho `no-cache`, no atualizador do Windows e na verificação automática; a consulta real ao GitHub passou a identificar a 0.1.122. Aplicativos com a 0.1.121 ou a 0.1.122 ainda podem demorar a enxergar a versão nova até o cache do Windows expirar; a partir da 0.1.123 a consulta não depende do cache.
+
+Testes cobrem os indicadores do relatório, a identificação de processo encerrado com bem apreendido, as seções do PDF, o relatório sem itens e a nova regra de senha (5 caracteres recusados, 6 aceitos). O PDF foi gerado e conferido com os dados reais. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Materiais apreendidos no dashboard e filtro por comarca — 0.1.122
 

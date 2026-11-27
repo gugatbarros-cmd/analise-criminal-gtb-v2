@@ -52,8 +52,8 @@ class AuthManager:
 
     @staticmethod
     def _validate_password(password: str) -> None:
-        if not 12 <= len(password) <= 256:
-            raise ValueError("Senha deve ter de 12 a 256 caracteres")
+        if not 6 <= len(password) <= 256:
+            raise ValueError("Senha deve ter de 6 a 256 caracteres")
         if (not any(char.isupper() for char in password)
                 or not any(char.islower() for char in password)
                 or not any(not char.isalnum() and not char.isspace() for char in password)):

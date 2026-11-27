@@ -119,7 +119,7 @@ def serve_release(manifest):
             pass
 
         def do_GET(self):
-            if self.path == "/manifest" and manifest is not None:
+            if self.path.split("?")[0] == "/manifest" and manifest is not None:
                 body = json.dumps(manifest).encode()
             elif self.path == "/api":
                 calls["api"] += 1

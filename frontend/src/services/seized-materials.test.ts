@@ -92,3 +92,24 @@ describe('filtro por comarca', () => {
     expect(reportRow(items[0])).toContain('Igaci')
   })
 })
+
+describe('relatório completo', () => {
+  it('calcula indicadores e aponta processo encerrado com bem apreendido', async () => {
+    const { seizedInsights, seizedFindings, buildSeizedReportHtml } = await import('./seized-report')
+    const items = normalizeRows(parseCsv(csv), '2026-03-01')
+    const data = seizedInsights(items)
+    expect(data).toMatchObject({ total: 3, seized: 2, returned: 1, overYear: 1 })
+    // Ocorrência 111: arquivada no ESAJ e ainda apreendida.
+    expect(data.closedWithSeized.map(item => item.occurrence)).toEqual(['111'])
+    expect(seizedFindings(items).join(' ')).toContain('candidatos a restituição')
+    const html = buildSeizedReportHtml(items, { scopeLabel: 'Todos', author: 'analista', version: 'v0', readAt: 'agora' })
+    for (const section of ['Visão executiva', 'Painel gráfico', 'Pontos de atenção', 'Metodologia e fonte', '<svg'])
+      expect(html).toContain(section)
+  })
+
+  it('não quebra sem itens selecionados', async () => {
+    const { buildSeizedReportHtml, seizedFindings } = await import('./seized-report')
+    expect(seizedFindings([])).toEqual(['Nenhum item atende à seleção do relatório.'])
+    expect(buildSeizedReportHtml([], { scopeLabel: '', author: '', version: '', readAt: '' })).toContain('Sem dados no recorte')
+  })
+})

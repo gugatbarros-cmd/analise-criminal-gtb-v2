@@ -22,7 +22,12 @@ function Write-UpdateLog([string]$Message) {
 # como alternativa para releases publicadas antes do manifesto.
 function Get-PublishedRelease {
   try {
-    $response = Invoke-WebRequest -Uri $ManifestUrl -UseBasicParsing -TimeoutSec 15 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
+    # Parâmetro único: o Windows guarda em cache o redirecionamento de releases/latest e
+    # devolveria o manifesto de uma versão anterior.
+    $separator = if ($ManifestUrl.Contains('?')) { '&' } else { '?' }
+    $manifestRequest = "$ManifestUrl${separator}t=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    $response = Invoke-WebRequest -Uri $manifestRequest -UseBasicParsing -TimeoutSec 15 -Headers @{
+      'User-Agent' = 'GTB2-Updater'; 'Cache-Control' = 'no-cache'; 'Pragma' = 'no-cache' }
     $text = if ($response.Content -is [byte[]]) { [System.Text.Encoding]::UTF8.GetString($response.Content) } else { [string]$response.Content }
     $manifest = $text.TrimStart([char]0xFEFF) | ConvertFrom-Json
   } catch {
