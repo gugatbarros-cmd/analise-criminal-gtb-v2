@@ -6,13 +6,81 @@ function Confirm-Exit([string]$step) {
   if ($LASTEXITCODE -ne 0) { throw "$step falhou (código $LASTEXITCODE)." }
 }
 
+$repo = 'gugatbarros-cmd/analise-criminal-gtb-v2'
+
+function Get-InstallerPath([string]$version) {
+  Join-Path $root "dist\GTB2-Instalador-$version.exe"
+}
+
+function Test-ReleaseExists([string]$version) {
+  $releases = & gh release list --repo $repo --limit 100 --json tagName | ConvertFrom-Json
+  Confirm-Exit 'Consulta das releases'
+  return [bool](@($releases | Where-Object { $_.tagName -eq "v$version" }).Count)
+}
+
+# Aguarda o GitHub Actions do commit e confirma que o site exibe a versão publicada.
+function Wait-PublishedSite([string]$commit, [string]$version) {
+  $deadline = (Get-Date).AddMinutes(25)
+  $run = $null
+  do {
+    $runs = & gh run list --repo $repo --workflow pages.yml --branch main --limit 10 --json headSha,status,conclusion,url | ConvertFrom-Json
+    Confirm-Exit 'Consulta do GitHub Actions'
+    $run = @($runs | Where-Object { $_.headSha -eq $commit } | Select-Object -First 1)
+    if ($run.Count -and $run[0].status -eq 'completed') {
+      if ($run[0].conclusion -ne 'success') { throw "Publicação do site falhou: $($run[0].url)" }
+      break
+    }
+    Start-Sleep -Seconds 10
+  } while ((Get-Date) -lt $deadline)
+  if (-not $run.Count -or $run[0].status -ne 'completed') { throw 'Tempo esgotado no GitHub Actions.' }
+
+  $onlineVersion = ''
+  do {
+    try {
+      $manifest = Invoke-RestMethod "https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/app-version.json?verify=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())" -TimeoutSec 15
+      $onlineVersion = $manifest.version
+    } catch { $onlineVersion = '' }
+    if ($onlineVersion -eq $version) { break }
+    Start-Sleep -Seconds 10
+  } while ((Get-Date) -lt $deadline)
+  if ($onlineVersion -ne $version) { throw "O site não confirmou a versão $version." }
+}
+
+# O aplicativo instalado só se atualiza a partir da release com o instalador anexado.
+function Publish-Release([string]$version, [string]$commit) {
+  $installer = Get-InstallerPath $version
+  if (-not (Test-Path -LiteralPath $installer)) { throw "Instalador ausente: $installer" }
+  $fileVersion = (Get-Item -LiteralPath $installer).VersionInfo.FileVersion
+  if ($fileVersion -and $fileVersion.Trim() -ne $version) {
+    throw "O instalador $installer declara a versão $fileVersion, não $version."
+  }
+  & gh release create "v$version" $installer --repo $repo --target $commit --title "GTB 2.0 v$version" --notes "Atualização do GTB 2.0. O instalador preserva as bases e contas locais."
+  Confirm-Exit 'Publicação do instalador'
+}
+
 & git fetch origin main
 Confirm-Exit 'Atualização da referência remota'
 if ((& git rev-parse HEAD) -ne (& git rev-parse origin/main)) {
   throw 'Esta cópia está atrás de origin/main. Integre as mudanças antes de publicar.'
 }
 if (-not (& git status --porcelain=v1 --untracked-files=normal)) {
-  Write-Output 'Nenhuma mudança nova para publicar.'
+  # Retoma uma publicação interrompida depois do envio: site publicado sem release do instalador.
+  $published = (Get-Content frontend/package.json -Raw | ConvertFrom-Json).version
+  if (Test-ReleaseExists $published) {
+    Write-Output 'Nenhuma mudança nova para publicar.'
+    return
+  }
+  if ((& git log -1 --format=%s).Trim() -ne "Publica GTB 2.0 v$published") {
+    throw "A versão $published não tem release, mas o último commit não é a publicação dessa versão. Verifique manualmente."
+  }
+  if (-not (Test-Path -LiteralPath (Get-InstallerPath $published))) {
+    throw "A versão $published não tem release e o instalador não está em dist. Gere-o a partir deste commit antes de retomar."
+  }
+  Write-Output "A versão $published foi enviada sem release. Retomando a publicação do instalador."
+  $commit = (& git rev-parse HEAD).Trim()
+  Wait-PublishedSite $commit $published
+  Publish-Release $published $commit
+  Write-Output "GTB 2.0 v$published publicado: site e instalador confirmados."
   return
 }
 if (-not (& git status --porcelain=v1 -- docs/STATUS_IMPLEMENTACAO.md) -or
@@ -47,7 +115,7 @@ $compiler = @(
 if (-not $compiler) { throw 'Compilador NSIS gratuito não encontrado.' }
 & (Join-Path $PSScriptRoot 'build-installer.ps1') -Compiler $compiler
 Confirm-Exit 'Build do instalador'
-$installer = Join-Path $root "dist\GTB2-Instalador-$version.exe"
+$installer = Get-InstallerPath $version
 if (-not (Test-Path -LiteralPath $installer)) { throw 'Instalador ausente após o build.' }
 
 & git add -A -- .
@@ -60,31 +128,6 @@ Confirm-Exit 'Commit'
 Confirm-Exit 'Envio ao GitHub'
 
 $commit = (& git rev-parse HEAD).Trim()
-$deadline = (Get-Date).AddMinutes(25)
-$run = $null
-do {
-  $runs = & gh run list --repo gugatbarros-cmd/analise-criminal-gtb-v2 --workflow pages.yml --branch main --limit 10 --json headSha,status,conclusion,url | ConvertFrom-Json
-  Confirm-Exit 'Consulta do GitHub Actions'
-  $run = @($runs | Where-Object { $_.headSha -eq $commit } | Select-Object -First 1)
-  if ($run.Count -and $run[0].status -eq 'completed') {
-    if ($run[0].conclusion -ne 'success') { throw "Publicação do site falhou: $($run[0].url)" }
-    break
-  }
-  Start-Sleep -Seconds 10
-} while ((Get-Date) -lt $deadline)
-if (-not $run.Count -or $run[0].status -ne 'completed') { throw 'Tempo esgotado no GitHub Actions.' }
-
-$onlineVersion = ''
-do {
-  try {
-    $manifest = Invoke-RestMethod "https://gugatbarros-cmd.github.io/analise-criminal-gtb-v2/app-version.json?verify=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())" -TimeoutSec 15
-    $onlineVersion = $manifest.version
-  } catch { $onlineVersion = '' }
-  if ($onlineVersion -eq $version) { break }
-  Start-Sleep -Seconds 10
-} while ((Get-Date) -lt $deadline)
-if ($onlineVersion -ne $version) { throw "O site não confirmou a versão $version." }
-
-& gh release create "v$version" $installer --repo gugatbarros-cmd/analise-criminal-gtb-v2 --title "GTB 2.0 v$version" --notes "Atualização do GTB 2.0. O instalador preserva as bases e contas locais."
-Confirm-Exit 'Publicação do instalador'
+Wait-PublishedSite $commit $version
+Publish-Release $version $commit
 Write-Output "GTB 2.0 v$version publicado: site e instalador confirmados."

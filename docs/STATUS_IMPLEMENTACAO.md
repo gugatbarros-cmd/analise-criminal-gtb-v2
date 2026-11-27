@@ -1,6 +1,12 @@
-# Andamento da implantação — 26/11/2026
+# Andamento da implantação — 27/11/2026
 
-> **Resumo atual (0.1.118).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.119).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Retomada da publicação do instalador — 0.1.119
+
+A versão 0.1.118 chegou ao site, mas a release com o instalador não foi criada porque o publicador foi interrompido depois do envio ao GitHub. Como o aplicativo instalado só se atualiza pela release, os computadores ficaram na 0.1.116 sem aviso de versão nova. A release 0.1.118 foi criada manualmente em 27/11/2026, com o instalador gerado para aquele commit.
+
+Agora, quando não há mudanças novas, o `publicar-atualizacao.ps1` verifica se a versão atual tem release. Se não tiver, e o último commit for a publicação dessa versão, o script aguarda o GitHub Actions, confirma a versão no site e cria a release com o instalador de `dist`. Antes de publicar, confere se o instalador declara a mesma versão. Sem o instalador ou com outro commit no topo, o script para e informa o motivo. A release passa a apontar explicitamente para o commit publicado. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Download da atualização com retomada — 0.1.118
 
