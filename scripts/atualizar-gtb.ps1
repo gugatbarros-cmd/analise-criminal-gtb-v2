@@ -1,5 +1,6 @@
 ﻿param([switch]$CheckOnly, [switch]$EmitStatus, [switch]$AllowRunning, [switch]$Restart, [string]$StatusFile = '',
   [switch]$DownloadOnly,
+  [string]$ManifestUrl = 'https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest/download/gtb2-atualizacao.json',
   [string]$ReleaseApi = 'https://api.github.com/repos/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest',
   [string]$DownloadBase = 'https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/download',
   [string]$UpdatesDirectory = '',
@@ -14,6 +15,40 @@ function Write-UpdateLog([string]$Message) {
   $directory = Split-Path $logFile -Parent
   New-Item -ItemType Directory -Path $directory -Force | Out-Null
   Add-Content -LiteralPath $logFile -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $Message" -Encoding UTF8
+}
+
+# Versão, tamanho e SHA-256 da release mais recente. O manifesto anexado à release vem pelo
+# endereço de download do GitHub, sem o limite de 60 consultas por hora da API; a API fica
+# como alternativa para releases publicadas antes do manifesto.
+function Get-PublishedRelease {
+  try {
+    $response = Invoke-WebRequest -Uri $ManifestUrl -UseBasicParsing -TimeoutSec 15 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
+    $text = if ($response.Content -is [byte[]]) { [System.Text.Encoding]::UTF8.GetString($response.Content) } else { [string]$response.Content }
+    $manifest = $text.TrimStart([char]0xFEFF) | ConvertFrom-Json
+  } catch {
+    $manifest = $null
+    Write-UpdateLog "Manifesto da release indisponível ($($_.Exception.Message)); consultando a API do GitHub."
+  }
+  if ($manifest) {
+    $version = [string]$manifest.version
+    if ($version -notmatch '^\d+\.\d+\.\d+$' -or [string]$manifest.installer -cne "GTB2-Instalador-$version.exe" -or
+        [string]$manifest.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or [long]$manifest.size -le 0) {
+      throw 'Manifesto da release inválido.'
+    }
+    return @{ Version = $version; Hash = ([string]$manifest.sha256).ToUpperInvariant(); Size = [long]$manifest.size }
+  }
+  $release = Invoke-RestMethod -Uri $ReleaseApi -TimeoutSec 15 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
+  if ($release.tag_name -notmatch '^v(\d+\.\d+\.\d+)$') { throw 'Versão da publicação inválida.' }
+  $version = $Matches[1]
+  $name = "GTB2-Instalador-$version.exe"
+  $asset = @($release.assets | Where-Object { $_.name -eq $name }) | Select-Object -First 1
+  if (-not $asset) { throw "Instalador $version ainda indisponível." }
+  if ($asset.browser_download_url -cne "$DownloadBase/v$version/$name" -or $asset.digest -notmatch '^sha256:([a-fA-F0-9]{64})$') {
+    throw 'Origem ou SHA-256 do instalador inválido.'
+  }
+  $hash = $Matches[1].ToUpperInvariant()
+  if ([long]$asset.size -le 0) { throw 'Tamanho do instalador inválido.' }
+  return @{ Version = $version; Hash = $hash; Size = [long]$asset.size }
 }
 
 function Send-UpdateStatus([string]$Phase, [string]$Message, [int]$Progress = -1) {
@@ -154,37 +189,30 @@ try {
   }
 
   Send-UpdateStatus 'checking' 'Verificando se existe uma nova versão…'
-  $release = Invoke-RestMethod -Uri $ReleaseApi -TimeoutSec 15 -Headers @{ 'User-Agent' = 'GTB2-Updater' }
-  if ($release.tag_name -notmatch '^v(\d+\.\d+\.\d+)$') { throw 'Versão da publicação inválida.' }
-  $publishedText = $Matches[1]
+  $published = Get-PublishedRelease
+  $publishedText = $published.Version
   if ([version]$publishedText -le $current) {
     Send-UpdateStatus 'ready' "Versão $currentText atualizada. Abrindo o sistema…"
     return
   }
-
   $expectedName = "GTB2-Instalador-$publishedText.exe"
-  $asset = @($release.assets | Where-Object { $_.name -eq $expectedName }) | Select-Object -First 1
-  if (-not $asset) { throw "Instalador $publishedText ainda indisponível." }
   $expectedUrl = "$DownloadBase/v$publishedText/$expectedName"
-  if ($asset.browser_download_url -cne $expectedUrl -or $asset.digest -notmatch '^sha256:([a-fA-F0-9]{64})$') {
-    throw 'Origem ou SHA-256 do instalador inválido.'
-  }
-  $expectedHash = $Matches[1].ToUpperInvariant()
-  if ([long]$asset.size -le 0) { throw 'Tamanho do instalador inválido.' }
+  $expectedHash = $published.Hash
+  $expectedSize = $published.Size
   if ($CheckOnly) { Write-Output $publishedText; return }
 
   Send-UpdateStatus 'available' "Nova versão $publishedText encontrada. Preparando o download…"
 
   $destination = Join-Path $UpdatesDirectory $expectedName
   $valid = (Test-Path -LiteralPath $destination -PathType Leaf) -and
-    ((Get-Item -LiteralPath $destination).Length -eq [long]$asset.size) -and
+    ((Get-Item -LiteralPath $destination).Length -eq $expectedSize) -and
     ((Get-Sha256 $destination) -eq $expectedHash)
   if (-not $valid) {
     $temporary = Join-Path $UpdatesDirectory "$expectedName.download"
     Send-UpdateStatus 'downloading' "Baixando a versão ${publishedText}…" 0
-    Receive-Installer $expectedUrl $temporary ([long]$asset.size) $publishedText
+    Receive-Installer $expectedUrl $temporary ($expectedSize) $publishedText
     Send-UpdateStatus 'verifying' 'Conferindo a integridade do arquivo baixado…'
-    if ((Get-Item -LiteralPath $temporary).Length -ne [long]$asset.size -or
+    if ((Get-Item -LiteralPath $temporary).Length -ne $expectedSize -or
         (Get-Sha256 $temporary) -ne $expectedHash) {
       # Arquivo completo mas corrompido: descarta para baixar de novo do zero.
       Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue

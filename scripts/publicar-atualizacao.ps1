@@ -12,10 +12,32 @@ function Get-InstallerPath([string]$version) {
   Join-Path $root "dist\GTB2-Instalador-$version.exe"
 }
 
+$manifestName = 'gtb2-atualizacao.json'
+
 function Test-ReleaseExists([string]$version) {
   $releases = & gh release list --repo $repo --limit 100 --json tagName | ConvertFrom-Json
   Confirm-Exit 'Consulta das releases'
   return [bool](@($releases | Where-Object { $_.tagName -eq "v$version" }).Count)
+}
+
+function Test-ReleaseManifest([string]$version) {
+  $assets = (& gh release view "v$version" --repo $repo --json assets | ConvertFrom-Json).assets
+  Confirm-Exit 'Consulta dos arquivos da release'
+  return [bool](@($assets | Where-Object { $_.name -eq $manifestName }).Count)
+}
+
+# Manifesto lido pelos aplicativos instalados pelo endereço de download do GitHub,
+# que não tem o limite de 60 consultas por hora da API.
+function New-ReleaseManifest([string]$version, [string]$installer) {
+  $stream = [System.IO.File]::OpenRead($installer)
+  try { $hash = ([System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($stream)) -replace '-', '').ToLowerInvariant() }
+  finally { $stream.Dispose() }
+  $folder = Join-Path ([System.IO.Path]::GetTempPath()) "gtb2-release-$version"
+  New-Item -ItemType Directory -Path $folder -Force | Out-Null
+  $path = Join-Path $folder $manifestName
+  $manifest = [ordered]@{ version = $version; installer = (Split-Path $installer -Leaf); size = (Get-Item -LiteralPath $installer).Length; sha256 = $hash }
+  [System.IO.File]::WriteAllText($path, ($manifest | ConvertTo-Json -Compress), [System.Text.UTF8Encoding]::new($false))
+  return $path
 }
 
 # Aguarda o GitHub Actions do commit e confirma que o site exibe a versão publicada.
@@ -54,7 +76,9 @@ function Publish-Release([string]$version, [string]$commit) {
   if ($fileVersion -and $fileVersion.Trim() -ne $version) {
     throw "O instalador $installer declara a versão $fileVersion, não $version."
   }
-  & gh release create "v$version" $installer --repo $repo --target $commit --title "GTB 2.0 v$version" --notes "Atualização do GTB 2.0. O instalador preserva as bases e contas locais."
+  $manifest = New-ReleaseManifest $version $installer
+  # O manifesto vai depois do instalador: só anuncia a versão quando o instalador já está anexado.
+  & gh release create "v$version" $installer $manifest --repo $repo --target $commit --title "GTB 2.0 v$version" --notes "Atualização do GTB 2.0. O instalador preserva as bases e contas locais."
   Confirm-Exit 'Publicação do instalador'
 }
 
@@ -67,6 +91,14 @@ if (-not (& git status --porcelain=v1 --untracked-files=normal)) {
   # Retoma uma publicação interrompida depois do envio: site publicado sem release do instalador.
   $published = (Get-Content frontend/package.json -Raw | ConvertFrom-Json).version
   if (Test-ReleaseExists $published) {
+    if (-not (Test-ReleaseManifest $published)) {
+      $installer = Get-InstallerPath $published
+      if (-not (Test-Path -LiteralPath $installer)) { throw "A release v$published não tem manifesto e o instalador não está em dist." }
+      & gh release upload "v$published" (New-ReleaseManifest $published $installer) --repo $repo
+      Confirm-Exit 'Envio do manifesto'
+      Write-Output "Manifesto de atualização anexado à release v$published."
+      return
+    }
     Write-Output 'Nenhuma mudança nova para publicar.'
     return
   }

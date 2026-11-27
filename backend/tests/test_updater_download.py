@@ -21,8 +21,8 @@ NAME = f"GTB2-Instalador-{VERSION}.exe"
 PAYLOAD = bytes(range(256)) * 4096  # 1 MiB sintético
 
 
-def serve(drop_first: bool, honor_range: bool = True, hang_first: bool = False):
-    state = {"requests": [], "dropped": False}
+def serve(drop_first: bool, honor_range: bool = True, hang_first: bool = False, manifest: dict | None | str = "valid"):
+    state = {"requests": [], "dropped": False, "api": 0}
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args):
@@ -30,7 +30,20 @@ def serve(drop_first: bool, honor_range: bool = True, hang_first: bool = False):
 
         def do_GET(self):
             base = f"http://127.0.0.1:{self.server.server_port}"
+            if self.path == "/manifest":
+                if manifest is None:
+                    self.send_error(404)
+                    return
+                body = json.dumps({"version": VERSION, "installer": NAME, "size": len(PAYLOAD),
+                                   "sha256": hashlib.sha256(PAYLOAD).hexdigest()} if manifest == "valid" else manifest).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if self.path == "/api":
+                state["api"] += 1
                 body = json.dumps({"tag_name": f"v{VERSION}", "assets": [{
                     "name": NAME, "size": len(PAYLOAD),
                     "browser_download_url": f"{base}/download/v{VERSION}/{NAME}",
@@ -85,7 +98,7 @@ def run_updater(tmp_path: Path, server, extra=()):
     result = subprocess.run(
         [str(POWERSHELL), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(install / "atualizar-gtb.ps1"),
          "-AllowRunning", "-DownloadOnly", "-StatusFile", str(tmp_path / "status.json"),
-         "-ReleaseApi", f"{base}/api", "-DownloadBase", f"{base}/download", "-UpdatesDirectory", str(updates),
+         "-ManifestUrl", f"{base}/manifest", "-ReleaseApi", f"{base}/api", "-DownloadBase", f"{base}/download", "-UpdatesDirectory", str(updates),
          "-StallSeconds", "5", "-RetryDelaySeconds", "1", *extra],
         check=False, capture_output=True, text=True, timeout=120, env=env)
     status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8-sig")) \
@@ -139,3 +152,36 @@ def test_second_updater_does_not_interfere_with_running_one(tmp_path):
     assert result.returncode == 0
     assert status is None  # não sobrescreve o andamento da atualização em curso
     assert state["requests"] == []
+
+
+def test_manifest_avoids_github_api(tmp_path):
+    server, state = serve(drop_first=False)
+    try:
+        result, status, updates = run_updater(tmp_path, server)
+    finally:
+        server.shutdown()
+    assert status["phase"] == "ready", result.stdout + result.stderr
+    assert (updates / NAME).read_bytes() == PAYLOAD
+    assert state["api"] == 0
+
+
+def test_release_without_manifest_uses_github_api(tmp_path):
+    server, state = serve(drop_first=False, manifest=None)
+    try:
+        result, status, updates = run_updater(tmp_path, server)
+    finally:
+        server.shutdown()
+    assert status["phase"] == "ready", result.stdout + result.stderr
+    assert (updates / NAME).read_bytes() == PAYLOAD
+    assert state["api"] == 1
+
+
+def test_invalid_manifest_is_refused(tmp_path):
+    server, state = serve(drop_first=False, manifest={"version": VERSION, "installer": "outro.exe", "size": 1, "sha256": "0" * 64})
+    try:
+        result, status, updates = run_updater(tmp_path, server)
+    finally:
+        server.shutdown()
+    assert status["phase"] == "failed", result.stdout + result.stderr
+    assert state["requests"] == []
+    assert not (updates / NAME).exists()

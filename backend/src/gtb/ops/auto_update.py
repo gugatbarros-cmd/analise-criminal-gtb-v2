@@ -1,6 +1,8 @@
 """Atualização automática do aplicativo instalado quando o sistema está sem uso.
 
-O verificador consulta a release estável mais recente no GitHub. Quando existe
+O verificador consulta a release estável mais recente no GitHub pelo manifesto
+anexado a ela (endereço de download, sem o limite de 60 consultas por hora da API;
+a API fica como alternativa para releases sem manifesto). Quando existe
 versão nova com instalador publicado, aguarda o sistema ficar ocioso (sem
 interação na interface, importação ou sessão CAD) e então aciona o mesmo
 atualizador usado pelo botão "Atualizar agora", que instala e reinicia.
@@ -11,9 +13,12 @@ import re
 import threading
 import time
 from collections.abc import Callable
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 RELEASES_URL = "https://api.github.com/repos/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest"
+MANIFEST_URL = ("https://github.com/gugatbarros-cmd/analise-criminal-gtb-v2/releases/latest/download/"
+                "gtb2-atualizacao.json")
 CHECK_INTERVAL_SECONDS = 15 * 60
 FIRST_CHECK_SECONDS = 2 * 60
 IDLE_SECONDS = 10 * 60
@@ -26,9 +31,30 @@ def parse_version(value: str) -> tuple[int, int, int] | None:
     return tuple(int(part) for part in match.groups()) if match else None  # type: ignore[return-value]
 
 
-def latest_release_version(timeout: float = 15) -> str | None:
+def manifest_version(manifest: dict) -> str | None:
+    """Versão de um manifesto de release válido (instalador, tamanho e SHA-256 coerentes)."""
+    version = parse_version(str(manifest.get("version", "")))
+    if not version:
+        return None
+    text = ".".join(map(str, version))
+    valid = (manifest.get("installer") == f"GTB2-Instalador-{text}.exe"
+             and re.fullmatch(r"[0-9a-fA-F]{64}", str(manifest.get("sha256", "")))
+             and isinstance(manifest.get("size"), int) and manifest["size"] > 0)
+    return text if valid else None
+
+
+def latest_release_version(timeout: float = 15, *, manifest_url: str = MANIFEST_URL,
+                           releases_url: str = RELEASES_URL) -> str | None:
     """Versão da release estável mais recente que já tem o instalador anexado."""
-    request = Request(RELEASES_URL, headers={"User-Agent": "GTB2-AutoUpdate",
+    request = Request(manifest_url, headers={"User-Agent": "GTB2-AutoUpdate"})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return manifest_version(json.loads(response.read().decode("utf-8-sig")))
+    except HTTPError as error:
+        if error.code != 404:
+            raise
+    # Release publicada antes do manifesto: consulta a API do GitHub.
+    request = Request(releases_url, headers={"User-Agent": "GTB2-AutoUpdate",
                                              "Accept": "application/vnd.github+json"})
     with urlopen(request, timeout=timeout) as response:
         release = json.loads(response.read().decode("utf-8"))

@@ -104,3 +104,51 @@ def test_activity_endpoint_postpones_install_and_status_is_available():
     assert main.auto_updater.last_activity >= before
     status = client.get("/system/auto-update", headers=headers).json()
     assert status["enabled"] is False  # fora do aplicativo instalado
+
+
+def serve_release(manifest):
+    """Servidor local com manifesto (ou 404) e API sintéticos."""
+    import json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    calls = {"api": 0}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+        def do_GET(self):
+            if self.path == "/manifest" and manifest is not None:
+                body = json.dumps(manifest).encode()
+            elif self.path == "/api":
+                calls["api"] += 1
+                body = json.dumps({"tag_name": "v0.2.0", "assets": [{"name": "GTB2-Instalador-0.2.0.exe"}]}).encode()
+            else:
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    return server, calls, {"manifest_url": f"{base}/manifest", "releases_url": f"{base}/api"}
+
+
+def test_latest_version_prefers_manifest_and_falls_back_to_api():
+    valid = {"version": "0.3.0", "installer": "GTB2-Instalador-0.3.0.exe", "size": 10, "sha256": "a" * 64}
+    for manifest, expected, api_calls in [
+        (valid, "0.3.0", 0),
+        (None, "0.2.0", 1),
+        ({**valid, "installer": "outro.exe"}, None, 0),
+        ({**valid, "sha256": "curto"}, None, 0),
+    ]:
+        server, calls, urls = serve_release(manifest)
+        try:
+            assert auto_update.latest_release_version(5, **urls) == expected
+        finally:
+            server.shutdown()
+        assert calls["api"] == api_calls

@@ -1,6 +1,14 @@
 # Andamento da implantação — 27/11/2026
 
-> **Resumo atual (0.1.120).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+> **Resumo atual (0.1.121).** Implementação funcional: 100% concluída no escopo validado. Validação operacional: 90% concluída; os 10% restantes dependem da conferência das bases com os totais oficiais, da operação em paralelo com o legado, do ensaio em duas máquinas e de uma execução completa da importação CAD na sessão oficial. As entradas abaixo seguem da versão mais recente para a mais antiga.
+
+## Consulta de versão sem o limite da API do GitHub — 0.1.121
+
+Na instalação da 0.1.120, o atualizador recebeu “403 Proibido”: a API do GitHub aceita só 60 consultas por hora por conexão sem login, e o limite se esgotou. Cada aplicativo instalado consulta a cada 15 minutos; vários computadores na mesma conexão do batalhão esgotariam o limite e atrasariam as atualizações.
+
+Cada release passa a levar o arquivo `gtb2-atualizacao.json`, com versão, nome, tamanho e SHA-256 do instalador. O atualizador do Windows e a verificação automática do programa leem esse manifesto pelo endereço de download do GitHub (`releases/latest/download/`), que não tem o limite da API. A API fica apenas como alternativa para releases sem manifesto. Um manifesto com nome, tamanho ou SHA-256 inválidos é recusado antes do download, e o instalador continua conferido por tamanho e SHA-256. O publicador anexa o manifesto depois do instalador e, ao ser executado sem mudanças, anexa o manifesto que faltar na release atual.
+
+A 0.1.121 ainda é encontrada pelos aplicativos anteriores por meio da API; as versões seguintes usam o manifesto. Testes com servidor local sintético cobrem o manifesto válido sem consulta à API, a release sem manifesto e o manifesto inválido, no atualizador do Windows e na verificação automática. Implementação funcional: **100% concluída**; validação operacional: **90% concluída, 10% restante**.
 
 ## Materiais apreendidos do 10º BPM — 0.1.120
 
